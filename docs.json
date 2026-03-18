@@ -5,10 +5,7 @@
     "light": "/logo/agentbot-logo-light.svg",
     "dark": "/logo/agentbot-logo-dark.svg"
   },
-  "theme": {
-    "mode": "dark",
-    "primaryColor": "#8b5cf6"
-  },
+  "theme": "willow",
   "colors": {
     "primary": "#8b5cf6",
     "light": "#a78bfa",
