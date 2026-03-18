@@ -20,11 +20,17 @@ Agentbot is committed to keeping your data safe. Here's our security posture.
 ## Skill Security Matrix
 
 | Skill | Input Validation | Sanitization | User Data | External Calls |
-|-------|------------------|---------------|-----------|----------------|
+|-------|------------------|-------------|-----------|----------------|
 | Visual Synthesizer | ✅ | ✅ | ❌ | ✅ (Replicate) |
 | Track Archaeologist | ✅ | ✅ | ❌ | ❌ |
 | Setlist Oracle | ✅ | ✅ | ❌ | ❌ |
 | Groupie Manager | ✅ | ✅ | ✅ (demo) | ❌ |
+| Royalty Tracker | ✅ | ✅ | ❌ | ❌ |
+| Demo Submitter | ✅ | ✅ | ✅ (demo) | ❌ |
+| Event Ticketing | ✅ | ✅ | ✅ (email) | ❌ |
+| Event Scheduler | ✅ | ✅ | ❌ | ❌ |
+| Venue Finder | ✅ | ✅ | ❌ | ❌ |
+| Festival Finder | ✅ | ✅ | ❌ | ❌ |
 
 ## Trust Principles
 
@@ -46,7 +52,7 @@ All user inputs are:
 - Used only for image generation requests
 
 ### 4. Read-Only Skills
-Track Archaeologist and Setlist Oracle are **read-only**:
+Track Archaeologist, Setlist Oracle, Royalty Tracker, Venue Finder, Festival Finder, and Event Scheduler are **read-only**:
 - No user data stored
 - No external API calls
 - Uses only in-memory mock catalog
