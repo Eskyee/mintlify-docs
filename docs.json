@@ -1,18 +1,29 @@
 {
   "$schema": "https://mintlify.com/docs.json",
   "name": "Agentbot",
-  "theme": "willow",
+  "logo": {
+    "light": "/logo/agentbot-logo-light.svg",
+    "dark": "/logo/agentbot-logo-dark.svg"
+  },
+  "theme": {
+    "mode": "dark",
+    "primaryColor": "#8b5cf6"
+  },
   "colors": {
     "primary": "#8b5cf6",
     "light": "#a78bfa",
-    "dark": "#8b5cf6"
+    "dark": "#8b5cf6",
+    "background": {
+      "light": "#ffffff",
+      "dark": "#000000"
+    }
   },
   "favicon": "/favicon.svg",
   "navigation": {
     "left": [
       {
         "group": "Getting Started",
-        "pages": ["index", "quickstart", "installation"]
+        "pages": ["index", "quickstart", "installation", "development-standard"]
       },
       {
         "group": "Core Concepts",
@@ -33,6 +44,10 @@
     ]
   },
   "navbar": {
+    "logo": {
+      "light": "/logo/agentbot-logo-light.svg",
+      "dark": "/logo/agentbot-logo-dark.svg"
+    },
     "links": [
       {
         "label": "Agentbot",
@@ -49,6 +64,10 @@
     ]
   },
   "footer": {
+    "socialLinks": {
+      "github": "https://github.com/raveculture/agentbot",
+      "discord": "https://discord.gg/raveculture"
+    },
     "links": [
       {
         "label": "GitHub",
