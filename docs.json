@@ -32,6 +32,10 @@
     {
       "group": "API Reference",
       "pages": ["api-reference/overview", "api-reference/agents", "api-reference/auth"]
+    },
+    {
+      "group": "MCP",
+      "pages": ["mcp"]
     }
   ],
   "navbar": {
