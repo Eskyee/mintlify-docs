@@ -1,7 +1,5 @@
----
-title: "MCP Server"
+
 description: "Agentbot MCP Server for AI agents"
----
 
 # MCP Server
 
