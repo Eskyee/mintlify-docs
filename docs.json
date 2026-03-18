@@ -9,37 +9,31 @@
   "colors": {
     "primary": "#8b5cf6",
     "light": "#a78bfa",
-    "dark": "#8b5cf6",
-    "background": {
-      "light": "#ffffff",
-      "dark": "#000000"
-    }
+    "dark": "#8b5cf6"
   },
   "favicon": "/favicon.svg",
-  "navigation": {
-    "left": [
-      {
-        "group": "Getting Started",
-        "pages": ["index", "quickstart", "installation", "development-standard"]
-      },
-      {
-        "group": "Core Concepts",
-        "pages": ["concepts/agents", "concepts/workflows", "concepts/api-keys"]
-      },
-      {
-        "group": "Integrations",
-        "pages": ["integrations/telegram", "integrations/discord", "integrations/whatsapp"]
-      },
-      {
-        "group": "Payments",
-        "pages": ["payments/stripe", "payments/x402"]
-      },
-      {
-        "group": "API Reference",
-        "pages": ["api-reference/overview", "api-reference/agents", "api-reference/auth"]
-      }
-    ]
-  },
+  "navigation": [
+    {
+      "group": "Getting Started",
+      "pages": ["index", "quickstart", "installation", "development-standard"]
+    },
+    {
+      "group": "Core Concepts",
+      "pages": ["concepts/agents", "concepts/workflows", "concepts/api-keys"]
+    },
+    {
+      "group": "Integrations",
+      "pages": ["integrations/telegram", "integrations/discord", "integrations/whatsapp"]
+    },
+    {
+      "group": "Payments",
+      "pages": ["payments/stripe", "payments/x402"]
+    },
+    {
+      "group": "API Reference",
+      "pages": ["api-reference/overview", "api-reference/agents", "api-reference/auth"]
+    }
+  ],
   "navbar": {
     "logo": {
       "light": "/logo/agentbot-logo-light.svg",
@@ -64,16 +58,6 @@
     "socialLinks": {
       "github": "https://github.com/raveculture/agentbot",
       "discord": "https://discord.gg/raveculture"
-    },
-    "links": [
-      {
-        "label": "GitHub",
-        "href": "https://github.com/raveculture/agentbot"
-      },
-      {
-        "label": "Discord",
-        "href": "https://discord.gg/raveculture"
-      }
-    ]
+    }
   }
 }
