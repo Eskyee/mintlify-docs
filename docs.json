@@ -35,7 +35,7 @@
     },
     {
       "group": "MCP",
-      "pages": ["mcp-server"]
+      "pages": ["mcp"]
     }
   ],
   "navbar": {
