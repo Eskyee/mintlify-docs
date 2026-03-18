@@ -63,7 +63,8 @@
   "footer": {
     "socialLinks": {
       "github": "https://github.com/raveculture/agentbot",
-      "discord": "https://discord.gg/eskyee"
+      "discord": "https://discord.gg/eskyee",
+      "googleDeveloper": "https://g.dev/agentbot"
     }
   }
 }
