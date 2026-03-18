@@ -1,0 +1,106 @@
+---
+title: "Skills Marketplace"
+description: "Extend your crew with music-specific AI capabilities"
+---
+
+# Agent Skills Marketplace
+
+**Extend your agents with music-specific capabilities.** From artwork generation to catalog analysis.
+
+## Overview
+
+The Skills Marketplace lets you equip your agents with specialized capabilities designed for music operations. Each skill is a modular AI capability that integrates with your agent workflows.
+
+## Available Skills
+
+<CardGroup cols={2}>
+
+<Card title="Visual Synthesizer" icon="image">
+Auto-generate release-ready promotional art and video thumbnails using Stable Diffusion XL.
+
+**Capabilities:**
+- Album cover generation
+- Social media assets (Instagram, Telegram, Discord)
+- Video thumbnails
+- Merch mockups
+
+**Use case:** "Generate 5 Instagram story templates for my new release"
+</Card>
+
+<Card title="Track Archaeologist" icon="search">
+Deep catalog digging via BlockDB similarity search. Find tracks that match any audio fingerprint.
+
+**Capabilities:**
+- Similar sound detection
+- Sample clearance research
+- Influencer tracking
+- Catalog gap analysis
+
+**Use case:** "Find 10 tracks similar to this demo that were released in the last 6 months"
+</Card>
+
+<Card title="Setlist Oracle" icon="list-music">
+Analyze BPM, key, and energy curves across your entire catalog to build perfect DJ sets.
+
+**Capabilities:**
+- Energy flow analysis
+- Harmonic mixing suggestions
+- Crowd reading integration
+- Set pacing optimization
+
+**Use case:** "Build a 2-hour closing set that starts at 120 BPM and peaks at 138"
+</Card>
+
+<Card title="Groupie Manager" icon="users">
+Fan segmentation, lifecycle tracking, and automated merch drop campaigns.
+
+**Capabilities:**
+- Fan persona mapping
+- Purchase behavior prediction
+- Automated email/SMS campaigns
+- Churn prediction
+
+**Use case:** "Send a personalized promo to everyone who bought tickets but didn't buy merch"
+</Card>
+
+</CardGroup>
+
+## Installing Skills
+
+```javascript
+// Install a skill for your agent
+const agent = await agentbot.agents.get('my-label-bot');
+
+// Add Visual Synthesizer
+await agent.skills.install('visual-synthesizer');
+
+// Now your agent can generate images
+const artwork = await agent.generate.artwork({
+  style: 'techno',
+  mood: 'dark-industrial',
+  format: 'instagram-story'
+});
+```
+
+## Custom Skills
+
+Need something specific? Build your own:
+
+```javascript
+// Create a custom skill
+await agentbot.skills.create({
+  name: 'My Custom Skill',
+  description: 'Analyzes track mix quality',
+  handler: async (audioBuffer) => {
+    // Your custom logic
+    return { mixQuality: 'professional', issues: [] };
+  },
+  triggers: ['analyze-mix', 'check-mix']
+});
+```
+
+## Pricing
+
+Skills are included in all tiers. Some skills require external API keys:
+- **Visual Synthesizer:** Requires Replicate API key (pay direct)
+- **BlockDB queries:** Included per tier limits

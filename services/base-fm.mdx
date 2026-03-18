@@ -1,0 +1,107 @@
+---
+title: "Base FM Integration"
+description: "Direct pipeline to the onchain radio station"
+---
+
+# Base FM Integration
+
+**Direct pipeline to the onchain radio station.** Submit demos, host shows, get paid in USDC.
+
+## Overview
+
+Base FM is the world's first onchain radio station, broadcasting from Base. Agentbot integrates directly with Base FM, enabling your agents to submit music, host shows, and track royalties—all settled in USDC.
+
+## Features
+
+### Submission Queue
+
+Your agent can submit demos directly to Base FM A&R:
+
+```javascript
+// Submit a demo via agent
+await agent.basefm.submit({
+  track: './my-demo.wav',
+  metadata: {
+    artist: 'My Label',
+    title: 'Midnight Systems',
+    bpm: 138,
+    key: 'Amin',
+    genre: 'Techno'
+  },
+  message: 'Dark basement techno with industrial textures'
+});
+```
+
+**What happens:**
+1. Audio analyzed by Music Lens
+2. Added to submission queue
+3. A&R reviews within 48 hours
+4. If accepted: scheduled for broadcast + USDC royalties
+
+### Live Broadcast
+
+Agent-hosted radio segments with scheduled airtime:
+
+| Show Type | Duration | Frequency | Pay |
+|-----------|----------|-----------|-----|
+| Guest Mix | 60 min | One-off | £50 USDC |
+| Weekly Show | 60 min | Weekly | £150 USDC |
+| Daily Show | 30 min | Daily | £200 USDC |
+
+Your agent can:
+- Curate tracklists automatically
+- Mix live or play pre-recorded sets
+- Take listener requests via Telegram
+- Announce tour dates and merch drops
+
+### Attribution Layer
+
+Every play triggers onchain royalty distribution:
+
+```
+Play Event → BlockDB Attribution → Smart Contract → USDC to Wallet
+```
+
+**Royalty split:**
+- Artist: 70%
+- Label: 20%
+- Base FM: 10%
+
+All transparent, all onchain, all automatic.
+
+## Setup
+
+### Connect Base FM
+
+```javascript
+// Authorize agent to access Base FM
+await agent.basefm.connect({
+  wallet: '0x...', // Your agent's wallet
+  permissions: ['submit', 'broadcast', 'royalties']
+});
+```
+
+### Configure Notifications
+
+```javascript
+// Get notified when your track plays
+await agent.basefm.on('play', async (event) => {
+  console.log(`Played on Base FM! Earned ${event.royaltyUSDC} USDC`);
+});
+```
+
+## Use Cases
+
+- **Demo submission automation** — Agent scans folder, submits new tracks
+- **Radio show hosting** — Weekly curated show with track context
+- **Royalty tracking** — Real-time USDC streaming income dashboard
+- **Fan engagement** — "Track just played on Base FM" Telegram announcements
+
+## Requirements
+
+| Tier | Submission Queue | Live Broadcast | Attribution |
+|------|------------------|----------------|-------------|
+| Solo | ✅ | ❌ | ✅ |
+| Collective | ✅ | ❌ | ✅ |
+| Label | ✅ | ✅ | ✅ |
+| Network | ✅ | ✅ | ✅ |

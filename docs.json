@@ -27,6 +27,10 @@
         "pages": ["integrations/telegram", "integrations/discord", "integrations/whatsapp"]
       },
       {
+        "group": "Core Services",
+        "pages": ["services/blockdb", "services/skills-marketplace", "services/base-fm"]
+      },
+      {
         "group": "Payments",
         "pages": ["payments/stripe", "payments/x402"]
       },
