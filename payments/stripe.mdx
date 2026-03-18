@@ -1,0 +1,125 @@
+---
+title: "Stripe"
+description: "Accept payments with Stripe"
+---
+
+# Stripe Integration
+
+Accept credit card payments for subscriptions and one-time purchases.
+
+## Setup
+
+### Step 1: Create Stripe Account
+
+1. Go to [Stripe.com](https://stripe.com)
+2. Create a business account
+3. Complete verification
+
+### Step 2: Get API Keys
+
+1. Go to **Developers → API Keys**
+2. Copy:
+   - Publishable Key (starts with `pk_`)
+   - Secret Key (starts with `sk_`)
+
+### Step 3: Connect to Agentbot
+
+1. Go to **Settings → Payments → Stripe**
+2. Enter keys
+3. Click **Connect**
+
+### Step 4: Configure Webhook
+
+1. Go to **Developers → Webhooks**
+2. Add endpoint: `https://agentbot.raveculture.xyz/api/webhooks/stripe`
+3. Select events:
+   - `checkout.session.completed`
+   - `customer.subscription.created`
+   - `customer.subscription.updated`
+   - `customer.subscription.deleted`
+   - `invoice.payment_succeeded`
+   - `invoice.payment_failed`
+4. Copy webhook secret and add to Agentbot
+
+## Pricing Plans
+
+| Plan | Price | Features |
+|------|-------|----------|
+| Solo | £29/mo | Creative only, 2GB RAM |
+| Collective | £69/mo | +1 OpenClaw seat, 4GB RAM |
+| Label | £149/mo | +3 OpenClaw seats, 8GB RAM |
+| Network | £499/mo | Unlimited, white-label, 16GB RAM |
+
+## Checkout
+
+### Embedded Checkout
+
+```typescript
+// Create checkout session
+const response = await fetch('/api/stripe/checkout', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    planId: 'price_xxx',
+    successUrl: 'https://yoursite.com/success',
+    cancelUrl: 'https://yoursite.com/cancel'
+  })
+});
+
+const { url } = await response.json();
+window.location.href = url;
+```
+
+## Webhook Events
+
+Handle subscription events:
+
+```typescript
+// /api/webhooks/stripe
+export async function POST(request) {
+  const sig = request.headers.get('stripe-signature');
+  const body = await request.text();
+  
+  let event;
+  try {
+    event = stripe.webhooks.constructEvent(body, sig, webhookSecret);
+  } catch (err) {
+    return new Response(`Webhook Error: ${err.message}`, { status: 400 });
+  }
+  
+  switch (event.type) {
+    case 'checkout.session.completed':
+      // Grant access
+      await grantAccess(event.data.object.customer_email);
+      break;
+    case 'customer.subscription.deleted':
+      // Revoke access
+      await revokeAccess(event.data.object.customer_email);
+      break;
+  }
+  
+  return new Response('OK');
+}
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+
+<Accordion icon="error" title="Payments not working">
+
+- Verify API keys are correct
+- Check webhook is configured
+- Ensure products/prices are created
+
+</Accordion>
+
+<Accordion icon="error" title="Webhook errors">
+
+- Verify webhook secret
+- Check webhook URL is accessible
+- Review Stripe logs in developer dashboard
+
+</Accordion>
+
+</AccordionGroup>

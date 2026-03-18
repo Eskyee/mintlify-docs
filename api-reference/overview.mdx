@@ -1,0 +1,94 @@
+---
+title: "Overview"
+description: "Agentbot API Reference"
+---
+
+# API Reference
+
+Complete API reference for Agentbot.
+
+## Base URL
+
+```
+https://agentbot.raveculture.xyz/api
+```
+
+## Authentication
+
+### API Keys
+
+Include your API key in the header:
+
+```bash
+curl -X GET https://agentbot.raveculture.xyz/api/agents \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+### JWT Tokens
+
+For user authentication:
+
+```bash
+curl -X GET https://agentbot.raveculture.xyz/api/user \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+## Rate Limits
+
+| Endpoint | Limit |
+|----------|-------|
+| /api/agents | 100/min |
+| /api/chat | 60/min |
+| /api/instance | 30/min |
+
+## Response Format
+
+### Success
+
+```json
+{
+  "success": true,
+  "data": { ... }
+}
+```
+
+### Error
+
+```json
+{
+  "success": false,
+  "error": {
+    "code": "INVALID_REQUEST",
+    "message": "Description of error"
+  }
+}
+```
+
+## Common Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/agents` | GET | List all agents |
+| `/api/agents` | POST | Create agent |
+| `/api/agents/[id]` | GET | Get agent |
+| `/api/agents/[id]` | DELETE | Delete agent |
+| `/api/chat` | POST | Send message to agent |
+| `/api/health` | GET | Health check |
+
+## SDK
+
+Use the Agentbot SDK:
+
+```bash
+npm install @agentbot/sdk
+```
+
+```typescript
+import { Agentbot } from '@agentbot/sdk';
+
+const client = new Agentbot({
+  apiKey: process.env.AGENTBOT_API_KEY
+});
+
+const agents = await client.agents.list();
+```

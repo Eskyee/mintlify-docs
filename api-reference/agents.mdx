@@ -1,0 +1,129 @@
+---
+title: "Agents API"
+description: "Manage agents via API"
+---
+
+# Agents API
+
+Create, manage, and interact with agents.
+
+## List Agents
+
+```http
+GET /api/agents
+```
+
+### Response
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "agent_123",
+      "name": "My Agent",
+      "model": "anthropic/claude-3-opus",
+      "status": "running",
+      "createdAt": "2026-03-01T00:00:00Z"
+    }
+  ]
+}
+```
+
+## Create Agent
+
+```http
+POST /api/agents
+```
+
+### Request Body
+
+```json
+{
+  "name": "My Agent",
+  "model": "anthropic/claude-3-opus",
+  "instructions": "You are a helpful assistant...",
+  "tools": ["web-search", "calculator"]
+}
+```
+
+### Response
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "agent_456",
+    "name": "My Agent",
+    "model": "anthropic/claude-3-opus",
+    "status": "starting",
+    "createdAt": "2026-03-18T00:00:00Z"
+  }
+}
+```
+
+## Get Agent
+
+```http
+GET /api/agents/:id
+```
+
+## Update Agent
+
+```http
+PATCH /api/agents/:id
+```
+
+```json
+{
+  "name": "New Name",
+  "instructions": "Updated instructions...",
+  "model": "anthropic/claude-3-sonnet"
+}
+```
+
+## Delete Agent
+
+```http
+DELETE /api/agents/:id
+```
+
+## Send Message
+
+```http
+POST /api/chat
+```
+
+```json
+{
+  "agentId": "agent_123",
+  "message": "Hello!",
+  "platform": "telegram"
+}
+```
+
+## Get Agent Logs
+
+```http
+GET /api/agents/:id/logs
+```
+
+## Get Agent Stats
+
+```http
+GET /api/agents/:id/stats
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "data": {
+    "messagesToday": 42,
+    "totalMessages": 1250,
+    "avgResponseTime": "1.2s",
+    "uptime": "99.9%"
+  }
+}
+```

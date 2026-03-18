@@ -1,0 +1,152 @@
+---
+title: "Authentication"
+description: "Authentication API endpoints"
+---
+
+# Authentication API
+
+Manage user authentication.
+
+## Sign Up
+
+```http
+POST /api/register
+```
+
+### Request Body
+
+```json
+{
+  "email": "user@example.com",
+  "password": "securepassword",
+  "name": "John Doe"
+}
+```
+
+### Response
+
+```json
+{
+  "success": true,
+  "user": {
+    "id": "user_123",
+    "email": "user@example.com",
+    "name": "John Doe"
+  }
+}
+```
+
+## Sign In
+
+```http
+POST /api/auth/callback/credentials
+```
+
+### Request Body
+
+```json
+{
+  "email": "user@example.com",
+  "password": "securepassword"
+}
+```
+
+## OAuth Sign In
+
+### GitHub
+
+```http
+GET /api/auth/github
+```
+
+Redirects to GitHub OAuth.
+
+### Google
+
+```http
+GET /api/auth/google
+```
+
+Redirects to Google OAuth.
+
+## Get Current User
+
+```http
+GET /api/user
+```
+
+Requires authentication.
+
+Response:
+
+```json
+{
+  "success": true,
+  "user": {
+    "id": "user_123",
+    "email": "user@example.com",
+    "name": "John Doe",
+    "plan": "solo",
+    "createdAt": "2026-01-01T00:00:00Z"
+  }
+}
+```
+
+## Update Profile
+
+```http
+PATCH /api/settings
+```
+
+```json
+{
+  "name": "New Name",
+  "avatar": "https://..."
+}
+```
+
+## Change Password
+
+```http
+POST /api/settings/password
+```
+
+```json
+{
+  "currentPassword": "oldpassword",
+  "newPassword": "newpassword"
+}
+```
+
+## Forgot Password
+
+```http
+POST /api/auth/forgot-password
+```
+
+```json
+{
+  "email": "user@example.com"
+}
+```
+
+## Reset Password
+
+```http
+POST /api/auth/reset-password
+```
+
+```json
+{
+  "token": "reset_token",
+  "newPassword": "newpassword"
+}
+```
+
+## Webhook Events
+
+| Event | Description |
+|-------|-------------|
+| `user.created` | New user registered |
+| `user.updated` | Profile updated |
+| `user.deleted` | Account deleted |

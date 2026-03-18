@@ -3,20 +3,32 @@
   "name": "Agentbot",
   "theme": "willow",
   "colors": {
-    "primary": "#000000",
-    "light": "#333333",
-    "dark": "#000000"
+    "primary": "#8b5cf6",
+    "light": "#a78bfa",
+    "dark": "#8b5cf6"
   },
   "favicon": "/favicon.svg",
   "navigation": {
     "left": [
       {
         "group": "Getting Started",
-        "pages": ["index", "quickstart"]
+        "pages": ["index", "quickstart", "installation"]
       },
       {
-        "group": "API",
-        "pages": ["api-reference/introduction"]
+        "group": "Core Concepts",
+        "pages": ["concepts/agents", "concepts/workflows", "concepts/api-keys"]
+      },
+      {
+        "group": "Integrations",
+        "pages": ["integrations/telegram", "integrations/discord", "integrations/whatsapp"]
+      },
+      {
+        "group": "Payments",
+        "pages": ["payments/stripe", "payments/x402"]
+      },
+      {
+        "group": "API Reference",
+        "pages": ["api-reference/overview", "api-reference/agents", "api-reference/auth"]
       }
     ]
   },
@@ -27,12 +39,12 @@
         "href": "https://agentbot.raveculture.xyz"
       },
       {
-        "label": "API",
-        "href": "https://agentbot.raveculture.xyz/api"
-      },
-      {
         "label": "GitHub",
         "href": "https://github.com/raveculture/agentbot"
+      },
+      {
+        "label": "Discord",
+        "href": "https://discord.gg/raveculture"
       }
     ]
   },
@@ -41,6 +53,10 @@
       {
         "label": "GitHub",
         "href": "https://github.com/raveculture/agentbot"
+      },
+      {
+        "label": "Discord",
+        "href": "https://discord.gg/raveculture"
       }
     ]
   }
