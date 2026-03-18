@@ -65,6 +65,10 @@
       {
         "label": "Talent",
         "href": "https://talent.app/raveculture.base.eth"
+      },
+      {
+        "label": "Base",
+        "href": "https://www.base.dev"
       }
     ]
   },
