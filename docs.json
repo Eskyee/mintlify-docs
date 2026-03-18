@@ -57,14 +57,17 @@
       {
         "label": "Discord",
         "href": "https://discord.gg/eskyee"
+      },
+      {
+        "label": "Google Dev",
+        "href": "https://g.dev/agentbot"
       }
     ]
   },
   "footer": {
     "socialLinks": {
       "github": "https://github.com/raveculture/agentbot",
-      "discord": "https://discord.gg/eskyee",
-      "googleDeveloper": "https://g.dev/agentbot"
+      "discord": "https://discord.gg/eskyee"
     }
   }
 }
