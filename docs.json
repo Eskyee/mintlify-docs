@@ -12,42 +12,40 @@
     "dark": "#8b5cf6"
   },
   "favicon": "/favicon.svg",
-  "navigation": {
-    "groups": [
-      {
-        "group": "Getting Started",
-        "pages": ["index", "quickstart", "installation", "build", "development-standard"]
-      },
-      {
-        "group": "Core Concepts",
-        "pages": ["concepts/agents", "concepts/workflows", "concepts/api-keys"]
-      },
-      {
-        "group": "Integrations",
-        "pages": ["integrations/telegram", "integrations/discord", "integrations/whatsapp"]
-      },
-      {
-        "group": "Core Services",
-        "pages": ["services/blockdb", "services/skills-marketplace", "services/base-fm"]
-      },
-      {
-        "group": "Payments",
-        "pages": ["payments/stripe", "payments/x402"]
-      },
-      {
-        "group": "API Reference",
-        "pages": ["api-reference/overview", "api-reference/agents", "api-reference/auth"]
-      },
-      {
-        "group": "MCP",
-        "pages": ["mcp"]
-      },
-      {
-        "group": "Security",
-        "pages": ["security"]
-      }
-    ]
-  },
+  "navigation": [
+    {
+      "group": "Getting Started",
+      "pages": ["index", "quickstart", "installation", "build", "development-standard"]
+    },
+    {
+      "group": "Core Concepts",
+      "pages": ["concepts/agents", "concepts/workflows", "concepts/api-keys"]
+    },
+    {
+      "group": "Integrations",
+      "pages": ["integrations/telegram", "integrations/discord", "integrations/whatsapp"]
+    },
+    {
+      "group": "Core Services",
+      "pages": ["services/blockdb", "services/skills-marketplace", "services/base-fm"]
+    },
+    {
+      "group": "Payments",
+      "pages": ["payments/stripe", "payments/x402"]
+    },
+    {
+      "group": "API Reference",
+      "pages": ["api-reference/overview", "api-reference/agents", "api-reference/auth"]
+    },
+    {
+      "group": "MCP",
+      "pages": ["mcp"]
+    },
+    {
+      "group": "Security",
+      "pages": ["security"]
+    }
+  ],
   "navbar": {
     "logo": {
       "light": "/logo/agentbot-logo-light.svg",
