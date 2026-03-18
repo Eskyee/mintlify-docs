@@ -1,7 +1,6 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "indigo",
-  "name": "Agentbot",
+  "theme": "mint",
   "colors": {
     "primary": "#6366f1",
     "light": "#818cf8",
