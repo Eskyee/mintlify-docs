@@ -41,6 +41,10 @@
       {
         "group": "MCP",
         "pages": ["mcp"]
+      },
+      {
+        "group": "Security",
+        "pages": ["security"]
       }
     ]
   },

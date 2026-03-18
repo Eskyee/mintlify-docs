@@ -1,0 +1,71 @@
+---
+title: "Security"
+description: "Agentbot security practices and trust guarantees"
+---
+
+# Security & Trust
+
+Agentbot is committed to keeping your data safe. Here's our security posture.
+
+## Security Overview
+
+| Category | Status | Notes |
+|----------|--------|-------|
+| Data Encryption | ✅ | TLS 1.3 in transit |
+| API Authorization | ✅ | Session-based auth |
+| Input Validation | ✅ | Allowlist + sanitization |
+| Rate Limiting | ✅ | Per-IP limits |
+| Audit Logging | ✅ | All actions logged |
+
+## Skill Security Matrix
+
+| Skill | Input Validation | Sanitization | User Data | External Calls |
+|-------|------------------|---------------|-----------|----------------|
+| Visual Synthesizer | ✅ | ✅ | ❌ | ✅ (Replicate) |
+| Track Archaeologist | ✅ | ✅ | ❌ | ❌ |
+| Setlist Oracle | ✅ | ✅ | ❌ | ❌ |
+| Groupie Manager | ✅ | ✅ | ✅ (demo) | ❌ |
+
+## Trust Principles
+
+### 1. Minimal Data Collection
+- We don't store prompts or generated images permanently
+- Demo skills use in-memory data that resets on restart
+- No user data sent to third parties (except Replicate for image generation)
+
+### 2. Input Sanitization
+All user inputs are:
+- Length-limited (max 100-500 chars depending on field)
+- Type-checked (strings, arrays, numbers)
+- Allowlist-validated (enum values must match predefined lists)
+- HTML/JS stripped (`<>` characters removed)
+
+### 3. API Key Security
+- Replicate API tokens stored in server-side environment variables
+- Never exposed to client-side code
+- Used only for image generation requests
+
+### 4. Read-Only Skills
+Track Archaeologist and Setlist Oracle are **read-only**:
+- No user data stored
+- No external API calls
+- Uses only in-memory mock catalog
+- Safe for public demo use
+
+## Known Limitations
+
+### Demo Mode
+Currently skills run in demo mode without authentication. In production:
+- User sessions will be required
+- Each user's data will be isolated
+- API rate limits will be per-user
+
+### In-Memory Storage
+Groupie Manager uses in-memory Map storage. Data is:
+- Lost on server restart
+- Not shared between server instances
+- Only for demonstration purposes
+
+## Reporting Issues
+
+Found a security issue? Email security@raveculture.xyz or open a GitHub issue.
