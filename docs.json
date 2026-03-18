@@ -23,8 +23,16 @@
   "navbar": {
     "links": [
       {
-        "label": "← Back to Agentbot",
+        "label": "Agentbot",
         "href": "https://agentbot.raveculture.xyz"
+      },
+      {
+        "label": "API",
+        "href": "https://agentbot.raveculture.xyz/api"
+      },
+      {
+        "label": "GitHub",
+        "href": "https://github.com/raveculture/agentbot"
       }
     ]
   },
