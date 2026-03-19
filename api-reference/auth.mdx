@@ -1,25 +1,25 @@
-
-description: "Authentication API endpoints"
+---
+title: Authentication API
+description: "Authentication API endpoints for user management and identity verification"
+---
 
 # Authentication API
 
-Manage user authentication.
+Manage user authentication, password resets, Farcaster identity, and token gating.
 
-## Sign Up
+## Sign up
 
 ```http
 POST /api/register
 ```
 
-### Request Body
+### Request body
 
-```json
-{
-  "email": "user@example.com",
-  "password": "securepassword",
-  "name": "John Doe"
-}
-```
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `email` | string | Yes | User email address |
+| `password` | string | Yes | Password (minimum 6 characters) |
+| `name` | string | Yes | Display name |
 
 ### Response
 
@@ -34,13 +34,13 @@ POST /api/register
 }
 ```
 
-## Sign In
+## Sign in
 
 ```http
 POST /api/auth/callback/credentials
 ```
 
-### Request Body
+### Request body
 
 ```json
 {
@@ -49,7 +49,7 @@ POST /api/auth/callback/credentials
 }
 ```
 
-## OAuth Sign In
+## OAuth sign in
 
 ### GitHub
 
@@ -57,7 +57,7 @@ POST /api/auth/callback/credentials
 GET /api/auth/github
 ```
 
-Redirects to GitHub OAuth.
+Redirects to GitHub OAuth flow.
 
 ### Google
 
@@ -65,17 +65,17 @@ Redirects to GitHub OAuth.
 GET /api/auth/google
 ```
 
-Redirects to Google OAuth.
+Redirects to Google OAuth flow.
 
-## Get Current User
+## Get current user
 
 ```http
 GET /api/user
 ```
 
-Requires authentication.
+Requires session authentication.
 
-Response:
+### Response
 
 ```json
 {
@@ -90,58 +90,230 @@ Response:
 }
 ```
 
-## Update Profile
+## Update profile
 
 ```http
 PATCH /api/settings
 ```
 
-```json
-{
-  "name": "New Name",
-  "avatar": "https://..."
-}
-```
+### Request body
 
-## Change Password
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | string | No | New display name |
+| `avatar` | string | No | Avatar URL |
+
+## Change password
 
 ```http
 POST /api/settings/password
 ```
 
-```json
-{
-  "currentPassword": "oldpassword",
-  "newPassword": "newpassword"
-}
-```
+### Request body
 
-## Forgot Password
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `currentPassword` | string | Yes | Current password |
+| `newPassword` | string | Yes | New password |
+
+## Forgot password
 
 ```http
 POST /api/auth/forgot-password
 ```
 
+Rate-limited per IP address. Always returns the same response regardless of whether the email exists, to prevent user enumeration.
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `email` | string | Yes | Account email address |
+
+### Response
+
 ```json
 {
-  "email": "user@example.com"
+  "message": "If an account exists, a reset link has been sent"
 }
 ```
 
-## Reset Password
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | Email is required or invalid email format |
+| 429 | Too many requests |
+| 500 | Email service error |
+
+## Reset password
 
 ```http
 POST /api/auth/reset-password
 ```
 
+Rate-limited per IP address.
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `token` | string | Yes | Reset token from the email link |
+| `password` | string | Yes | New password (minimum 6 characters) |
+
+### Response
+
 ```json
 {
-  "token": "reset_token",
-  "newPassword": "newpassword"
+  "message": "Password reset successfully"
 }
 ```
 
-## Webhook Events
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | Token and password are required, password too short, or invalid/expired token |
+| 404 | User not found |
+| 429 | Too many requests |
+
+## Farcaster authentication
+
+### Verify Farcaster identity
+
+```http
+POST /api/auth/farcaster/verify
+```
+
+Verifies a Farcaster ID token and optionally checks `$RAVE` token gating on Base.
+
+#### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `fidToken` | string | Yes | Farcaster ID token |
+| `address` | string | No | Ethereum address for token gating check |
+
+#### Response
+
+```json
+{
+  "success": true,
+  "sessionToken": "base64-encoded-session",
+  "address": "0x...",
+  "message": "Farcaster verification successful",
+  "tokenGated": true,
+  "accessLevel": "premium"
+}
+```
+
+#### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | Missing Farcaster ID token |
+| 403 | Token gating failed (insufficient `$RAVE` balance). Response includes `required`, `minBalance` fields |
+| 500 | Verification failed |
+
+### Refresh Farcaster token
+
+```http
+POST /api/auth/farcaster/refresh
+```
+
+#### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `refreshToken` | string | Yes | Base64-encoded refresh token |
+
+#### Response
+
+```json
+{
+  "success": true,
+  "sessionToken": "base64-new-session",
+  "expiresIn": 86400,
+  "message": "Token refreshed successfully"
+}
+```
+
+#### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | Missing refresh token |
+| 401 | Invalid refresh token |
+| 500 | Token refresh failed |
+
+## Token gating
+
+### Verify token access (POST)
+
+```http
+POST /api/auth/token-gating/verify
+```
+
+Checks whether a wallet holds sufficient `$RAVE` tokens on Base mainnet.
+
+#### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `fid` | string | Yes | Farcaster ID |
+| `address` | string | Yes | Ethereum address (0x-prefixed, 42 characters) |
+
+#### Response
+
+```json
+{
+  "fid": "12345",
+  "address": "0x...",
+  "hasAccess": true,
+  "tokenGated": true,
+  "minBalance": "1000000000000000000",
+  "token": "RAVE",
+  "chain": "base",
+  "message": "User has sufficient $RAVE balance",
+  "timestamp": "2026-03-19T00:00:00Z"
+}
+```
+
+#### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | Missing fid or address, or invalid Ethereum address |
+| 500 | Verification failed |
+
+### Verify token access (GET)
+
+```http
+GET /api/auth/token-gating/verify?address=0x...
+```
+
+#### Query parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `address` | string | Yes | Ethereum address (0x-prefixed, 42 characters) |
+
+#### Response
+
+```json
+{
+  "address": "0x...",
+  "hasAccess": true,
+  "tokenGated": true,
+  "minBalance": "1000000000000000000",
+  "token": "RAVE",
+  "chain": "base",
+  "contractAddress": "0x6EE72eEDEfBa8937Ec8c36dEd9B8c1ef9ca7A3db",
+  "rpcEndpoint": "https://mainnet.base.org"
+}
+```
+
+## Webhook events
 
 | Event | Description |
 |-------|-------------|

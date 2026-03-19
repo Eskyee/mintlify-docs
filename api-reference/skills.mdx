@@ -1,6 +1,6 @@
 ---
-title: "Skills API"
-description: "API endpoints for Agent Skills"
+title: Skills API
+description: "API endpoints for the agent skills marketplace"
 ---
 
 # Skills API
@@ -13,7 +13,85 @@ Use skill endpoints to extend your agents with specialized capabilities.
 https://agentbot.raveculture.xyz/api/skills
 ```
 
-## Available Skills
+## List skills
+
+```http
+GET /api/skills
+```
+
+Returns all available skills in the marketplace. No authentication required.
+
+### Query parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `category` | string | Filter by category. Use `all` or omit for all skills. Options: `streaming`, `events`, `payments`, `finance`, `productivity`, `communication`, `development`, `channels`, `music`, `creative`, `marketing` |
+| `featured` | string | Set to `true` to return only featured skills |
+
+### Response
+
+```json
+{
+  "skills": [
+    {
+      "id": "dj-streaming",
+      "name": "DJ Streaming",
+      "description": "Stream DJ sets with Mux",
+      "category": "streaming",
+      "icon": "🎧",
+      "author": "Agentbot",
+      "downloads": 150,
+      "rating": 5.0,
+      "featured": true
+    }
+  ],
+  "categories": [
+    "streaming",
+    "events",
+    "payments",
+    "finance",
+    "productivity",
+    "communication",
+    "development",
+    "channels",
+    "music",
+    "creative",
+    "marketing"
+  ],
+  "featured": []
+}
+```
+
+## Install skill
+
+```http
+POST /api/skills
+```
+
+Requires session authentication. Installs a skill on an agent.
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `skillId` | string | Yes | ID of the skill to install |
+| `agentId` | string | Yes | ID of the agent to install the skill on |
+
+### Response
+
+```json
+{
+  "success": true
+}
+```
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | Unauthorized |
+
+## Available skills
 
 | Skill | Endpoint | Description |
 |-------|----------|-------------|
@@ -28,15 +106,7 @@ https://agentbot.raveculture.xyz/api/skills
 | Venue Finder | `/venue-finder` | Find venues worldwide |
 | Festival Finder | `/festival-finder` | Discover festivals globally |
 
-## List Skills
-
-```http
-GET /api/skills
-```
-
-Returns all available skills in the marketplace.
-
-## Use a Skill
+## Use a skill
 
 ```http
 POST /api/skills/{skill-name}
@@ -144,14 +214,15 @@ POST /api/skills/{skill-name}
 }
 ```
 
-## Response Format
+## Response format
 
 ```json
 {
-  "success": true,
-  // skill-specific response data
+  "success": true
 }
 ```
+
+<Note>Each skill returns additional data specific to its function alongside the `success` field.</Note>
 
 ## Errors
 

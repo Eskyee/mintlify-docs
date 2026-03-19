@@ -1,0 +1,117 @@
+---
+title: Health API
+description: "Health check and heartbeat endpoints for monitoring"
+---
+
+# Health API
+
+Monitor system health and configure heartbeat schedules.
+
+## Health check
+
+```http
+GET /api/health
+```
+
+No authentication required. Returns system health metrics including CPU and memory usage.
+
+### Response
+
+```json
+{
+  "status": "ok",
+  "health": "healthy",
+  "timestamp": "2026-03-19T00:00:00Z",
+  "cpu": {
+    "usage": 15.3,
+    "cores": 4
+  },
+  "memory": {
+    "usage": 42.1,
+    "total": 8589934592,
+    "used": 3617054720,
+    "free": 4972879872
+  },
+  "uptime": 86400
+}
+```
+
+The `health` field reflects overall system status:
+
+| Value | Condition |
+|-------|-----------|
+| `healthy` | CPU and memory usage both below 70% |
+| `degraded` | CPU or memory usage above 70% |
+| `unhealthy` | CPU or memory usage above 85% |
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 500 | System unhealthy |
+
+## Get heartbeat settings
+
+```http
+GET /api/heartbeat
+```
+
+Requires session authentication.
+
+### Response
+
+```json
+{
+  "heartbeat": {
+    "frequency": "3h",
+    "enabled": true,
+    "lastHeartbeat": "2026-03-19T00:00:00Z",
+    "nextHeartbeat": "2026-03-19T03:00:00Z"
+  },
+  "message": "Heartbeat scheduling database integration pending"
+}
+```
+
+## Update heartbeat settings
+
+```http
+POST /api/heartbeat
+```
+
+Requires session authentication.
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `frequency` | string | No | Heartbeat interval (for example, `3h`) |
+| `enabled` | boolean | No | Enable or disable heartbeats |
+
+### Response
+
+```json
+{
+  "frequency": "3h",
+  "enabled": true,
+  "lastUpdated": "2026-03-19T00:00:00Z",
+  "lastHeartbeat": "2026-03-19T00:00:00Z",
+  "nextHeartbeat": "2026-03-19T03:00:00Z"
+}
+```
+
+## Delete heartbeat settings
+
+```http
+DELETE /api/heartbeat
+```
+
+Requires session authentication. Resets heartbeat configuration to defaults.
+
+### Response
+
+```json
+{
+  "success": true,
+  "message": "Heartbeat settings reset"
+}
+```
