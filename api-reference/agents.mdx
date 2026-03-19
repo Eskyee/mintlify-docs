@@ -357,23 +357,25 @@ When the backend is unavailable, mock data is returned with `"status": "mock"`:
 
 ## Agent lifecycle
 
+Lifecycle operations use the `/api/instance/:userId` endpoint pattern. These endpoints require session authentication and proxy to the backend agent management service.
+
 ### Start agent
 
 ```http
-POST /api/agents/:id/start
+POST /api/instance/:userId/start
 ```
 
 ```json
 {
   "success": true,
-  "status": "active"
+  "status": "running"
 }
 ```
 
 ### Stop agent
 
 ```http
-POST /api/agents/:id/stop
+POST /api/instance/:userId/stop
 ```
 
 ```json
@@ -386,56 +388,38 @@ POST /api/agents/:id/stop
 ### Restart agent
 
 ```http
-POST /api/agents/:id/restart
+POST /api/instance/:userId/restart
 ```
 
 ```json
 {
   "success": true,
-  "status": "active",
-  "healedLegacyModel": false,
-  "healMessage": "skip:no-legacy",
-  "openclawVersion": "2026.3.13"
+  "status": "running"
 }
 ```
 
 ### Update agent image
 
 ```http
-POST /api/agents/:id/update
+POST /api/instance/:userId/update
 ```
 
-#### Request body
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `image` | string | No | Docker image tag. Defaults to the latest OpenClaw image if omitted. Must match a valid Docker image pattern. |
-
-#### Response
+Triggers an image update on the backend.
 
 ```json
 {
   "success": true,
-  "status": "active",
-  "image": "ghcr.io/openclaw/openclaw:2026.3.13",
-  "previousImage": "ghcr.io/openclaw/openclaw:2026.3.12",
-  "backupPath": null,
-  "openclawVersion": "2026.3.13"
+  "status": "running"
 }
 ```
-
-#### Errors
-
-| Code | Description |
-|------|-------------|
-| 400 | Invalid Docker image value |
-| 500 | Update failed |
 
 ### Repair agent
 
 ```http
-POST /api/agents/:id/repair
+POST /api/instance/:userId/repair
 ```
+
+Returns the backend response directly.
 
 ```json
 {
@@ -447,8 +431,10 @@ POST /api/agents/:id/repair
 ### Reset agent memory
 
 ```http
-POST /api/agents/:id/reset-memory
+POST /api/instance/:userId/reset-memory
 ```
+
+Returns the backend response directly.
 
 ```json
 {
@@ -457,10 +443,69 @@ POST /api/agents/:id/reset-memory
 }
 ```
 
+### Lifecycle error responses
+
+All lifecycle endpoints return the following shape on failure:
+
+```json
+{
+  "success": false,
+  "status": "error"
+}
+```
+
+| Code | Description |
+|------|-------------|
+| 502 | Backend service unavailable |
+| 500 | Internal server error |
+
+## Get instance details
+
+```http
+GET /api/instance/:userId
+```
+
+Returns the current status and metadata for an agent instance.
+
+### Response
+
+```json
+{
+  "userId": "user_123",
+  "status": "running",
+  "startedAt": "2026-03-01T00:00:00Z",
+  "subdomain": "user_123.agents.localhost",
+  "url": "https://user_123.agents.localhost",
+  "plan": "free",
+  "openclawVersion": "2026.2.17"
+}
+```
+
+## Get instance stats
+
+```http
+GET /api/instance/:userId/stats
+```
+
+Returns resource usage statistics for an agent instance.
+
+### Response
+
+```json
+{
+  "userId": "user_123",
+  "cpu": "0.15%",
+  "memory": "128MiB",
+  "status": "running",
+  "plan": "starter",
+  "openclawVersion": "2026.3.13"
+}
+```
+
 ## Get agent gateway token
 
 ```http
-GET /api/agents/:id/token
+GET /api/instance/:userId/token
 ```
 
 Returns an auto-generated gateway token for the agent. A new token is created if none exists.
@@ -475,7 +520,7 @@ Returns an auto-generated gateway token for the agent. A new token is created if
 
 | Code | Description |
 |------|-------------|
-| 404 | Agent not found |
+| 502 | Backend service unavailable |
 | 500 | Failed to get token |
 
 ## Agent verification
