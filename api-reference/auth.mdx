@@ -60,13 +60,15 @@ POST /api/auth/callback/credentials
 
 ## OAuth sign in
 
+OAuth providers support automatic account linking. If a user with the same email address already exists, the OAuth account is linked to the existing user on first sign-in. This lets users who originally signed up with email and password add GitHub or Google login without creating a duplicate account.
+
 ### GitHub
 
 ```http
 GET /api/auth/github
 ```
 
-Redirects to GitHub OAuth flow.
+Redirects to GitHub OAuth flow. Requires `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` to be configured.
 
 ### Google
 
@@ -74,7 +76,7 @@ Redirects to GitHub OAuth flow.
 GET /api/auth/google
 ```
 
-Redirects to Google OAuth flow.
+Redirects to Google OAuth flow. Requires `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` to be configured.
 
 ## Get current user
 
