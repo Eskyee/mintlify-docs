@@ -78,6 +78,7 @@ API keys use the `sk_` prefix and are shown only once at creation time. See the 
 | 404 | Resource not found |
 | 429 | Too many requests or tier limit reached |
 | 500 | Internal server error |
+| 502 | Backend service unavailable |
 | 503 | Service unavailable |
 
 ## Endpoint reference
@@ -97,13 +98,15 @@ API keys use the `sk_` prefix and are shown only once at creation time. See the 
 | `/api/agents/:id/verify` | GET | Get verification status |
 | `/api/agents/:id/verify` | POST | Verify an agent |
 | `/api/agents/:id/verify` | DELETE | Remove verification |
-| `/api/agents/:id/start` | POST | Start an agent |
-| `/api/agents/:id/stop` | POST | Stop an agent |
-| `/api/agents/:id/restart` | POST | Restart an agent |
-| `/api/agents/:id/update` | POST | Update agent image |
-| `/api/agents/:id/repair` | POST | Repair an agent |
-| `/api/agents/:id/reset-memory` | POST | Reset agent memory |
-| `/api/agents/:id/token` | GET | Get agent gateway token |
+| `/api/instance/:userId` | GET | Get instance details |
+| `/api/instance/:userId/start` | POST | Start an agent |
+| `/api/instance/:userId/stop` | POST | Stop an agent |
+| `/api/instance/:userId/restart` | POST | Restart an agent |
+| `/api/instance/:userId/update` | POST | Update agent image |
+| `/api/instance/:userId/repair` | POST | Repair an agent |
+| `/api/instance/:userId/reset-memory` | POST | Reset agent memory |
+| `/api/instance/:userId/token` | GET | Get agent gateway token |
+| `/api/instance/:userId/stats` | GET | Get instance stats |
 | `/api/agents/provision` | POST | Provision a new agent |
 | `/api/agents/provision` | GET | List provisioned agents |
 | `/api/chat` | POST | Send message to agent |
