@@ -39,6 +39,7 @@ API keys use the `sk_` prefix and are shown only once at creation time. See the 
 | `/api/agents` | 100/min |
 | `/api/chat` | 60/min |
 | `/api/instance` | 30/min |
+| `/api/register` | Rate-limited per IP |
 | `/api/auth/forgot-password` | Rate-limited per IP |
 | `/api/auth/reset-password` | Rate-limited per IP |
 
@@ -72,7 +73,7 @@ API keys use the `sk_` prefix and are shown only once at creation time. See the 
 | 400 | Bad request or validation error |
 | 401 | Unauthorized (missing or invalid authentication) |
 | 402 | Payment required (no active subscription) |
-| 403 | Forbidden (insufficient permissions or token gating failure) |
+| 403 | Forbidden (insufficient permissions, token gating failure, or bot detection) |
 | 404 | Resource not found |
 | 429 | Too many requests or tier limit reached |
 | 500 | Internal server error |
@@ -120,6 +121,7 @@ API keys use the `sk_` prefix and are shown only once at creation time. See the 
 | `/api/wallet/create` | POST | Create a CDP wallet |
 | `/api/wallet/cdp` | GET | Get CDP wallet status |
 | `/api/wallet/cdp` | POST | Create a CDP wallet client |
+| `/api/register` | POST | Create a new account |
 | `/api/auth/forgot-password` | POST | Request password reset |
 | `/api/auth/reset-password` | POST | Reset password |
 | `/api/auth/farcaster/verify` | POST | Verify Farcaster identity |

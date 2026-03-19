@@ -13,6 +13,7 @@ Agentbot is committed to keeping your data safe. Here's our security posture.
 |----------|--------|-------|
 | Data Encryption | ✅ | TLS 1.3 in transit |
 | API Authorization | ✅ | Session-based auth |
+| Bot Detection | ✅ | Automated request filtering on sensitive endpoints |
 | Input Validation | ✅ | Allowlist + sanitization |
 | Rate Limiting | ✅ | Per-IP limits |
 | Audit Logging | ✅ | All actions logged |
@@ -31,6 +32,19 @@ Agentbot is committed to keeping your data safe. Here's our security posture.
 | Event Scheduler | ✅ | ✅ | ❌ | ❌ |
 | Venue Finder | ✅ | ✅ | ❌ | ❌ |
 | Festival Finder | ✅ | ✅ | ❌ | ❌ |
+
+## Bot detection
+
+Sensitive API endpoints are protected by bot detection to prevent automated abuse. Protected endpoints return a `403` status code when a request is identified as coming from an automated source.
+
+**Protected endpoints:**
+
+| Endpoint | Purpose |
+|----------|---------|
+| `/api/register` | Prevents fake account creation |
+| `/api/auth/forgot-password` | Blocks automated password reset abuse |
+
+Requests from standard web browsers are not affected. Automated clients such as scripts or bots may be blocked. If you are building a legitimate integration and receive a `403` response, ensure your requests originate from an environment that supports browser-level verification.
 
 ## Trust Principles
 
