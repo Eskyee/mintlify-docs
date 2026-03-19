@@ -42,6 +42,7 @@
           "api-reference/auth",
           "api-reference/keys",
           "api-reference/wallet",
+          "api-reference/metrics",
           "api-reference/skills",
           "api-reference/memory",
           "api-reference/ai",

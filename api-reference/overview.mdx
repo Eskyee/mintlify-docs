@@ -116,6 +116,10 @@ API keys use the `sk_` prefix and are shown only once at creation time. See the 
 | `/api/heartbeat` | DELETE | Reset heartbeat settings |
 | `/api/memory` | GET | Get agent memory |
 | `/api/memory` | POST | Store agent memory |
+| `/api/metrics` | GET | Get platform-wide metrics |
+| `/api/metrics/:userId/historical` | GET | Get historical time-series metrics |
+| `/api/metrics/:userId/performance` | GET | Get current performance metrics |
+| `/api/metrics/:userId/summary` | GET | Get music industry metrics summary |
 | `/api/credits` | GET | Get credit balance |
 | `/api/keys` | GET | List API keys |
 | `/api/keys` | POST | Create API key |
