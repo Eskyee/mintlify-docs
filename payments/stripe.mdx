@@ -65,6 +65,35 @@ All plans are billed monthly in GBP.
 | Label | £149/mo | 10 Creative Agent threads, +3 OpenClaw seats, white-label emails, 8GB RAM |
 | Network | £499/mo | Unlimited agents and OpenClaw seats, white-label reselling, 16GB RAM |
 
+## Enterprise add-ons
+
+Individual add-ons can be purchased on top of any subscription plan. All add-on prices are billed monthly in GBP.
+
+| Add-on | Price | Description |
+|--------|-------|-------------|
+| Audit Logs | £199/mo | Full traceability of every agent action and decision |
+| Slack Integration | £149/mo | Agents work inside your Slack workspace |
+| Salesforce Connector | £349/mo | Sync leads, contacts, and opportunities automatically |
+| API Access | £249/mo | Programmatic access to your agents via REST API |
+| Custom Integration | £499/mo | Custom connector built for your tools |
+| Dedicated Account Manager | £399/mo | Priority support and personalized onboarding |
+
+### Full Enterprise Suite
+
+The Full Enterprise Suite bundles all add-ons and additional enterprise capabilities at a single price of **£4,999/mo**. It includes:
+
+- Unlimited AI Agents with hierarchical task delegation
+- Enterprise SSO/SAML and role-based access control (RBAC)
+- Credential isolation and zero-trust security
+- Full audit logging and compliance tooling
+- Pre-built connectors for Salesforce, Cisco, Google Cloud, Adobe, and CrowdStrike
+- Tool use framework for external APIs
+- Hardware agnostic deployment (NVIDIA, AMD, Intel support)
+- 24/7 priority support with SLA guarantee
+- Mission Control dashboard and analytics
+
+To purchase the Full Enterprise Suite, contact sales or use the billing page in the dashboard.
+
 ## Checkout
 
 ### Start a checkout session
@@ -187,7 +216,24 @@ Enable Bring Your Own Key mode so AI requests use your own API keys instead of p
 
 ```json
 {
-  "action": "enable-byok"
+  "action": "enable-byok",
+  "apiKey": "your-provider-api-key",
+  "provider": "openrouter"
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `action` | string | Yes | Must be `enable-byok` |
+| `apiKey` | string | Yes | Your API key for the AI provider |
+| `provider` | string | Yes | AI provider name (for example `openrouter`, `anthropic`, `openai`) |
+
+**Response**
+
+```json
+{
+  "success": true,
+  "message": "BYOK enabled with openrouter. You'll pay openrouter directly for AI usage."
 }
 ```
 
@@ -198,6 +244,15 @@ Switch back to platform credits for AI usage.
 ```json
 {
   "action": "disable-byok"
+}
+```
+
+**Response**
+
+```json
+{
+  "success": true,
+  "message": "BYOK disabled. Using platform credits."
 }
 ```
 
@@ -223,14 +278,45 @@ Retrieve your current daily usage statistics.
 
 #### Buy credits
 
-Purchase a credit pack to top up your account balance.
+Purchase a credit pack to top up your account balance. Pass one of the available pack sizes.
 
 ```json
 {
   "action": "buy-credits",
-  "priceId": "price_xxx"
+  "pack": "200"
 }
 ```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `action` | string | Yes | Must be `buy-credits` |
+| `pack` | string | Yes | Credit pack size: `50`, `200`, or `500` |
+
+**Response**
+
+```json
+{
+  "success": true,
+  "credits": 15,
+  "price": "$15"
+}
+```
+
+| Pack size | Credits | Price |
+|-----------|---------|-------|
+| `50` | 5 | $5 |
+| `200` | 15 | $15 |
+| `500` | 30 | $30 |
+
+## Storage upgrade
+
+Upgrade to the Pro plan with 50GB storage via a dedicated checkout endpoint.
+
+```http
+POST /api/stripe/storage-upgrade
+```
+
+This endpoint requires authentication. No request body is needed — the upgrade is a fixed Pro plan at £39/mo with 50GB storage, WhatsApp support, and a custom domain.
 
 **Response**
 
@@ -239,6 +325,14 @@ Purchase a credit pack to top up your account balance.
   "url": "https://checkout.stripe.com/..."
 }
 ```
+
+Redirect the user to the returned `url` to complete the upgrade. On success, the user is redirected to the files dashboard. On cancellation, the user returns to the files dashboard with an error parameter.
+
+| Status | Description |
+|--------|-------------|
+| 200 | Checkout URL returned |
+| 401 | Unauthorized (authentication required) |
+| 500 | Stripe not configured or checkout creation failed |
 
 ## Webhook events
 
