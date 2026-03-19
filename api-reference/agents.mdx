@@ -540,6 +540,267 @@ DELETE /api/agents/:id/verify
 }
 ```
 
+## Provision with channel tokens
+
+```http
+POST /api/provision
+```
+
+Provisions a new agent with messaging channel tokens. Requires authentication. Rate-limited per IP. At least one channel token is required.
+
+A dedicated Mux live stream is automatically created for the agent.
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `telegramToken` | string | Conditional | Telegram bot token. At least one channel token is required. |
+| `telegramUserId` | string | No | Telegram user ID for owner binding |
+| `whatsappToken` | string | Conditional | WhatsApp API token. At least one channel token is required. |
+| `whatsappPhoneNumberId` | string | No | WhatsApp phone number ID |
+| `whatsappBusinessAccountId` | string | No | WhatsApp Business Account ID |
+| `discordBotToken` | string | Conditional | Discord bot token. At least one channel token is required. |
+| `discordGuildId` | string | No | Discord guild (server) ID |
+| `discordChannelId` | string | No | Discord channel ID |
+| `aiProvider` | string | No | AI provider (default: `openrouter`) |
+| `apiKey` | string | No | API key for the AI provider |
+| `plan` | string | No | Plan tier (default: `free`) |
+
+### Response
+
+```json
+{
+  "success": true,
+  "userId": "a1b2c3d4e5f6g7h8",
+  "subdomain": "a1b2c3d4e5f6g7h8.agents.localhost",
+  "url": "https://a1b2c3d4e5f6g7h8.agents.localhost",
+  "streamKey": "live_abc123",
+  "liveStreamId": "stream_456"
+}
+```
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | At least one channel token required (Telegram, WhatsApp, or Discord) |
+| 401 | Unauthorized |
+| 429 | Too many requests |
+| 500 | Internal server error |
+| 502 | Provisioning service unavailable or returned an error |
+
+## Agent interaction
+
+```http
+GET /api/agent
+POST /api/agent
+```
+
+Unified endpoint for interacting with agents. All requests require session authentication. The `userId` is always bound to the authenticated session and cannot be overridden by the client.
+
+### GET actions
+
+Pass the `action` query parameter to select the operation.
+
+#### List endpoints
+
+```http
+GET /api/agent
+```
+
+Returns available endpoints and version information when no action is specified.
+
+```json
+{
+  "apiVersion": "1.0.0",
+  "agentbotVersion": "2026.3.1",
+  "endpoints": {
+    "GET /api/agent": "List endpoints",
+    "GET /api/agent?action=health": "Health status",
+    "GET /api/agent?action=sessions": "List sessions",
+    "GET /api/agent?action=session&sessionId=xxx": "Get session details",
+    "GET /api/agent?action=memory": "Get agent memory",
+    "GET /api/agent?action=skills": "List available skills",
+    "GET /api/agent?action=credentials": "List configured credentials",
+    "POST /api/agent": "Send message to agent",
+    "POST /api/agent?action=create-session": "Create new session",
+    "POST /api/agent?action=update-skill": "Enable/disable skill"
+  }
+}
+```
+
+#### Health
+
+```http
+GET /api/agent?action=health
+```
+
+```json
+{
+  "status": "running",
+  "version": "2026.3.1",
+  "apiVersion": "1.0.0",
+  "uptime": 86400,
+  "model": "claude-sonnet-4-20250514",
+  "channels": ["telegram"],
+  "skills": [],
+  "lastSeen": 1710806400000
+}
+```
+
+#### List sessions
+
+```http
+GET /api/agent?action=sessions
+```
+
+```json
+{
+  "sessions": [
+    {
+      "id": "sess_abc123",
+      "status": "active",
+      "messageCount": 5,
+      "createdAt": 1710806400000,
+      "lastActivity": 1710810000000
+    }
+  ]
+}
+```
+
+#### Get session
+
+```http
+GET /api/agent?action=session&sessionId=sess_abc123
+```
+
+Returns the full session including messages.
+
+#### Memory
+
+```http
+GET /api/agent?action=memory
+```
+
+Returns the last 10 messages from the active session (truncated to 100 characters each).
+
+```json
+{
+  "memory": [
+    { "role": "user", "content": "Hello, can you help me with..." },
+    { "role": "assistant", "content": "Of course! Let me..." }
+  ]
+}
+```
+
+#### Skills
+
+```http
+GET /api/agent?action=skills
+```
+
+Returns skills available on the agent instance.
+
+#### Credentials
+
+```http
+GET /api/agent?action=credentials
+```
+
+Returns which credentials are configured for the agent.
+
+```json
+{
+  "credentials": {
+    "anthropic": false,
+    "openai": false,
+    "openrouter": true,
+    "google": false,
+    "telegram": true,
+    "discord": false,
+    "whatsapp": false
+  }
+}
+```
+
+### POST actions
+
+Pass the `action` field in the request body.
+
+#### Chat
+
+```http
+POST /api/agent
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `action` | string | No | Set to `chat` or omit (default action) |
+| `message` | string | Yes | Message to send to the agent |
+| `sessionId` | string | No | Session ID to continue. A new session is created if omitted and no active session exists. |
+
+```json
+{
+  "sessionId": "sess_abc123",
+  "reply": "Agent is processing your request...",
+  "timestamp": 1710810000000
+}
+```
+
+#### Create session
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `action` | string | Yes | `create-session` |
+
+```json
+{
+  "sessionId": "sess_abc123",
+  "status": "active"
+}
+```
+
+#### Update skill
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `action` | string | Yes | `update-skill` |
+| `skillId` | string | Yes | Skill ID to enable or disable |
+| `enabled` | boolean | Yes | Whether to enable or disable the skill |
+
+```json
+{
+  "success": true,
+  "skillId": "browser",
+  "enabled": true
+}
+```
+
+#### Set credential
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `action` | string | Yes | `set-credential` |
+| `key` | string | Yes | Credential key (for example, `anthropic`, `telegram`) |
+| `value` | string | Yes | Credential value |
+
+```json
+{
+  "success": true,
+  "key": "anthropic",
+  "configured": true
+}
+```
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | Invalid action or missing required fields |
+| 401 | Unauthorized |
+| 404 | Session not found |
+| 500 | Internal error |
+
 ## Send message
 
 ```http

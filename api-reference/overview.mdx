@@ -39,6 +39,7 @@ API keys use the `sk_` prefix and are shown only once at creation time. See the 
 | `/api/agents` | 100/min |
 | `/api/chat` | 60/min |
 | `/api/instance` | 30/min |
+| `/api/provision` | Rate-limited per IP |
 | `/api/register` | Rate-limited per IP |
 | `/api/auth/forgot-password` | Rate-limited per IP |
 | `/api/auth/reset-password` | Rate-limited per IP |
@@ -114,13 +115,19 @@ API keys use the `sk_` prefix and are shown only once at creation time. See the 
 | `/api/keys/:id` | GET | Get API key details |
 | `/api/keys/:id` | DELETE | Delete API key |
 | `/api/skills` | GET | List skills marketplace |
+| `/api/skills` | POST | Install a skill on an agent |
 | `/api/skills/:name` | POST | Use a skill |
+| `/api/skills/booking-settlement` | GET, POST | Booking escrow and settlement |
+| `/api/skills/instant-split` | GET, POST | Royalty split execution |
 | `/api/wallet` | GET | Get wallet info |
 | `/api/wallet` | POST | Wallet actions (create, info) |
 | `/api/wallet/address` | GET | Get CDP wallet address |
 | `/api/wallet/create` | POST | Create a CDP wallet |
 | `/api/wallet/cdp` | GET | Get CDP wallet status |
 | `/api/wallet/cdp` | POST | Create a CDP wallet client |
+| `/api/provision` | POST | Provision agent with channel tokens |
+| `/api/agent` | GET | Agent interaction (health, sessions, memory, skills, credentials) |
+| `/api/agent` | POST | Agent interaction (chat, create-session, update-skill, set-credential) |
 | `/api/register` | POST | Create a new account |
 | `/api/auth/forgot-password` | POST | Request password reset |
 | `/api/auth/reset-password` | POST | Reset password |
