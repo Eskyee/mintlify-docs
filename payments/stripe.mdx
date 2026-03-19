@@ -165,8 +165,27 @@ GET /api/billing
 
 ```json
 {
-  "plans": { ... },
-  "currentPlan": "solo",
+  "plans": {
+    "starter": {
+      "name": "Starter",
+      "price": 19,
+      "dailyUnits": 600,
+      "features": ["1 AI Agent", "2GB RAM", "Telegram", "Basic skills"]
+    },
+    "pro": {
+      "name": "Pro",
+      "price": 39,
+      "dailyUnits": 1000,
+      "features": ["1 AI Agent", "4GB RAM", "All channels", "All skills", "Priority support"]
+    },
+    "scale": {
+      "name": "Scale",
+      "price": 79,
+      "dailyUnits": 2500,
+      "features": ["3 AI Agents", "8GB RAM", "All channels", "All skills", "Analytics"]
+    }
+  },
+  "currentPlan": "starter",
   "subscriptionStatus": "active",
   "byokEnabled": false,
   "usage": {
@@ -176,6 +195,8 @@ GET /api/billing
   }
 }
 ```
+
+<Note>The billing API returns plan tiers as `starter`, `pro`, and `scale` with USD pricing. These correspond to the subscription plans available through the billing dashboard. The Stripe checkout endpoint uses a separate set of plan identifiers (`solo`, `collective`, `label`, `network`) for direct checkout flows.</Note>
 
 ### Billing actions
 
@@ -191,12 +212,12 @@ Use `POST /api/billing` with an `action` field to manage your subscription.
 
 #### Create checkout
 
-Start a new Stripe checkout session for a subscription plan.
+Start a new Stripe checkout session for a subscription plan. The billing API accepts `starter`, `pro`, or `scale` as plan values.
 
 ```json
 {
   "action": "create-checkout",
-  "plan": "solo"
+  "plan": "starter"
 }
 ```
 

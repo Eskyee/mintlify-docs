@@ -43,6 +43,8 @@
           "api-reference/keys",
           "api-reference/wallet",
           "api-reference/skills",
+          "api-reference/memory",
+          "api-reference/ai",
           "api-reference/health"
         ]
       },

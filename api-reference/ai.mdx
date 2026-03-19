@@ -1,0 +1,195 @@
+---
+title: AI API
+description: "AI provider endpoints for model selection, chat completion, and cost estimation"
+---
+
+# AI API
+
+Endpoints for interacting with AI models through a unified provider layer. These endpoints are served by the backend API and do not require session authentication.
+
+## Health check
+
+```http
+GET /api/ai/health
+```
+
+Returns the availability status of configured AI providers.
+
+### Response
+
+```json
+{
+  "status": "healthy",
+  "providers": {
+    "openrouter": true
+  },
+  "timestamp": "2026-03-19T00:00:00Z"
+}
+```
+
+The `status` field is `healthy` when all providers are reachable and `degraded` when one or more are down.
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 503 | AI service unavailable |
+
+## List models
+
+```http
+GET /api/ai/models
+```
+
+Returns all available AI models across providers.
+
+### Response
+
+```json
+{
+  "models": [
+    {
+      "id": "anthropic/claude-sonnet-4-20250514",
+      "provider": "openrouter"
+    }
+  ],
+  "count": 1,
+  "openrouter": 1,
+  "timestamp": "2026-03-19T00:00:00Z"
+}
+```
+
+## List models by provider
+
+```http
+GET /api/ai/models/:provider
+```
+
+### Path parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `provider` | string | Provider name (for example, `openrouter`) |
+
+### Response
+
+```json
+{
+  "provider": "openrouter",
+  "models": [],
+  "count": 0,
+  "timestamp": "2026-03-19T00:00:00Z"
+}
+```
+
+## Select model
+
+```http
+POST /api/ai/models/select
+```
+
+Automatically selects the best model for a given task type.
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `taskType` | string | No | Type of task (default: `general`) |
+
+### Response
+
+```json
+{
+  "model": {
+    "id": "anthropic/claude-sonnet-4-20250514",
+    "provider": "openrouter"
+  },
+  "taskType": "general",
+  "timestamp": "2026-03-19T00:00:00Z"
+}
+```
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 404 | No models available |
+
+## Chat completion
+
+```http
+POST /api/ai/chat
+```
+
+Send a chat completion request through the unified AI provider layer. The model is auto-selected if not specified.
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `messages` | array | Yes | Array of message objects with `role` (`user`, `assistant`, or `system`) and `content` |
+| `model` | string | No | Model ID. Auto-selected based on `taskType` if omitted. |
+| `taskType` | string | No | Used for auto-selection when `model` is omitted |
+| `temperature` | number | No | Sampling temperature |
+| `top_p` | number | No | Nucleus sampling parameter |
+| `max_tokens` | number | No | Maximum tokens in the response |
+
+### Example request
+
+```json
+{
+  "messages": [
+    { "role": "system", "content": "You are a helpful assistant." },
+    { "role": "user", "content": "Hello!" }
+  ],
+  "temperature": 0.7,
+  "max_tokens": 1024
+}
+```
+
+### Response
+
+Returns the AI provider's chat completion response. The exact shape depends on the provider used.
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | Messages array is required and must be non-empty |
+| 404 | No models available |
+| 500 | AI provider error |
+
+## Estimate cost
+
+```http
+POST /api/ai/estimate-cost
+```
+
+Estimate the cost of a request based on token counts and model pricing.
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `model` | string | Yes | Model ID |
+| `inputTokens` | number | Yes | Number of input tokens |
+| `outputTokens` | number | Yes | Number of output tokens |
+
+### Response
+
+```json
+{
+  "model": "anthropic/claude-sonnet-4-20250514",
+  "inputTokens": 1000,
+  "outputTokens": 500,
+  "estimatedCost": 0.0045,
+  "currency": "USD",
+  "timestamp": "2026-03-19T00:00:00Z"
+}
+```
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | Model, inputTokens, and outputTokens are all required |

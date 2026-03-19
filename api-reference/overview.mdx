@@ -110,6 +110,10 @@ API keys use the `sk_` prefix and are shown only once at creation time. See the 
 | `/api/health` | GET | Health check |
 | `/api/heartbeat` | GET | Get heartbeat settings |
 | `/api/heartbeat` | POST | Update heartbeat settings |
+| `/api/heartbeat` | DELETE | Reset heartbeat settings |
+| `/api/memory` | GET | Get agent memory |
+| `/api/memory` | POST | Store agent memory |
+| `/api/credits` | GET | Get credit balance |
 | `/api/keys` | GET | List API keys |
 | `/api/keys` | POST | Create API key |
 | `/api/keys/:id` | GET | Get API key details |
@@ -139,6 +143,12 @@ API keys use the `sk_` prefix and are shown only once at creation time. See the 
 | `/api/stripe/checkout` | GET | Start Stripe checkout |
 | `/api/stripe/credits` | GET | Purchase credit top-ups |
 | `/api/stripe/storage-upgrade` | POST | Upgrade storage plan |
+| `/api/ai/health` | GET | AI provider availability |
+| `/api/ai/models` | GET | List available AI models |
+| `/api/ai/models/:provider` | GET | List models for a provider |
+| `/api/ai/models/select` | POST | Smart model selection for a task type |
+| `/api/ai/chat` | POST | Universal chat completion |
+| `/api/ai/estimate-cost` | POST | Estimate token cost |
 
 ## SDK
 
