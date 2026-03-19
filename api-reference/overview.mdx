@@ -1,7 +1,9 @@
-
+---
+title: API reference
 description: "Agentbot API Reference"
+---
 
-# API Reference
+# API reference
 
 Complete API reference for Agentbot.
 
@@ -75,6 +77,10 @@ curl -X GET https://agentbot.raveculture.xyz/api/user \
 | `/api/skills` | GET | List all skills marketplace |
 | `/api/skills/[name]` | POST | Use a skill (Visual Synth, Track Archaeologist, etc.) |
 | `/api/demo/chat` | POST | Demo AI chat (no auth required) |
+| `/api/billing` | GET | Get billing info and current plan |
+| `/api/billing` | POST | Manage billing (checkout, BYOK, credits) |
+| `/api/stripe/checkout` | GET | Start Stripe subscription checkout |
+| `/api/stripe/credits` | GET | Purchase credit top-ups via Stripe |
 
 ## SDK
 

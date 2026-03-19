@@ -1,19 +1,34 @@
-
+---
+title: Stripe integration
 description: "Accept payments with Stripe"
+---
 
-# Stripe Integration
+# Stripe integration
 
-Accept credit card payments for subscriptions and one-time purchases.
+Accept credit card payments for monthly subscriptions and one-time credit purchases. All plans are billed monthly — yearly billing is not available.
+
+## Accepted payment methods
+
+Stripe checkout accepts the following payment methods:
+
+- Visa / Mastercard (credit and debit)
+- Apple Pay
+- Google Pay
+- PayPal
+
+<Note>
+Crypto payments are not accepted through Stripe checkout. For USDC payments on Base, see the [x402 integration](/payments/x402).
+</Note>
 
 ## Setup
 
-### Step 1: Create Stripe Account
+### Step 1: Create Stripe account
 
 1. Go to [Stripe.com](https://stripe.com)
 2. Create a business account
 3. Complete verification
 
-### Step 2: Get API Keys
+### Step 2: Get API keys
 
 1. Go to **Developers → API Keys**
 2. Copy:
@@ -26,7 +41,7 @@ Accept credit card payments for subscriptions and one-time purchases.
 2. Enter keys
 3. Click **Connect**
 
-### Step 4: Configure Webhook
+### Step 4: Configure webhook
 
 1. Go to **Developers → Webhooks**
 2. Add endpoint: `https://agentbot.raveculture.xyz/api/webhooks/stripe`
@@ -39,36 +54,117 @@ Accept credit card payments for subscriptions and one-time purchases.
    - `invoice.payment_failed`
 4. Copy webhook secret and add to Agentbot
 
-## Pricing Plans
+## Pricing plans
+
+All plans are billed monthly in GBP.
 
 | Plan | Price | Features |
 |------|-------|----------|
-| Solo | £29/mo | Creative only, 2GB RAM |
-| Collective | £69/mo | +1 OpenClaw seat, 4GB RAM |
-| Label | £149/mo | +3 OpenClaw seats, 8GB RAM |
-| Network | £499/mo | Unlimited, white-label, 16GB RAM |
+| Solo | £29/mo | 1 Creative Agent thread, Telegram, 2GB RAM |
+| Collective | £69/mo | 3 Creative Agent threads, +1 OpenClaw seat, WhatsApp, 4GB RAM |
+| Label | £149/mo | 10 Creative Agent threads, +3 OpenClaw seats, white-label emails, 8GB RAM |
+| Network | £499/mo | Unlimited agents and OpenClaw seats, white-label reselling, 16GB RAM |
 
 ## Checkout
 
-### Embedded Checkout
+### Start a checkout session
 
-```typescript
-// Create checkout session
-const response = await fetch('/api/stripe/checkout', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    planId: 'price_xxx',
-    successUrl: 'https://yoursite.com/success',
-    cancelUrl: 'https://yoursite.com/cancel'
-  })
-});
+To start a subscription checkout, redirect the user to the checkout endpoint with a `plan` query parameter:
 
-const { url } = await response.json();
-window.location.href = url;
+```http
+GET /api/stripe/checkout?plan={plan_id}
 ```
 
-## Webhook Events
+**Parameters**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `plan` | string | Yes | One of `solo`, `collective`, `label`, or `network` |
+
+The endpoint redirects the user to Stripe's hosted checkout page. On success, the user is redirected to the onboarding page. On cancellation, the user returns to the pricing page.
+
+**Example**
+
+```html
+<a href="/api/stripe/checkout?plan=collective">Subscribe to Collective</a>
+```
+
+<Warning>
+The legacy `POST /api/checkout` endpoint is deprecated and returns a `410 Gone` status. Use `GET /api/stripe/checkout` instead.
+</Warning>
+
+### Buy credits
+
+To purchase additional credits, redirect the user to the credits checkout endpoint:
+
+```http
+GET /api/stripe/credits?price={stripe_price_id}
+```
+
+**Parameters**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `price` | string | Yes | A valid Stripe price ID from the allowed credit price list |
+
+## Billing API
+
+You can manage billing programmatically using the billing endpoint.
+
+```http
+POST /api/billing
+```
+
+**Actions**
+
+| Action | Description |
+|--------|-------------|
+| `create-checkout` | Create a Stripe checkout session for a plan |
+| `enable-byok` | Enable Bring Your Own Key mode for AI usage |
+| `disable-byok` | Disable BYOK and return to platform credits |
+| `get-usage` | Get current daily usage stats |
+| `buy-credits` | Purchase a credit pack |
+
+### Create checkout
+
+```json
+{
+  "action": "create-checkout",
+  "plan": "solo"
+}
+```
+
+**Response**
+
+```json
+{
+  "url": "https://checkout.stripe.com/..."
+}
+```
+
+### Get billing info
+
+```http
+GET /api/billing
+```
+
+**Response**
+
+```json
+{
+  "plans": { ... },
+  "currentPlan": "solo",
+  "subscriptionStatus": "active",
+  "byokEnabled": false,
+  "usage": {
+    "dailyUnits": 600,
+    "used": 245,
+    "remaining": 355
+  }
+}
+```
+
+## Webhook events
 
 Handle subscription events:
 
@@ -108,7 +204,7 @@ export async function POST(request) {
 
 - Verify API keys are correct
 - Check webhook is configured
-- Ensure products/prices are created
+- Ensure products/prices are created in Stripe
 
 </Accordion>
 
@@ -117,6 +213,12 @@ export async function POST(request) {
 - Verify webhook secret
 - Check webhook URL is accessible
 - Review Stripe logs in developer dashboard
+
+</Accordion>
+
+<Accordion icon="error" title="410 error on /api/checkout">
+
+The legacy `/api/checkout` endpoint has been deprecated. Use `GET /api/stripe/checkout?plan={plan_id}` instead.
 
 </Accordion>
 
