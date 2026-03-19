@@ -1,0 +1,113 @@
+---
+title: API keys
+description: "Create and manage API keys for programmatic access"
+---
+
+# API keys
+
+Create and manage API keys for authenticating with the Agentbot API. All endpoints require session authentication.
+
+## List keys
+
+```http
+GET /api/keys
+```
+
+### Response
+
+```json
+{
+  "keys": [
+    {
+      "id": "key_123",
+      "name": "Production Key",
+      "keyPreview": "sk_abc1234...",
+      "createdAt": "2026-03-01T00:00:00Z",
+      "lastUsed": "2026-03-19T00:00:00Z"
+    }
+  ]
+}
+```
+
+## Create key
+
+```http
+POST /api/keys
+```
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | string | Yes | Key name (max 64 characters) |
+
+### Response
+
+```json
+{
+  "id": "key_456",
+  "name": "Production Key",
+  "key": "sk_a1b2c3d4e5f6...",
+  "createdAt": "2026-03-19T00:00:00Z"
+}
+```
+
+<Warning>The raw API key is only returned once at creation time. Store it securely — it cannot be retrieved again. The key is stored as a bcrypt hash in the database.</Warning>
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | Name required or name too long (max 64 characters) |
+| 401 | Unauthorized |
+| 500 | Failed to create key |
+
+## Get key
+
+```http
+GET /api/keys/:id
+```
+
+Requires ownership of the key.
+
+### Response
+
+```json
+{
+  "id": "key_123",
+  "name": "Production Key",
+  "keyPreview": "sk_abc1234...",
+  "createdAt": "2026-03-01T00:00:00Z",
+  "lastUsed": "2026-03-19T00:00:00Z"
+}
+```
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | Unauthorized |
+| 404 | Key not found |
+
+## Delete key
+
+```http
+DELETE /api/keys/:id
+```
+
+Requires ownership of the key.
+
+### Response
+
+```json
+{
+  "success": true
+}
+```
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | Unauthorized |
+| 404 | Key not found |

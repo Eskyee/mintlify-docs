@@ -1,48 +1,181 @@
-
-description: "Manage agents via API"
+---
+title: Agents API
+description: "Create, manage, and interact with agents"
+---
 
 # Agents API
 
 Create, manage, and interact with agents.
 
-## List Agents
+## List agents
 
 ```http
 GET /api/agents
 ```
 
+Returns all agents owned by the authenticated user.
+
 ### Response
 
 ```json
 {
-  "success": true,
-  "data": [
+  "agents": [
     {
       "id": "agent_123",
       "name": "My Agent",
-      "model": "anthropic/claude-3-opus",
+      "model": "claude-opus-4-6",
       "status": "running",
-      "createdAt": "2026-03-01T00:00:00Z"
+      "websocketUrl": "ws://openclaw-gateway:10000/agent/user_123",
+      "createdAt": "2026-03-01T00:00:00Z",
+      "updatedAt": "2026-03-18T00:00:00Z"
     }
-  ]
+  ],
+  "count": 1,
+  "status": "ok"
 }
 ```
 
-## Create Agent
+## Create agent
 
 ```http
 POST /api/agents
 ```
 
-### Request Body
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | string | Yes | Name of the agent |
+| `config` | object | No | Agent configuration |
+
+### Response
 
 ```json
 {
+  "id": "agent_456",
   "name": "My Agent",
-  "model": "anthropic/claude-3-opus",
-  "instructions": "You are a helpful assistant...",
-  "tools": ["web-search", "calculator"]
+  "status": "deploying"
 }
+```
+
+## Get agent
+
+```http
+GET /api/agents/:id
+```
+
+Requires authentication and ownership of the agent.
+
+### Response
+
+```json
+{
+  "agent": {
+    "id": "agent_123",
+    "status": "active",
+    "startedAt": "2026-03-01T00:00:00Z",
+    "plan": "starter",
+    "subdomain": "agent_123.agents.localhost",
+    "url": "https://agent_123.agents.localhost",
+    "openclawVersion": "2026.3.13",
+    "verified": false,
+    "verificationType": null,
+    "attestationUid": null,
+    "verifiedAt": null
+  },
+  "status": "ok"
+}
+```
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | Unauthorized |
+| 404 | Agent not found or not owned by user |
+| 500 | Failed to fetch agent |
+
+## Update agent
+
+```http
+PUT /api/agents/:id
+```
+
+### Request body
+
+Any valid agent configuration fields.
+
+### Response
+
+```json
+{
+  "id": "agent_123",
+  "message": "Agent updated"
+}
+```
+
+## Delete agent
+
+```http
+DELETE /api/agents/:id
+```
+
+### Response
+
+```json
+{
+  "id": "agent_123",
+  "message": "Agent deleted"
+}
+```
+
+## Provision agent
+
+```http
+POST /api/agents/provision
+```
+
+Provisions a new agent. Requires an active subscription.
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | string | Yes | Agent name |
+| `model` | string | No | AI model (default: `claude-opus-4-6`). Options: `claude-opus-4-6`, `gpt-4`, `custom` |
+| `config` | object | No | Agent configuration |
+| `tier` | string | No | Subscription tier: `starter`, `pro`, `enterprise` |
+
+### Response
+
+```json
+{
+  "success": true,
+  "agent": {
+    "id": "agent_789",
+    "name": "My Agent",
+    "status": "running",
+    "websocketUrl": "ws://openclaw-gateway:10000/agent/user_123",
+    "model": "claude-opus-4-6",
+    "createdAt": "2026-03-19T00:00:00Z"
+  }
+}
+```
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | Agent name is required |
+| 401 | Unauthorized |
+| 402 | Active subscription required to provision agents |
+| 429 | Agent limit reached for your tier (`starter`: 1, `pro`: 3, `enterprise`: 100) |
+| 500 | Failed to provision agent |
+
+## List provisioned agents
+
+```http
+GET /api/agents/provision
 ```
 
 ### Response
@@ -50,78 +183,375 @@ POST /api/agents
 ```json
 {
   "success": true,
-  "data": {
-    "id": "agent_456",
-    "name": "My Agent",
-    "model": "anthropic/claude-3-opus",
-    "status": "starting",
-    "createdAt": "2026-03-18T00:00:00Z"
-  }
+  "agents": [
+    {
+      "id": "agent_789",
+      "name": "My Agent",
+      "model": "claude-opus-4-6",
+      "status": "running",
+      "websocketUrl": "ws://openclaw-gateway:10000/agent/user_123",
+      "createdAt": "2026-03-19T00:00:00Z",
+      "updatedAt": "2026-03-19T00:00:00Z"
+    }
+  ],
+  "count": 1
 }
 ```
 
-## Get Agent
+## Get agent configuration
 
 ```http
-GET /api/agents/:id
+GET /api/agents/:id/config
 ```
 
-## Update Agent
+Requires authentication and ownership.
+
+### Response
+
+```json
+{
+  "config": {},
+  "status": "ok"
+}
+```
+
+## Update agent configuration
 
 ```http
-PATCH /api/agents/:id
+PUT /api/agents/:id/config
+```
+
+### Request body
+
+Arbitrary JSON configuration to apply.
+
+### Response
+
+```json
+{
+  "config": {},
+  "status": "updated"
+}
+```
+
+## Get agent logs
+
+```http
+GET /api/agents/:id/logs
+```
+
+### Query parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `limit` | integer | 50 | Max entries to return (max 100) |
+| `level` | string | — | Filter by level: `info`, `warning`, `error`, `debug` |
+
+### Response
+
+```json
+{
+  "logs": [
+    {
+      "id": "log-0",
+      "timestamp": "2026-03-19T00:00:00Z",
+      "level": "info",
+      "message": "Agent activity log entry",
+      "source": "agent",
+      "agentId": "agent_123"
+    }
+  ],
+  "total": 50,
+  "limit": 50,
+  "status": "ok"
+}
+```
+
+## Get agent messages
+
+```http
+GET /api/agents/:id/messages
+```
+
+### Query parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `limit` | integer | 50 | Max messages to return (max 100) |
+| `offset` | integer | 0 | Offset for pagination |
+
+### Response
+
+```json
+{
+  "messages": [
+    {
+      "id": "msg-0",
+      "agentId": "agent_123",
+      "sender": "user",
+      "content": "Hello!",
+      "timestamp": "2026-03-19T00:00:00Z",
+      "platform": "telegram"
+    }
+  ],
+  "total": 50,
+  "limit": 50,
+  "offset": 0,
+  "status": "ok"
+}
+```
+
+The `sender` field is either `user` or `agent`. The `platform` field indicates the messaging channel: `telegram`, `discord`, or `whatsapp`.
+
+## Get agent stats
+
+```http
+GET /api/agents/:id/stats
+```
+
+Returns live container metrics when available, with a mock fallback.
+
+### Response (live)
+
+```json
+{
+  "stats": {
+    "agentId": "agent_123",
+    "cpu": "0.15%",
+    "memory": "128MiB / 2GiB",
+    "memoryPercent": "6.25%",
+    "network": "1.2kB / 3.4kB",
+    "uptime": 86400000,
+    "uptimeFormatted": "1d 0h",
+    "status": "running",
+    "pids": "12"
+  },
+  "status": "ok"
+}
+```
+
+### Response (mock fallback)
+
+When the backend is unavailable, mock data is returned with `"status": "mock"`:
+
+```json
+{
+  "stats": {
+    "agentId": "agent_123",
+    "messagesProcessed": 1234,
+    "messagesPerHour": 456,
+    "averageResponseTime": 789,
+    "uptime": 12345,
+    "successRate": "95.42",
+    "errorRate": "4.58",
+    "timestamp": "2026-03-19T00:00:00Z"
+  },
+  "status": "mock"
+}
+```
+
+## Agent lifecycle
+
+### Start agent
+
+```http
+POST /api/agents/:id/start
 ```
 
 ```json
 {
-  "name": "New Name",
-  "instructions": "Updated instructions...",
-  "model": "anthropic/claude-3-sonnet"
+  "success": true,
+  "status": "active"
 }
 ```
 
-## Delete Agent
+### Stop agent
 
 ```http
-DELETE /api/agents/:id
+POST /api/agents/:id/stop
 ```
 
-## Send Message
+```json
+{
+  "success": true,
+  "status": "stopped"
+}
+```
+
+### Restart agent
+
+```http
+POST /api/agents/:id/restart
+```
+
+```json
+{
+  "success": true,
+  "status": "active",
+  "healedLegacyModel": false,
+  "healMessage": "skip:no-legacy",
+  "openclawVersion": "2026.3.13"
+}
+```
+
+### Update agent image
+
+```http
+POST /api/agents/:id/update
+```
+
+#### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `image` | string | No | Docker image tag. Defaults to the latest OpenClaw image if omitted. Must match a valid Docker image pattern. |
+
+#### Response
+
+```json
+{
+  "success": true,
+  "status": "active",
+  "image": "ghcr.io/openclaw/openclaw:2026.3.13",
+  "previousImage": "ghcr.io/openclaw/openclaw:2026.3.12",
+  "backupPath": null,
+  "openclawVersion": "2026.3.13"
+}
+```
+
+#### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | Invalid Docker image value |
+| 500 | Update failed |
+
+### Repair agent
+
+```http
+POST /api/agents/:id/repair
+```
+
+```json
+{
+  "success": true,
+  "message": "Agent repaired successfully"
+}
+```
+
+### Reset agent memory
+
+```http
+POST /api/agents/:id/reset-memory
+```
+
+```json
+{
+  "success": true,
+  "message": "Memory reset successfully"
+}
+```
+
+## Get agent gateway token
+
+```http
+GET /api/agents/:id/token
+```
+
+Returns an auto-generated gateway token for the agent. A new token is created if none exists.
+
+```json
+{
+  "token": "abc123def456"
+}
+```
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 404 | Agent not found |
+| 500 | Failed to get token |
+
+## Agent verification
+
+Agents can be verified using multiple verification types: `eas` (Ethereum Attestation Service), `coinbase`, `ens`, or `webauthn`.
+
+### Get verification status
+
+```http
+GET /api/agents/:id/verify
+```
+
+```json
+{
+  "verified": false,
+  "verificationType": null,
+  "attestationUid": null,
+  "verifierAddress": null,
+  "verifiedAt": null,
+  "metadata": null
+}
+```
+
+### Verify agent
+
+```http
+POST /api/agents/:id/verify
+```
+
+#### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `verificationType` | string | Yes | One of: `eas`, `coinbase`, `ens`, `webauthn` |
+| `attestationUid` | string | For `eas` | Attestation UID from EAS |
+| `signature` | string | For `coinbase`, `ens`, `webauthn` | Verification signature |
+| `walletAddress` | string | For `ens` | Wallet address for ENS verification |
+
+#### Response
+
+```json
+{
+  "success": true,
+  "verified": true,
+  "verificationType": "eas",
+  "attestationUid": "0x123...",
+  "verifiedAt": "2026-03-19T00:00:00Z"
+}
+```
+
+#### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | Invalid verification type or missing required fields |
+| 401 | Unauthorized |
+
+### Remove verification
+
+```http
+DELETE /api/agents/:id/verify
+```
+
+```json
+{
+  "success": true
+}
+```
+
+## Send message
 
 ```http
 POST /api/chat
 ```
+
+### Request body
 
 ```json
 {
   "agentId": "agent_123",
   "message": "Hello!",
   "platform": "telegram"
-}
-```
-
-## Get Agent Logs
-
-```http
-GET /api/agents/:id/logs
-```
-
-## Get Agent Stats
-
-```http
-GET /api/agents/:id/stats
-```
-
-Response:
-
-```json
-{
-  "success": true,
-  "data": {
-    "messagesToday": 42,
-    "totalMessages": 1250,
-    "avgResponseTime": "1.2s",
-    "uptime": "99.9%"
-  }
 }
 ```

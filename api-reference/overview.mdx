@@ -1,6 +1,6 @@
 ---
 title: API reference
-description: "Agentbot API Reference"
+description: "Complete API reference for Agentbot"
 ---
 
 # API reference
@@ -15,72 +15,119 @@ https://agentbot.raveculture.xyz/api
 
 ## Authentication
 
-### API Keys
+Agentbot supports two authentication methods depending on the endpoint.
 
-Include your API key in the header:
+### Session authentication
+
+Most web API endpoints use cookie-based session authentication via NextAuth. Sign in through the web application to obtain a session cookie.
+
+### API keys
+
+You can generate API keys from the dashboard. Include your key in the `Authorization` header:
 
 ```bash
 curl -X GET https://agentbot.raveculture.xyz/api/agents \
   -H "Authorization: Bearer YOUR_API_KEY"
 ```
 
-### JWT Tokens
+API keys use the `sk_` prefix and are shown only once at creation time. See the [keys API](/api-reference/keys) for details.
 
-For user authentication:
-
-```bash
-curl -X GET https://agentbot.raveculture.xyz/api/user \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN"
-```
-
-## Rate Limits
+## Rate limits
 
 | Endpoint | Limit |
 |----------|-------|
-| /api/agents | 100/min |
-| /api/chat | 60/min |
-| /api/instance | 30/min |
+| `/api/agents` | 100/min |
+| `/api/chat` | 60/min |
+| `/api/instance` | 30/min |
+| `/api/auth/forgot-password` | Rate-limited per IP |
+| `/api/auth/reset-password` | Rate-limited per IP |
 
-## Response Format
+## Response format
 
 ### Success
 
 ```json
 {
   "success": true,
-  "data": { ... }
+  "data": {}
 }
 ```
+
+<Note>Some endpoints return domain-specific top-level keys (for example `agents`, `keys`, `stats`) instead of a generic `data` wrapper. Refer to each endpoint's documentation for the exact response shape.</Note>
 
 ### Error
 
 ```json
 {
-  "success": false,
-  "error": {
-    "code": "INVALID_REQUEST",
-    "message": "Description of error"
-  }
+  "error": "Description of the error"
 }
 ```
 
-## Common Endpoints
+## HTTP status codes
+
+| Code | Meaning |
+|------|---------|
+| 200 | Success |
+| 201 | Resource created |
+| 400 | Bad request or validation error |
+| 401 | Unauthorized (missing or invalid authentication) |
+| 402 | Payment required (no active subscription) |
+| 403 | Forbidden (insufficient permissions or token gating failure) |
+| 404 | Resource not found |
+| 429 | Too many requests or tier limit reached |
+| 500 | Internal server error |
+| 503 | Service unavailable |
+
+## Endpoint reference
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/api/agents` | GET | List all agents |
-| `/api/agents` | POST | Create agent |
-| `/api/agents/[id]` | GET | Get agent |
-| `/api/agents/[id]` | DELETE | Delete agent |
+| `/api/agents` | POST | Create an agent |
+| `/api/agents/:id` | GET | Get agent details |
+| `/api/agents/:id` | PUT | Update an agent |
+| `/api/agents/:id` | DELETE | Delete an agent |
+| `/api/agents/:id/config` | GET | Get agent configuration |
+| `/api/agents/:id/config` | PUT | Update agent configuration |
+| `/api/agents/:id/logs` | GET | Get agent logs |
+| `/api/agents/:id/messages` | GET | Get agent messages |
+| `/api/agents/:id/stats` | GET | Get agent stats |
+| `/api/agents/:id/verify` | GET | Get verification status |
+| `/api/agents/:id/verify` | POST | Verify an agent |
+| `/api/agents/:id/verify` | DELETE | Remove verification |
+| `/api/agents/:id/start` | POST | Start an agent |
+| `/api/agents/:id/stop` | POST | Stop an agent |
+| `/api/agents/:id/restart` | POST | Restart an agent |
+| `/api/agents/:id/update` | POST | Update agent image |
+| `/api/agents/:id/repair` | POST | Repair an agent |
+| `/api/agents/:id/reset-memory` | POST | Reset agent memory |
+| `/api/agents/:id/token` | GET | Get agent gateway token |
+| `/api/agents/provision` | POST | Provision a new agent |
+| `/api/agents/provision` | GET | List provisioned agents |
 | `/api/chat` | POST | Send message to agent |
 | `/api/health` | GET | Health check |
-| `/api/skills` | GET | List all skills marketplace |
-| `/api/skills/[name]` | POST | Use a skill (Visual Synth, Track Archaeologist, etc.) |
-| `/api/demo/chat` | POST | Demo AI chat (no auth required) |
-| `/api/billing` | GET | Get billing info and current plan |
-| `/api/billing` | POST | Manage billing (checkout, BYOK, credits) |
-| `/api/stripe/checkout` | GET | Start Stripe subscription checkout |
-| `/api/stripe/credits` | GET | Purchase credit top-ups via Stripe |
+| `/api/heartbeat` | GET | Get heartbeat settings |
+| `/api/heartbeat` | POST | Update heartbeat settings |
+| `/api/keys` | GET | List API keys |
+| `/api/keys` | POST | Create API key |
+| `/api/keys/:id` | GET | Get API key details |
+| `/api/keys/:id` | DELETE | Delete API key |
+| `/api/skills` | GET | List skills marketplace |
+| `/api/skills/:name` | POST | Use a skill |
+| `/api/wallet` | GET | Get wallet info |
+| `/api/wallet` | POST | Wallet actions (create, info) |
+| `/api/wallet/address` | GET | Get CDP wallet address |
+| `/api/wallet/create` | POST | Create a CDP wallet |
+| `/api/wallet/cdp` | GET | Get CDP wallet status |
+| `/api/wallet/cdp` | POST | Create a CDP wallet client |
+| `/api/auth/forgot-password` | POST | Request password reset |
+| `/api/auth/reset-password` | POST | Reset password |
+| `/api/auth/farcaster/verify` | POST | Verify Farcaster identity |
+| `/api/auth/farcaster/refresh` | POST | Refresh Farcaster token |
+| `/api/auth/token-gating/verify` | GET, POST | Verify token gating access |
+| `/api/billing` | GET | Get billing info |
+| `/api/stripe/checkout` | GET | Start Stripe checkout |
+| `/api/stripe/credits` | GET | Purchase credit top-ups |
 
 ## SDK
 

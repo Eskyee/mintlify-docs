@@ -36,7 +36,15 @@
       },
       {
         "group": "API Reference",
-        "pages": ["api-reference/overview", "api-reference/agents", "api-reference/auth"]
+        "pages": [
+          "api-reference/overview",
+          "api-reference/agents",
+          "api-reference/auth",
+          "api-reference/keys",
+          "api-reference/wallet",
+          "api-reference/skills",
+          "api-reference/health"
+        ]
       },
       {
         "group": "MCP",
