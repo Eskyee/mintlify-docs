@@ -171,7 +171,7 @@ Rate-limited per IP address.
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `token` | string | Yes | Reset token from the email link |
-| `password` | string | Yes | New password (minimum 8 characters) |
+| `password` | string | Yes | New password (minimum 6 characters) |
 
 ### Response
 
@@ -185,7 +185,7 @@ Rate-limited per IP address.
 
 | Code | Description |
 |------|-------------|
-| 400 | Token and password are required, password too short, or invalid/expired token |
+| 400 | Token and password are required, password too short (minimum 6 characters), or invalid/expired token |
 | 404 | User not found |
 | 429 | Too many requests |
 
