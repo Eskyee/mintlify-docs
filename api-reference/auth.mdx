@@ -5,7 +5,7 @@ description: "Authentication API endpoints for user management and identity veri
 
 # Authentication API
 
-Manage user authentication, password resets, Farcaster identity, and token gating.
+Manage user authentication, password resets, wallet sign-in, Farcaster identity, and token gating.
 
 ## Sign up
 
@@ -77,6 +77,45 @@ GET /api/auth/google
 ```
 
 Redirects to Google OAuth flow. Requires `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` to be configured.
+
+## Wallet sign in (SIWE)
+
+```http
+POST /api/auth/callback/wallet
+```
+
+Sign in using an Ethereum wallet via [Sign-In with Ethereum (SIWE)](https://eips.ethereum.org/EIPS/eip-4361). This flow is designed for Base smart wallets and supports ERC-6492 signature verification for pre-deployed wallets.
+
+### How it works
+
+1. The client opens the Base Account SDK popup and requests a SIWE signature on Base Mainnet (chain ID `0x2105`).
+2. The signed SIWE message and signature are sent to the `wallet` NextAuth credentials provider.
+3. The server parses the SIWE message, validates the domain, and verifies the signature.
+4. If no account exists for the wallet address, a new user is created automatically.
+5. If an account with the same email already exists (from a previous OAuth or email sign-up), the wallet is linked to the existing account.
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `message` | string | Yes | The full SIWE message string |
+| `signature` | string | Yes | The wallet signature of the SIWE message (0x-prefixed) |
+
+### Response
+
+On success, a session cookie is set and the user is redirected to the callback URL. The response follows the standard NextAuth credentials callback flow.
+
+### Account linking
+
+When a wallet signs in, the system checks for an existing user by the wallet-derived email address. If a matching user is found (for example, one who previously signed up with email and password or OAuth), the wallet provider is linked to that existing account. This prevents duplicate accounts and lets users access the same data regardless of which sign-in method they use.
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | Missing message or signature, SIWE domain mismatch, or signature verification failed |
+
+<Note>The SIWE domain is validated against the configured application URL to prevent replay attacks from other sites.</Note>
 
 ## Get current user
 
