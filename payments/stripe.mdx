@@ -1,6 +1,6 @@
 ---
 title: Stripe integration
-description: "Accept payments with Stripe"
+description: "Accept credit card payments for monthly subscriptions and one-time credit purchases using Stripe."
 ---
 
 # Stripe integration
@@ -107,42 +107,26 @@ GET /api/stripe/credits?price={stripe_price_id}
 |-----------|------|----------|-------------|
 | `price` | string | Yes | A valid Stripe price ID from the allowed credit price list |
 
+The endpoint redirects the user to a Stripe checkout page for the selected credit pack. On success, credits are added to the account automatically.
+
+**Example**
+
+```html
+<a href="/api/stripe/credits?price=price_xxx">Buy credits</a>
+```
+
 ## Billing API
 
-You can manage billing programmatically using the billing endpoint.
+Manage billing, subscriptions, and usage programmatically. All billing endpoints require authentication with a valid JWT token.
 
-```http
-POST /api/billing
-```
-
-**Actions**
-
-| Action | Description |
-|--------|-------------|
-| `create-checkout` | Create a Stripe checkout session for a plan |
-| `enable-byok` | Enable Bring Your Own Key mode for AI usage |
-| `disable-byok` | Disable BYOK and return to platform credits |
-| `get-usage` | Get current daily usage stats |
-| `buy-credits` | Purchase a credit pack |
-
-### Create checkout
-
-```json
-{
-  "action": "create-checkout",
-  "plan": "solo"
-}
-```
-
-**Response**
-
-```json
-{
-  "url": "https://checkout.stripe.com/..."
-}
+```bash
+curl -X GET https://agentbot.raveculture.xyz/api/billing \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
 
 ### Get billing info
+
+Retrieve your current plan, subscription status, and usage.
 
 ```http
 GET /api/billing
@@ -161,6 +145,98 @@ GET /api/billing
     "used": 245,
     "remaining": 355
   }
+}
+```
+
+### Billing actions
+
+Use `POST /api/billing` with an `action` field to manage your subscription.
+
+| Action | Description |
+|--------|-------------|
+| `create-checkout` | Create a Stripe checkout session for a plan |
+| `enable-byok` | Enable Bring Your Own Key mode for AI usage |
+| `disable-byok` | Disable BYOK and return to platform credits |
+| `get-usage` | Get current daily usage stats |
+| `buy-credits` | Purchase a credit pack |
+
+#### Create checkout
+
+Start a new Stripe checkout session for a subscription plan.
+
+```json
+{
+  "action": "create-checkout",
+  "plan": "solo"
+}
+```
+
+**Response**
+
+```json
+{
+  "url": "https://checkout.stripe.com/..."
+}
+```
+
+Redirect the user to the returned `url` to complete payment.
+
+#### Enable BYOK
+
+Enable Bring Your Own Key mode so AI requests use your own API keys instead of platform credits.
+
+```json
+{
+  "action": "enable-byok"
+}
+```
+
+#### Disable BYOK
+
+Switch back to platform credits for AI usage.
+
+```json
+{
+  "action": "disable-byok"
+}
+```
+
+#### Get usage
+
+Retrieve your current daily usage statistics.
+
+```json
+{
+  "action": "get-usage"
+}
+```
+
+**Response**
+
+```json
+{
+  "dailyUnits": 600,
+  "used": 245,
+  "remaining": 355
+}
+```
+
+#### Buy credits
+
+Purchase a credit pack to top up your account balance.
+
+```json
+{
+  "action": "buy-credits",
+  "priceId": "price_xxx"
+}
+```
+
+**Response**
+
+```json
+{
+  "url": "https://checkout.stripe.com/..."
 }
 ```
 
