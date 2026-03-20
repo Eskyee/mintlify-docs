@@ -63,13 +63,21 @@ Key services:
 - `GET /api/agents` — List and manage agents
 - `POST /api/ai/*` — AI provider proxy (OpenRouter, Anthropic, etc.)
 
-### Worker Service (Render)
+### Worker service (Render)
 
-Background job processor for:
-- Scheduled tasks (cron jobs per agent)
+A standalone background job processor built on BullMQ. It connects to the same Redis instance used by the backend and processes jobs from two queues:
+
+| Queue | Job types | Concurrency |
+|-------|-----------|-------------|
+| `tasks` | `scheduled-task` — cron jobs per agent | 5 |
+| | `skill-execution` — run a skill on behalf of an agent | |
+| `provision` | `new-agent` — provision a new agent asynchronously | 2 |
+
+The worker also handles:
 - A2A message routing between agents
 - Webhook processing (Stripe, Telegram, Discord)
-- Skill execution and sandboxing
+
+The worker listens for `SIGTERM` and drains in-flight jobs before shutting down.
 
 ### Database (Neon PostgreSQL)
 
@@ -149,7 +157,7 @@ Agentbot is fully open source. To self-host:
 
 1. **Frontend:** Deploy `web/` to Vercel or any Next.js-compatible host
 2. **Backend:** Run `agentbot-backend/` on any Docker-capable server
-3. **Worker:** Run `agentbot-worker/` alongside the backend
+3. **Worker:** Run the worker entry point from `agentbot-backend/` using `Dockerfile.worker`
 4. **Database:** Neon Postgres (free tier available) or any PostgreSQL 15+
 5. **Redis:** Any Redis 7+ instance
 6. **AI:** Ollama for local inference, or configure BYOK providers
