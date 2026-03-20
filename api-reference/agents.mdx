@@ -37,26 +37,7 @@ Returns all agents owned by the authenticated user. When no session is present, 
 
 ## Create agent
 
-```http
-POST /api/agents
-```
-
-### Request body
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `name` | string | Yes | Name of the agent |
-| `config` | object | No | Agent configuration |
-
-### Response
-
-```json
-{
-  "id": "agent_456",
-  "name": "My Agent",
-  "status": "deploying"
-}
-```
+<Warning>The `POST /api/agents` endpoint is deprecated. Use [`POST /api/agents/provision`](#provision-agent) to create agents.</Warning>
 
 ## Get agent
 
@@ -97,37 +78,11 @@ Requires authentication and ownership of the agent.
 
 ## Update agent
 
-```http
-PUT /api/agents/:id
-```
-
-### Request body
-
-Any valid agent configuration fields.
-
-### Response
-
-```json
-{
-  "id": "agent_123",
-  "message": "Agent updated"
-}
-```
+<Warning>`PUT /api/agents/:id` is deprecated. Use [`PUT /api/agents/:id/config`](#update-agent-configuration) to update agent configuration.</Warning>
 
 ## Delete agent
 
-```http
-DELETE /api/agents/:id
-```
-
-### Response
-
-```json
-{
-  "id": "agent_123",
-  "message": "Agent deleted"
-}
-```
+<Warning>`DELETE /api/agents/:id` is deprecated. Use the lifecycle endpoints to manage agent state (for example, [`POST /api/instance/:userId/stop`](#stop-agent)).</Warning>
 
 ## Provision agent
 
@@ -155,7 +110,7 @@ Admin users (configured via `ADMIN_EMAILS`) are exempt from the following restri
 - **Subscription requirement** — admins can provision agents without an active subscription (the `402` error is not returned).
 - **Agent limit** — admins receive an elevated agent slot limit instead of the plan-based cap.
 
-### Response
+### Response (201 Created)
 
 ```json
 {
@@ -178,7 +133,7 @@ Admin users (configured via `ADMIN_EMAILS`) are exempt from the following restri
 | 400 | Agent name is required |
 | 401 | Unauthorized |
 | 402 | Active subscription required to provision agents |
-| 429 | Agent limit reached for your plan. Response includes `current` (agent count) and `limit` fields. Limits: `free` 1, `starter` 1, `pro` 3, `enterprise` 100. Users without a recognized plan are treated as `free` tier. |
+| 429 | Agent limit reached for your plan. Response includes `current` (agent count) and `limit` fields. Limits: `starter` 1, `pro` 3, `enterprise` 100. Users without a recognized plan default to a limit of 1. |
 | 500 | Failed to provision agent |
 
 ## List provisioned agents
@@ -245,38 +200,7 @@ Arbitrary JSON configuration to apply.
 
 ## Get agent logs
 
-<Warning>This endpoint is not yet available. It is planned for a future release.</Warning>
-
-```http
-GET /api/agents/:id/logs
-```
-
-### Query parameters
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `limit` | integer | 50 | Max entries to return (max 100) |
-| `level` | string | — | Filter by level: `info`, `warning`, `error`, `debug` |
-
-### Response
-
-```json
-{
-  "logs": [
-    {
-      "id": "log-0",
-      "timestamp": "2026-03-19T00:00:00Z",
-      "level": "info",
-      "message": "Agent activity log entry",
-      "source": "agent",
-      "agentId": "agent_123"
-    }
-  ],
-  "total": 50,
-  "limit": 50,
-  "status": "ok"
-}
-```
+<Warning>This endpoint is planned for a future release and is not yet implemented.</Warning>
 
 ## Get agent messages
 
@@ -467,6 +391,7 @@ All lifecycle endpoints return the following shape on failure:
 
 | Code | Description |
 |------|-------------|
+| 403 | Forbidden — authenticated user does not own this agent instance |
 | 502 | Backend service unavailable |
 | 500 | Internal server error |
 
@@ -870,10 +795,44 @@ POST /api/chat
 
 ### Request body
 
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `message` | string | Yes | Message to send |
+| `topic` | string | No | Conversation topic |
+
 ```json
 {
-  "agentId": "agent_123",
   "message": "Hello!",
-  "platform": "telegram"
+  "topic": "general"
+}
+```
+
+### Response
+
+```json
+{
+  "id": "msg_123",
+  "message": "Hello!",
+  "topic": "general",
+  "status": "received",
+  "timestamp": "2026-03-19T00:00:00Z",
+  "reply": "Hi! How can I help?"
+}
+```
+
+## List messages
+
+```http
+GET /api/chat
+```
+
+Returns the message history. No authentication required.
+
+### Response
+
+```json
+{
+  "messages": [],
+  "count": 0
 }
 ```

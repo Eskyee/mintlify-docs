@@ -120,10 +120,10 @@ When a wallet signs in, the system checks for an existing user by the wallet-der
 ## Get current user
 
 ```http
-GET /api/user
+GET /api/settings
 ```
 
-Requires session authentication.
+Requires session authentication. Returns the current user profile.
 
 ### Response
 
@@ -140,18 +140,44 @@ Requires session authentication.
 }
 ```
 
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | Unauthorized |
+
 ## Update profile
+
+You can update your profile using either `POST` or `PATCH`.
+
+```http
+POST /api/settings
+```
+
+### Request body (POST)
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | string | No | New display name |
+| `email` | string | No | New email address (must be unique) |
+
+### Errors (POST)
+
+| Code | Description |
+|------|-------------|
+| 401 | Unauthorized |
+| 409 | Email address already in use |
 
 ```http
 PATCH /api/settings
 ```
 
-### Request body
+### Request body (PATCH)
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `name` | string | No | New display name |
-| `avatar` | string | No | Avatar URL |
+| `notifications` | object | No | Notification preferences |
 
 ## Change password
 
@@ -164,7 +190,14 @@ POST /api/settings/password
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `currentPassword` | string | Yes | Current password |
-| `newPassword` | string | Yes | New password |
+| `newPassword` | string | Yes | New password (minimum 8 characters) |
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | New password must be at least 8 characters |
+| 401 | Unauthorized or current password incorrect |
 
 ## Forgot password
 

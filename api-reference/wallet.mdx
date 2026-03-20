@@ -58,6 +58,12 @@ Returns wallet information. When CDP is configured, returns CDP status without a
 }
 ```
 
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | Unauthorized (no session and CDP not configured) |
+
 ## Wallet actions
 
 ```http
@@ -140,7 +146,8 @@ Returns the address of the CDP Agentic Wallet.
 {
   "authenticated": false,
   "needsAuth": true,
-  "message": "Run: npx awal auth login your@email.com"
+  "error": "Error description",
+  "setup": "Install: npx skills add coinbase/agentic-wallet-skills"
 }
 ```
 
