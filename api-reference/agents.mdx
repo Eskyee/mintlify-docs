@@ -178,7 +178,7 @@ Admin users (configured via `ADMIN_EMAILS`) are exempt from the following restri
 | 400 | Agent name is required |
 | 401 | Unauthorized |
 | 402 | Active subscription required to provision agents |
-| 429 | Agent limit reached for your plan. Response includes `current` (agent count) and `limit` fields. Limits: `starter` 1, `pro` 3, `enterprise` 100 |
+| 429 | Agent limit reached for your plan. Response includes `current` (agent count) and `limit` fields. Limits: `free` 1, `starter` 1, `pro` 3, `enterprise` 100. Users without a recognized plan are treated as `free` tier. |
 | 500 | Failed to provision agent |
 
 ## List provisioned agents
