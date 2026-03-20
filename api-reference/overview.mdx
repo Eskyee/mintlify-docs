@@ -74,7 +74,7 @@ API keys use the `sk_` prefix and are shown only once at creation time. See the 
 | 201 | Resource created |
 | 400 | Bad request or validation error |
 | 401 | Unauthorized (missing or invalid authentication) |
-| 402 | Payment required (no active subscription or missing [MPP](/payments/mpp) credential) |
+| 402 | Payment required — a paid subscription is mandatory for all agent provisioning and usage. Also returned when an [MPP](/payments/mpp) credential is missing for gateway requests. Requests using the deprecated `free` plan value receive this status. |
 | 403 | Forbidden (insufficient permissions, token gating failure, or bot detection) |
 | 404 | Resource not found |
 | 429 | Too many requests or tier limit reached |

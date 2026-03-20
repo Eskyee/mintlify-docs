@@ -423,7 +423,7 @@ Returns the current status and metadata for an agent instance.
   "startedAt": "2026-03-01T00:00:00Z",
   "subdomain": "user_123.agents.localhost",
   "url": "https://user_123.agents.localhost",
-  "plan": "free",
+  "plan": "solo",
   "openclawVersion": "2026.2.17"
 }
 ```
@@ -557,7 +557,9 @@ The request is proxied to the backend provisioning service. A dedicated Mux live
 | `discordBotToken` | string | Conditional | Discord bot token. At least one channel token is required. |
 | `aiProvider` | string | No | AI provider (default: `openrouter`). Options: `openrouter`, `gemini`, `groq`, `anthropic`, `openai` |
 | `apiKey` | string | No | API key for the AI provider |
-| `plan` | string | No | Plan tier (default: `free`). Options: `free`, `pro`, `enterprise` |
+| `plan` | string | No | Plan tier. Options: `solo`, `collective`, `label`, `network`. A paid plan is required — requests with `plan` set to `free` (or omitted) return `402 Payment Required`. |
+
+<Warning>The `free` plan value is deprecated. The provisioning service now requires a paid plan (`solo`, `collective`, `label`, or `network`) and a valid Stripe subscription. Requests with `plan` set to `free` return `402 Payment Required` with `code: "PAYMENT_REQUIRED"`.</Warning>
 
 <Warning>The following request fields are deprecated and no longer accepted: `whatsappPhoneNumberId`, `whatsappBusinessAccountId`, `discordGuildId`, `discordChannelId`.</Warning>
 
@@ -583,6 +585,7 @@ The proxy returns a filtered subset of the backend response:
 | Code | Description |
 |------|-------------|
 | 400 | At least one channel token required (Telegram, WhatsApp, or Discord) |
+| 402 | Payment required. Returned when `plan` is `free` or when no valid Stripe subscription is present. The response includes `code: "PAYMENT_REQUIRED"` and a message directing the user to choose a paid plan. |
 | 429 | Too many requests |
 | 500 | Internal server error |
 | 502 | Provisioning service unavailable or returned an error |
