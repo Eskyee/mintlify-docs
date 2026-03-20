@@ -49,9 +49,7 @@ Crypto payments are not accepted through Stripe checkout. For USDC payments on B
    - `checkout.session.completed`
    - `customer.subscription.created`
    - `customer.subscription.updated`
-   - `customer.subscription.deleted`
-   - `invoice.payment_succeeded`
-   - `invoice.payment_failed`
+   - `invoice.paid`
 4. Copy webhook secret and add to Agentbot
 
 ## Pricing plans
@@ -144,6 +142,8 @@ GET /api/stripe/credits?price={stripe_price_id}
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `price` | string | Yes | A valid Stripe price ID from the allowed credit price list |
+
+The endpoint validates the `price` parameter against a server-side allowlist of approved Stripe price IDs. Requests with unlisted price IDs are rejected with a `400` error.
 
 The endpoint redirects the user to a Stripe checkout page for the selected credit pack. On success, credits are added to the account automatically.
 
@@ -367,7 +367,16 @@ Redirect the user to the returned `url` to complete the upgrade. On success, the
 
 ## Webhook events
 
-Handle subscription events:
+The webhook handler processes the following events:
+
+| Event | Action |
+|-------|--------|
+| `checkout.session.completed` | Updates the user's subscription plan, stores the Stripe customer ID, and sends a payment receipt email. Also handles storage upgrade purchases. |
+| `invoice.paid` | Sends a payment receipt email to the customer. |
+| `customer.subscription.created` | Sends a subscription confirmation email. |
+| `customer.subscription.updated` | Sends a subscription update email. |
+
+<Note>Guest checkouts from unknown email addresses are rejected. The user must have a registered account before completing a Stripe checkout session.</Note>
 
 ```typescript
 // /api/webhooks/stripe
@@ -384,12 +393,15 @@ export async function POST(request) {
   
   switch (event.type) {
     case 'checkout.session.completed':
-      // Grant access
+      // Grant access and update subscription
       await grantAccess(event.data.object.customer_email);
       break;
-    case 'customer.subscription.deleted':
-      // Revoke access
-      await revokeAccess(event.data.object.customer_email);
+    case 'invoice.paid':
+      // Send payment receipt
+      break;
+    case 'customer.subscription.created':
+    case 'customer.subscription.updated':
+      // Send confirmation email
       break;
   }
   

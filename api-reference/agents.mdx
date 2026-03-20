@@ -90,7 +90,7 @@ Requires authentication and ownership of the agent.
 POST /api/agents/provision
 ```
 
-Provisions a new agent. Requires an active subscription unless the caller is an admin.
+Provisions a new agent. Requires an active subscription unless the caller is an admin or designated tester.
 
 <Note>Provisioning requests may be processed asynchronously through the background task queue. The agent is created immediately with a `provisioning` status and transitions to `running` once the gateway confirms the deployment. If gateway provisioning fails, the status changes to `error`.</Note>
 
@@ -105,12 +105,12 @@ Provisions a new agent. Requires an active subscription unless the caller is an 
 
 <Note>The agent limit is determined by the subscription plan on the authenticated user's account (`starter`: 1, `pro`: 3, `enterprise`: 100). It cannot be overridden in the request body.</Note>
 
-### Admin bypass
+### Admin and tester bypass
 
-Admin users (configured via `ADMIN_EMAILS`) are exempt from the following restrictions:
+Admin users (configured via `ADMIN_EMAILS`) and tester users (configured via `TESTER_EMAILS`) are exempt from the following restrictions:
 
-- **Subscription requirement** — admins can provision agents without an active subscription (the `402` error is not returned).
-- **Agent limit** — admins receive an elevated agent slot limit instead of the plan-based cap.
+- **Subscription requirement** -- admins and testers can provision agents without an active subscription (the `402` error is not returned).
+- **Agent limit** -- admins receive an elevated agent slot limit instead of the plan-based cap.
 
 ### Response (201 Created)
 
@@ -337,6 +337,8 @@ POST /api/instance/:userId/stop
 POST /api/instance/:userId/restart
 ```
 
+Restarts the agent. Before restarting, the backend automatically heals any deprecated AI model references in the agent configuration.
+
 ```json
 {
   "success": true,
@@ -350,7 +352,7 @@ POST /api/instance/:userId/restart
 POST /api/instance/:userId/update
 ```
 
-Triggers an image update on the backend.
+Triggers an image update on the backend. The backend backs up the agent's data before updating. If the new image fails to start, the backend rolls back to the previous image automatically.
 
 ```json
 {
@@ -365,7 +367,7 @@ Triggers an image update on the backend.
 POST /api/instance/:userId/repair
 ```
 
-Returns the backend response directly.
+Heals deprecated AI model references and recreates the agent container. Returns the backend response directly.
 
 ```json
 {
@@ -547,6 +549,17 @@ Provisions a new agent with messaging channel tokens. No authentication is requi
 
 The request is proxied to the backend provisioning service. A dedicated Mux live stream is automatically created for the agent. The backend may enqueue the provisioning job to the `provision` queue for asynchronous processing.
 
+### Kill switch
+
+When the platform kill switch is enabled, all provisioning requests are rejected with a `503 Service Unavailable` response. Existing agent instances continue running but no new agents can be created.
+
+```json
+{
+  "error": "PLATFORM_DISABLED",
+  "message": "New provisioning is temporarily disabled. Existing instances continue running."
+}
+```
+
 ### Request body
 
 | Field | Type | Required | Description |
@@ -557,9 +570,30 @@ The request is proxied to the backend provisioning service. A dedicated Mux live
 | `discordBotToken` | string | Conditional | Discord bot token. At least one channel token is required. |
 | `aiProvider` | string | No | AI provider (default: `openrouter`). Options: `openrouter`, `gemini`, `groq`, `anthropic`, `openai` |
 | `apiKey` | string | No | API key for the AI provider |
-| `plan` | string | No | Plan tier (default: `free`). Options: `free`, `pro`, `enterprise` |
+| `plan` | string | No | Plan tier (default: `free`). Options: `free`, `label`, `solo`, `collective`, `network` |
+| `email` | string | No | Email address for the account |
+| `stripeSubscriptionId` | string | No | Stripe subscription ID. Required for paid plans unless the caller is an admin or tester. |
 
 <Warning>The following request fields are deprecated and no longer accepted: `whatsappPhoneNumberId`, `whatsappBusinessAccountId`, `discordGuildId`, `discordChannelId`.</Warning>
+
+### Payment enforcement
+
+Paid plans require a valid `stripeSubscriptionId` unless the caller's email is in the admin or tester allow list:
+
+- **Free plan**: Always returns `402` with code `UPGRADE_REQUIRED`. The free tier provides dashboard access only with zero compute.
+- **Paid plans without Stripe**: Returns `402` with code `PAYMENT_REQUIRED` unless the caller is an admin or designated tester.
+- **Admin bypass**: Users configured via `ADMIN_EMAILS` skip the Stripe subscription check.
+- **Tester bypass**: Users configured via `TESTER_EMAILS` skip the Stripe subscription check.
+
+### Plan limits
+
+| Plan | Max agents |
+|------|-----------|
+| `free` | 0 (dashboard only) |
+| `label` | 1 |
+| `solo` | 3 |
+| `collective` | 10 |
+| `network` | 100 |
 
 ### Response
 
@@ -582,10 +616,12 @@ The proxy returns a filtered subset of the backend response:
 
 | Code | Description |
 |------|-------------|
-| 400 | At least one channel token required (Telegram, WhatsApp, or Discord) |
+| 400 | At least one channel token required (Telegram, WhatsApp, or Discord), invalid AI provider, or invalid plan |
+| 402 | Payment required. Returns `UPGRADE_REQUIRED` for the free plan or `PAYMENT_REQUIRED` for paid plans without a valid Stripe subscription. |
 | 429 | Too many requests |
 | 500 | Internal server error |
 | 502 | Provisioning service unavailable or returned an error |
+| 503 | Platform kill switch is active. Provisioning is temporarily disabled. |
 
 ## Agent interaction
 
