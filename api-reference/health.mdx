@@ -44,11 +44,21 @@ The `health` field reflects overall system status:
 | `degraded` | CPU or memory usage above 70% but at or below 85% |
 | `unhealthy` | CPU or memory usage above 85% |
 
-### Errors
+### Error response
+
+When the system is unhealthy, the response body uses `status: "error"` rather than a top-level `error` field:
+
+```json
+{
+  "status": "error",
+  "health": "unhealthy",
+  "timestamp": "2026-03-19T00:00:00Z"
+}
+```
 
 | Code | Description |
 |------|-------------|
-| 500 | System unhealthy |
+| 500 | System unhealthy. Response includes `status`, `health`, and `timestamp` fields. |
 
 ## Get heartbeat settings
 

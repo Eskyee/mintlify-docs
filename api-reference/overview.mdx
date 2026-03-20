@@ -142,8 +142,8 @@ API keys use the `sk_` prefix and are shown only once at creation time. See the 
 | `/api/auth/callback/wallet` | POST | Wallet sign in (SIWE) |
 | `/api/auth/forgot-password` | POST | Request password reset |
 | `/api/auth/reset-password` | POST | Reset password |
-| `/api/auth/farcaster/verify` | POST | Verify Farcaster identity |
-| `/api/auth/farcaster/refresh` | POST | Refresh Farcaster token |
+| `/api/auth/farcaster/verify` | GET, POST | Verify Farcaster identity (GET returns endpoint metadata) |
+| `/api/auth/farcaster/refresh` | GET, POST | Refresh Farcaster token (GET returns endpoint metadata) |
 | `/api/auth/token-gating/verify` | GET, POST | Verify token gating access |
 | `/api/billing` | GET | Get billing info |
 | `/api/billing` | POST | Billing actions (`create-checkout`, `enable-byok`, `disable-byok`, `get-usage`, `buy-credits`) |
