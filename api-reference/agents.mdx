@@ -572,9 +572,9 @@ DELETE /api/agents/:id/verify
 POST /api/provision
 ```
 
-Provisions a new agent with messaging channel tokens. Requires authentication. Rate-limited per IP. At least one channel token is required.
+Provisions a new agent with messaging channel tokens. No authentication is required. Rate-limited per IP. At least one channel token is required.
 
-A dedicated Mux live stream is automatically created for the agent.
+The request is proxied to the backend provisioning service. A dedicated Mux live stream is automatically created for the agent.
 
 ### Request body
 
@@ -583,25 +583,23 @@ A dedicated Mux live stream is automatically created for the agent.
 | `telegramToken` | string | Conditional | Telegram bot token. At least one channel token is required. |
 | `telegramUserId` | string | No | Telegram user ID for owner binding |
 | `whatsappToken` | string | Conditional | WhatsApp API token. At least one channel token is required. |
-| `whatsappPhoneNumberId` | string | No | WhatsApp phone number ID |
-| `whatsappBusinessAccountId` | string | No | WhatsApp Business Account ID |
 | `discordBotToken` | string | Conditional | Discord bot token. At least one channel token is required. |
-| `discordGuildId` | string | No | Discord guild (server) ID |
-| `discordChannelId` | string | No | Discord channel ID |
 | `aiProvider` | string | No | AI provider (default: `openrouter`). Options: `openrouter`, `gemini`, `groq`, `anthropic`, `openai` |
 | `apiKey` | string | No | API key for the AI provider |
 | `plan` | string | No | Plan tier (default: `free`). Options: `free`, `pro`, `enterprise` |
+
+<Warning>The following request fields are deprecated and no longer accepted: `whatsappPhoneNumberId`, `whatsappBusinessAccountId`, `discordGuildId`, `discordChannelId`.</Warning>
 
 ### Response
 
 ```json
 {
   "success": true,
-  "userId": "a1b2c3d4e5f6g7h8",
-  "subdomain": "a1b2c3d4e5f6g7h8.agents.localhost",
-  "url": "https://a1b2c3d4e5f6g7h8.agents.localhost",
-  "streamKey": "live_abc123",
-  "liveStreamId": "stream_456"
+  "userId": "a1b2c3d4e5",
+  "subdomain": "dj-a1b2c3d4e5.agentbot.raveculture.xyz",
+  "url": "https://dj-a1b2c3d4e5.agentbot.raveculture.xyz",
+  "streamKey": "sk-ab12-cd34-ef56",
+  "liveStreamId": "x7k9m2p4q1"
 }
 ```
 
@@ -610,7 +608,6 @@ A dedicated Mux live stream is automatically created for the agent.
 | Code | Description |
 |------|-------------|
 | 400 | At least one channel token required (Telegram, WhatsApp, or Discord) |
-| 401 | Unauthorized |
 | 429 | Too many requests |
 | 500 | Internal server error |
 | 502 | Provisioning service unavailable or returned an error |
