@@ -187,7 +187,8 @@ Returns the current configuration for an agent. Requires authentication and owne
 
 ```json
 {
-  "config": {}
+  "config": {},
+  "status": "ok"
 }
 ```
 
@@ -196,7 +197,8 @@ Returns the current configuration for an agent. Requires authentication and owne
 | Code | Description |
 |------|-------------|
 | 401 | Unauthorized |
-| 502 | Backend service unavailable |
+| 404 | Agent not found or agent configuration not found |
+| 500 | Failed to fetch agent configuration |
 
 ## Update agent configuration
 
@@ -206,16 +208,67 @@ PUT /api/agents/:id/config
 
 Updates the configuration for an agent. Requires authentication and ownership. The request body is forwarded to the backend.
 
+### Response
+
+```json
+{
+  "config": {},
+  "status": "updated"
+}
+```
+
 ### Errors
 
 | Code | Description |
 |------|-------------|
 | 401 | Unauthorized |
-| 502 | Backend service unavailable |
+| 404 | Agent not found |
+| 500 | Failed to update agent configuration |
 
 ## Get agent logs
 
-<Warning>`GET /api/agents/:id/logs` is deprecated. This endpoint is not currently implemented and may be removed in a future release.</Warning>
+```http
+GET /api/agents/:id/logs
+```
+
+Returns logs for an agent. Requires authentication and ownership.
+
+<Warning>This endpoint currently returns mock data. Log entries are generated placeholders, not real agent logs. A future release will connect this endpoint to the backend logging service.</Warning>
+
+### Query parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `limit` | number | Maximum log entries to return (default: 50, max: 100) |
+| `level` | string | Filter by log level (for example, `info`, `error`, `warn`) |
+
+### Response
+
+```json
+{
+  "logs": [
+    {
+      "id": "log_1",
+      "timestamp": "2026-03-19T00:00:00Z",
+      "level": "info",
+      "message": "Agent activity log entry 1",
+      "source": "system",
+      "agentId": "agent_123"
+    }
+  ],
+  "total": 50,
+  "limit": 50,
+  "status": "ok"
+}
+```
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | Unauthorized |
+| 404 | Agent not found |
+| 500 | Failed to fetch logs |
 
 ## Get agent messages
 
@@ -229,14 +282,23 @@ Returns paginated messages for an agent. Requires authentication and ownership.
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `limit` | number | Maximum messages to return (default: 50) |
+| `limit` | number | Maximum messages to return (default: 50, max: 100) |
 | `offset` | number | Offset for pagination (default: 0) |
 
 ### Response
 
 ```json
 {
-  "messages": [],
+  "messages": [
+    {
+      "id": "msg_1",
+      "agentId": "agent_123",
+      "sender": "user",
+      "content": "Hello",
+      "timestamp": "2026-03-19T00:00:00Z",
+      "platform": "telegram"
+    }
+  ],
   "total": 0,
   "limit": 50,
   "offset": 0,
@@ -244,12 +306,15 @@ Returns paginated messages for an agent. Requires authentication and ownership.
 }
 ```
 
+<Warning>This endpoint currently returns mock data. Message entries are generated placeholders. A future release will connect this endpoint to the backend message store.</Warning>
+
 ### Errors
 
 | Code | Description |
 |------|-------------|
 | 401 | Unauthorized |
-| 502 | Backend service unavailable |
+| 404 | Agent not found |
+| 500 | Failed to fetch messages |
 
 ## Get agent stats
 
@@ -558,7 +623,7 @@ The request is proxied to the backend provisioning service. A dedicated Mux live
 | `telegramUserId` | string | No | Telegram user ID for owner binding |
 | `whatsappToken` | string | Conditional | WhatsApp API token. At least one channel token is required. |
 | `discordBotToken` | string | Conditional | Discord bot token. At least one channel token is required. |
-| `aiProvider` | string | No | AI provider (default: `openrouter`). Options: `openrouter`, `gemini`, `groq`, `anthropic`, `openai` |
+| `aiProvider` | string | No | AI provider (default: `openrouter`). Options: `openrouter`, `gemini`, `groq`, `anthropic`, `openai`. Each provider maps to a default model — see [AI provider defaults](#ai-provider-defaults) below. |
 | `apiKey` | string | No | API key for the AI provider |
 | `plan` | string | No | Plan tier. Options: `solo`, `collective`, `label`, `network`. A paid plan is required — requests with `plan` set to `free` (or omitted) return `402 Payment Required`. |
 | `email` | string | No | User email address. Used for admin and tester bypass of payment enforcement. |
@@ -642,6 +707,19 @@ When calling the backend provisioning service directly, the response includes ad
 | 429 | Too many requests |
 | 500 | Internal server error |
 | 502 | Provisioning service unavailable or returned an error |
+| 503 | Provisioning temporarily disabled (kill switch active). The response includes `success: false` and an error message directing you to contact support. |
+
+### AI provider defaults
+
+Each `aiProvider` value maps to a default model and base URL:
+
+| Provider | Default model | Base URL |
+|----------|--------------|----------|
+| `openrouter` | `openai/gpt-4o-mini` | `https://openrouter.ai/api/v1` |
+| `gemini` | `gemini-2.0-flash` | `https://generativelanguage.googleapis.com/v1beta` |
+| `groq` | `mixtral-8x7b-32768` | `https://api.groq.com/openai/v1` |
+| `anthropic` | `claude-3-sonnet-20240229` | `https://api.anthropic.com/v1` |
+| `openai` | `gpt-4o` | `https://api.openai.com/v1` |
 
 ## Agent interaction
 
