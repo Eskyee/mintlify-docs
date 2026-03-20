@@ -51,17 +51,20 @@ Requires authentication and ownership of the agent.
 
 ```json
 {
-  "id": "agent_123",
-  "status": "active",
-  "startedAt": "2026-03-01T00:00:00Z",
-  "plan": "starter",
-  "subdomain": "agent_123.agents.localhost",
-  "url": "https://agent_123.agents.localhost",
-  "openclawVersion": "2026.3.13",
-  "verified": false,
-  "verificationType": null,
-  "attestationUid": null,
-  "verifiedAt": null
+  "agent": {
+    "id": "agent_123",
+    "status": "active",
+    "startedAt": "2026-03-01T00:00:00Z",
+    "plan": "starter",
+    "subdomain": "agent_123.agents.localhost",
+    "url": "https://agent_123.agents.localhost",
+    "openclawVersion": "2026.3.13",
+    "verified": false,
+    "verificationType": null,
+    "attestationUid": null,
+    "verifiedAt": null
+  },
+  "status": "ok"
 }
 ```
 
@@ -172,19 +175,158 @@ Requires session authentication.
 
 ## Get agent configuration
 
-<Warning>`GET /api/agents/:id/config` is deprecated. This endpoint is not currently implemented and may be removed in a future release.</Warning>
+```http
+GET /api/agents/:id/config
+```
+
+Returns the configuration for an agent. Requires authentication and ownership.
+
+### Response
+
+```json
+{
+  "config": {
+    "model": "claude-opus-4-6",
+    "channels": ["telegram"],
+    "skills": []
+  },
+  "status": "ok"
+}
+```
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 404 | Agent not found or not owned by user |
+| 500 | Failed to fetch agent configuration |
 
 ## Update agent configuration
 
-<Warning>`PUT /api/agents/:id/config` is deprecated. This endpoint is not currently implemented and may be removed in a future release.</Warning>
+```http
+PUT /api/agents/:id/config
+```
+
+Updates the configuration for an agent. Requires authentication and ownership. The request body is forwarded to the backend configuration service.
+
+### Request body
+
+Pass the configuration fields you want to update. The exact fields depend on the backend configuration schema.
+
+### Response
+
+```json
+{
+  "config": {
+    "model": "claude-opus-4-6",
+    "channels": ["telegram", "discord"],
+    "skills": ["browser"]
+  },
+  "status": "updated"
+}
+```
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 404 | Agent not found or not owned by user |
+| 500 | Failed to update agent configuration |
 
 ## Get agent logs
 
-<Warning>`GET /api/agents/:id/logs` is deprecated. This endpoint is not currently implemented and may be removed in a future release.</Warning>
+```http
+GET /api/agents/:id/logs
+```
+
+Returns activity logs for an agent. Requires authentication and ownership.
+
+### Query parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `limit` | number | `50` | Maximum number of log entries to return (capped at 100) |
+| `level` | string | — | Filter by log level. Options: `info`, `warning`, `error`, `debug`. Returns all levels when omitted. |
+
+### Response
+
+```json
+{
+  "logs": [
+    {
+      "id": "log-0",
+      "timestamp": "2026-03-19T12:00:00Z",
+      "level": "info",
+      "message": "Agent activity log entry 1",
+      "source": "agent",
+      "agentId": "agent_123"
+    }
+  ],
+  "total": 50,
+  "limit": 50,
+  "status": "ok"
+}
+```
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | Unauthorized |
+| 404 | Agent not found or not owned by user |
+| 500 | Failed to fetch logs |
 
 ## Get agent messages
 
-<Warning>`GET /api/agents/:id/messages` is deprecated. This endpoint is not currently implemented and may be removed in a future release.</Warning>
+```http
+GET /api/agents/:id/messages
+```
+
+Returns messages exchanged with an agent. Requires authentication and ownership.
+
+### Query parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `limit` | number | `50` | Maximum number of messages to return (capped at 100) |
+| `offset` | number | `0` | Number of messages to skip for pagination |
+
+### Response
+
+```json
+{
+  "messages": [
+    {
+      "id": "msg-0",
+      "agentId": "agent_123",
+      "sender": "user",
+      "content": "User message 1",
+      "timestamp": "2026-03-19T12:00:00Z",
+      "platform": "telegram"
+    },
+    {
+      "id": "msg-1",
+      "agentId": "agent_123",
+      "sender": "agent",
+      "content": "Agent response to message 0",
+      "timestamp": "2026-03-19T11:59:00Z",
+      "platform": "discord"
+    }
+  ],
+  "total": 50,
+  "limit": 50,
+  "offset": 0,
+  "status": "ok"
+}
+```
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | Unauthorized |
+| 404 | Agent not found or not owned by user |
+| 500 | Failed to fetch messages |
 
 ## Get agent stats
 
@@ -428,8 +570,7 @@ GET /api/agents/:id/verification
   "verificationType": null,
   "attestationUid": null,
   "verifierAddress": null,
-  "verifiedAt": null,
-  "metadata": null
+  "verifiedAt": null
 }
 ```
 
@@ -444,10 +585,9 @@ POST /api/agents/:id/verify
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `verificationType` | string | Yes | One of: `eas`, `coinbase`, `ens`, `webauthn` |
-| `verified` | boolean | No | Verification status flag |
 | `attestationUid` | string | For `eas` | Attestation UID from EAS |
-| `verifierAddress` | string | No | Address of the verifying wallet |
-| `metadata` | object | No | Additional verification metadata |
+| `walletAddress` | string | Conditional | Wallet address of the verifier. Required for `ens` verification. |
+| `signature` | string | Conditional | Cryptographic signature. Required for `coinbase`, `ens`, and `webauthn` verification. |
 
 #### Response
 
@@ -465,8 +605,9 @@ POST /api/agents/:id/verify
 
 | Code | Description |
 |------|-------------|
-| 400 | Invalid verification type or missing required fields |
+| 400 | Invalid verification type or missing required fields. Each type has specific requirements: `eas` requires `attestationUid`; `coinbase` and `webauthn` require `signature`; `ens` requires both `signature` and `walletAddress`. |
 | 401 | Unauthorized |
+| 500 | Failed to process verification |
 
 ### Remove verification
 

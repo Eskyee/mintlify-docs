@@ -1,216 +1,1115 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "OpenAPI Plant Store",
-    "description": "A sample API that uses a plant store as an example to demonstrate features in the OpenAPI specification",
+    "title": "Agentbot API",
+    "description": "API for creating, managing, and interacting with AI agents on the Agentbot platform.",
+    "version": "1.0.0",
     "license": {
       "name": "MIT"
-    },
-    "version": "1.0.0"
+    }
   },
   "servers": [
     {
-      "url": "http://sandbox.mintlify.com"
+      "url": "https://agentbot.raveculture.xyz",
+      "description": "Production"
     }
   ],
   "security": [
     {
-      "bearerAuth": []
+      "sessionAuth": []
     }
   ],
   "paths": {
-    "/plants": {
+    "/api/agents": {
       "get": {
-        "description": "Returns all plants from the system that the user has access to",
-        "parameters": [
-          {
-            "name": "limit",
-            "in": "query",
-            "description": "The maximum number of results to return",
-            "schema": {
-              "type": "integer",
-              "format": "int32"
-            }
-          }
+        "summary": "List agents",
+        "description": "Returns all agents owned by the authenticated user. Returns an empty list when no session is present.",
+        "tags": ["Agents"],
+        "security": [
+          {},
+          { "sessionAuth": [] }
         ],
         "responses": {
           "200": {
-            "description": "Plant response",
+            "description": "Agent list",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/Plant"
+                  "type": "object",
+                  "properties": {
+                    "agents": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/Agent" }
+                    },
+                    "count": { "type": "integer" },
+                    "status": { "type": "string", "example": "ok" }
                   }
                 }
               }
             }
           },
-          "400": {
-            "description": "Unexpected error",
+          "500": {
+            "description": "Internal server error",
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
+                "schema": { "$ref": "#/components/schemas/Error" }
               }
             }
           }
         }
+      }
+    },
+    "/api/agents/{id}": {
+      "get": {
+        "summary": "Get agent",
+        "description": "Returns a single agent by ID. Requires authentication and ownership.",
+        "tags": ["Agents"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Agent details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "agent": { "$ref": "#/components/schemas/AgentDetail" },
+                    "status": { "type": "string", "example": "ok" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" },
+          "404": { "description": "Agent not found or not owned by user" },
+          "500": { "description": "Failed to fetch agent" }
+        }
+      }
+    },
+    "/api/agents/{id}/config": {
+      "get": {
+        "summary": "Get agent configuration",
+        "description": "Returns the configuration for an agent. Requires authentication and ownership.",
+        "tags": ["Agents"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Agent configuration",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "config": { "type": "object" },
+                    "status": { "type": "string", "example": "ok" }
+                  }
+                }
+              }
+            }
+          },
+          "404": { "description": "Agent not found" },
+          "500": { "description": "Failed to fetch agent configuration" }
+        }
       },
-      "post": {
-        "description": "Creates a new plant in the store",
+      "put": {
+        "summary": "Update agent configuration",
+        "description": "Updates the configuration for an agent. Requires authentication and ownership.",
+        "tags": ["Agents"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
         "requestBody": {
-          "description": "Plant to add to the store",
+          "description": "Configuration fields to update",
           "content": {
             "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/NewPlant"
-              }
+              "schema": { "type": "object" }
             }
           },
           "required": true
         },
         "responses": {
           "200": {
-            "description": "plant response",
+            "description": "Updated configuration",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Plant"
+                  "type": "object",
+                  "properties": {
+                    "config": { "type": "object" },
+                    "status": { "type": "string", "example": "updated" }
+                  }
                 }
               }
             }
           },
-          "400": {
-            "description": "unexpected error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          }
+          "404": { "description": "Agent not found" },
+          "500": { "description": "Failed to update agent configuration" }
         }
       }
     },
-    "/plants/{id}": {
-      "delete": {
-        "description": "Deletes a single plant based on the ID supplied",
+    "/api/agents/{id}/logs": {
+      "get": {
+        "summary": "Get agent logs",
+        "description": "Returns activity logs for an agent. Requires authentication and ownership.",
+        "tags": ["Agents"],
         "parameters": [
           {
             "name": "id",
             "in": "path",
-            "description": "ID of plant to delete",
             "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int64"
-            }
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Maximum number of log entries (default 50, max 100)",
+            "schema": { "type": "integer", "default": 50 }
+          },
+          {
+            "name": "level",
+            "in": "query",
+            "description": "Filter by log level",
+            "schema": { "type": "string", "enum": ["info", "warning", "error", "debug"] }
           }
         ],
         "responses": {
-          "204": {
-            "description": "Plant deleted",
-            "content": {}
-          },
-          "400": {
-            "description": "unexpected error",
+          "200": {
+            "description": "Agent logs",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Error"
+                  "type": "object",
+                  "properties": {
+                    "logs": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/LogEntry" }
+                    },
+                    "total": { "type": "integer" },
+                    "limit": { "type": "integer" },
+                    "status": { "type": "string", "example": "ok" }
+                  }
                 }
               }
             }
-          }
+          },
+          "401": { "description": "Unauthorized" },
+          "404": { "description": "Agent not found" },
+          "500": { "description": "Failed to fetch logs" }
         }
       }
-    }
-  },
-  "webhooks": {
-    "/plant/webhook": {
+    },
+    "/api/agents/{id}/messages": {
+      "get": {
+        "summary": "Get agent messages",
+        "description": "Returns messages exchanged with an agent. Requires authentication and ownership.",
+        "tags": ["Agents"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Maximum number of messages (default 50, max 100)",
+            "schema": { "type": "integer", "default": 50 }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "description": "Number of messages to skip",
+            "schema": { "type": "integer", "default": 0 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Agent messages",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "messages": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/Message" }
+                    },
+                    "total": { "type": "integer" },
+                    "limit": { "type": "integer" },
+                    "offset": { "type": "integer" },
+                    "status": { "type": "string", "example": "ok" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" },
+          "404": { "description": "Agent not found" },
+          "500": { "description": "Failed to fetch messages" }
+        }
+      }
+    },
+    "/api/agents/{id}/stats": {
+      "get": {
+        "summary": "Get agent stats",
+        "description": "Returns live container metrics when available, with a mock fallback.",
+        "tags": ["Agents"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Agent statistics",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "stats": { "$ref": "#/components/schemas/AgentStats" },
+                    "status": { "type": "string", "enum": ["ok", "mock"] }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" },
+          "404": { "description": "Agent not found" },
+          "500": { "description": "Internal server error" }
+        }
+      }
+    },
+    "/api/agents/{id}/verify": {
       "post": {
-        "description": "Information about a new plant added to the store",
+        "summary": "Verify agent",
+        "description": "Submit a verification for an agent using EAS, Coinbase, ENS, or WebAuthn.",
+        "tags": ["Agents"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
         "requestBody": {
-          "description": "Plant added to the store",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/VerifyRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Verification result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "verified": { "type": "boolean" },
+                    "verificationType": { "type": "string" },
+                    "attestationUid": { "type": "string" },
+                    "verifiedAt": { "type": "string", "format": "date-time" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Invalid verification type or missing required fields" },
+          "401": { "description": "Unauthorized" },
+          "500": { "description": "Failed to process verification" }
+        }
+      },
+      "delete": {
+        "summary": "Remove verification",
+        "description": "Removes verification from an agent.",
+        "tags": ["Agents"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Verification removed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" },
+          "500": { "description": "Failed to remove verification" }
+        }
+      }
+    },
+    "/api/agents/provision": {
+      "post": {
+        "summary": "Provision agent",
+        "description": "Provisions a new agent. Requires an active subscription unless the caller is an admin.",
+        "tags": ["Agents"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ProvisionRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Agent provisioned",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "agent": { "$ref": "#/components/schemas/Agent" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Agent name is required" },
+          "401": { "description": "Unauthorized" },
+          "402": { "description": "Active subscription required" },
+          "429": { "description": "Agent limit reached for your plan" },
+          "500": { "description": "Failed to provision agent" }
+        }
+      },
+      "get": {
+        "summary": "List provisioned agents",
+        "description": "Lists agents provisioned by the authenticated user.",
+        "tags": ["Agents"],
+        "responses": {
+          "200": {
+            "description": "Agent list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "agents": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/Agent" }
+                    },
+                    "count": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" },
+          "500": { "description": "Failed to list agents" }
+        }
+      }
+    },
+    "/api/v1/gateway": {
+      "post": {
+        "summary": "Gateway",
+        "description": "Routes requests to registered plugins. Supports Stripe and MPP payment methods.",
+        "tags": ["Gateway"],
+        "parameters": [
+          {
+            "name": "X-Plugin-Id",
+            "in": "header",
+            "description": "Plugin to route the request to",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "X-Payment-Method",
+            "in": "header",
+            "description": "Payment method: stripe or mpp",
+            "schema": { "type": "string", "enum": ["stripe", "mpp"] }
+          }
+        ],
+        "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/NewPlant"
+                "type": "object",
+                "properties": {
+                  "plugin": { "type": "string", "description": "Plugin ID" },
+                  "messages": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "role": { "type": "string" },
+                        "content": { "type": "string" }
+                      }
+                    }
+                  }
+                }
               }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Return a 200 status to indicate that the data was received successfully"
+            "description": "Plugin response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "plugin": { "type": "string" },
+                    "message": { "type": "string" },
+                    "timestamp": { "type": "string", "format": "date-time" },
+                    "payment": {
+                      "type": "object",
+                      "properties": {
+                        "method": { "type": "string" },
+                        "receipt": { "type": "string", "nullable": true }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" },
+          "402": { "description": "Payment required (MPP challenge)" },
+          "500": { "description": "Internal server error" },
+          "502": { "description": "No plugin registered for the given ID" }
+        }
+      },
+      "options": {
+        "summary": "CORS preflight",
+        "description": "Returns CORS headers for the gateway endpoint.",
+        "tags": ["Gateway"],
+        "responses": {
+          "204": { "description": "No content" }
+        }
+      }
+    },
+    "/api/keys": {
+      "get": {
+        "summary": "List API keys",
+        "description": "Returns all API keys owned by the authenticated user.",
+        "tags": ["Keys"],
+        "responses": {
+          "200": {
+            "description": "Key list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "keys": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/ApiKey" }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" }
+        }
+      },
+      "post": {
+        "summary": "Create API key",
+        "description": "Creates a new API key. The raw key is only returned once.",
+        "tags": ["Keys"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name"],
+                "properties": {
+                  "name": { "type": "string", "maxLength": 64 }
+                }
+              }
+            }
           }
+        },
+        "responses": {
+          "201": {
+            "description": "Key created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": { "type": "string" },
+                    "name": { "type": "string" },
+                    "key": { "type": "string" },
+                    "createdAt": { "type": "string", "format": "date-time" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Name required or too long" },
+          "401": { "description": "Unauthorized" },
+          "500": { "description": "Failed to create key" }
+        }
+      }
+    },
+    "/api/keys/{id}": {
+      "get": {
+        "summary": "Get API key",
+        "description": "Returns a single API key by ID.",
+        "tags": ["Keys"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Key details",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ApiKey" }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" },
+          "404": { "description": "Key not found" }
+        }
+      },
+      "delete": {
+        "summary": "Delete API key",
+        "description": "Deletes an API key by ID.",
+        "tags": ["Keys"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Key deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" },
+          "404": { "description": "Key not found" }
+        }
+      }
+    },
+    "/api/metrics": {
+      "get": {
+        "summary": "Platform metrics",
+        "description": "Returns platform-wide metrics. No authentication required.",
+        "tags": ["Metrics"],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Platform metrics",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PlatformMetrics" }
+              }
+            }
+          },
+          "500": { "description": "Failed to fetch metrics" }
+        }
+      }
+    },
+    "/api/health": {
+      "get": {
+        "summary": "Health check",
+        "description": "Returns platform health status. No authentication required.",
+        "tags": ["Health"],
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Health status",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/HealthStatus" }
+              }
+            }
+          },
+          "500": { "description": "Health check failed" }
+        }
+      }
+    },
+    "/api/memory": {
+      "get": {
+        "summary": "Get agent memory",
+        "description": "Returns stored memory for an agent.",
+        "tags": ["Memory"],
+        "parameters": [
+          {
+            "name": "agentId",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Agent memory",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "memory": { "type": "object" },
+                    "agentId": { "type": "string" },
+                    "count": { "type": "integer" },
+                    "lastUpdated": { "type": "string", "format": "date-time" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "agentId is required" },
+          "401": { "description": "Unauthorized" },
+          "404": { "description": "Agent not found" },
+          "500": { "description": "Failed to fetch memory" }
+        }
+      },
+      "post": {
+        "summary": "Save agent memory",
+        "description": "Saves memory data for an agent. Supports single key upsert or bulk upsert (max 50 keys, max 100KB per value).",
+        "tags": ["Memory"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["memory", "agentId"],
+                "properties": {
+                  "memory": { "type": "object" },
+                  "agentId": { "type": "string" },
+                  "key": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Memory saved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "agentId": { "type": "string" },
+                    "saved": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Invalid request" },
+          "401": { "description": "Unauthorized" },
+          "404": { "description": "Agent not found" },
+          "500": { "description": "Failed to save memory" }
+        }
+      }
+    },
+    "/api/skills": {
+      "get": {
+        "summary": "List skills",
+        "description": "Returns available skills. Supports filtering by category and featured status.",
+        "tags": ["Skills"],
+        "security": [],
+        "parameters": [
+          {
+            "name": "category",
+            "in": "query",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "featured",
+            "in": "query",
+            "schema": { "type": "boolean" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Skills list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "skills": { "type": "array", "items": { "type": "object" } },
+                    "categories": { "type": "array", "items": { "type": "string" } },
+                    "featured": { "type": "array", "items": { "type": "object" } }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Install skill",
+        "description": "Installs a skill on an agent.",
+        "tags": ["Skills"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["skillId", "agentId"],
+                "properties": {
+                  "skillId": { "type": "string" },
+                  "agentId": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Skill installed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    },
+    "/api/wallet": {
+      "get": {
+        "summary": "Get wallet",
+        "description": "Returns wallet information. When CDP is configured, returns CDP status without authentication.",
+        "tags": ["Wallet"],
+        "security": [
+          {},
+          { "sessionAuth": [] }
+        ],
+        "responses": {
+          "200": {
+            "description": "Wallet information",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    { "$ref": "#/components/schemas/CdpWallet" },
+                    { "$ref": "#/components/schemas/UserWallet" }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" }
+        }
+      },
+      "post": {
+        "summary": "Wallet actions",
+        "description": "Perform wallet operations: create, get_seed, or export_seed.",
+        "tags": ["Wallet"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["action"],
+                "properties": {
+                  "action": { "type": "string", "enum": ["create", "get_seed", "export_seed"] }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Action result" },
+          "400": { "description": "Invalid action or wallet already exists" },
+          "401": { "description": "Unauthorized" },
+          "403": { "description": "Seed export disabled" },
+          "404": { "description": "No wallet found" }
         }
       }
     }
   },
   "components": {
     "schemas": {
-      "Plant": {
-        "required": [
-          "name"
-        ],
+      "Agent": {
         "type": "object",
         "properties": {
-          "name": {
-            "description": "The name of the plant",
-            "type": "string"
-          },
-          "tag": {
-            "description": "Tag to specify the type",
-            "type": "string"
-          }
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "model": { "type": "string" },
+          "status": { "type": "string" },
+          "websocketUrl": { "type": "string" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
         }
       },
-      "NewPlant": {
-        "allOf": [
-          {
-            "$ref": "#/components/schemas/Plant"
-          },
-          {
-            "required": [
-              "id"
-            ],
-            "type": "object",
-            "properties": {
-              "id": {
-                "description": "Identification number of the plant",
-                "type": "integer",
-                "format": "int64"
-              }
-            }
-          }
-        ]
-      },
-      "Error": {
-        "required": [
-          "error",
-          "message"
-        ],
+      "AgentDetail": {
         "type": "object",
         "properties": {
-          "error": {
-            "type": "integer",
-            "format": "int32"
+          "id": { "type": "string" },
+          "status": { "type": "string" },
+          "startedAt": { "type": "string", "format": "date-time" },
+          "plan": { "type": "string" },
+          "subdomain": { "type": "string" },
+          "url": { "type": "string" },
+          "openclawVersion": { "type": "string" },
+          "verified": { "type": "boolean" },
+          "verificationType": { "type": "string", "nullable": true },
+          "attestationUid": { "type": "string", "nullable": true },
+          "verifiedAt": { "type": "string", "format": "date-time", "nullable": true }
+        }
+      },
+      "AgentStats": {
+        "type": "object",
+        "properties": {
+          "agentId": { "type": "string" },
+          "cpu": { "type": "string" },
+          "memory": { "type": "string" },
+          "memoryPercent": { "type": "string" },
+          "network": { "type": "string" },
+          "uptime": { "type": "number" },
+          "uptimeFormatted": { "type": "string" },
+          "status": { "type": "string" },
+          "pids": { "type": "string" },
+          "messagesProcessed": {},
+          "messagesPerHour": {},
+          "averageResponseTime": {},
+          "successRate": {},
+          "errorRate": {}
+        }
+      },
+      "LogEntry": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "timestamp": { "type": "string", "format": "date-time" },
+          "level": { "type": "string", "enum": ["info", "warning", "error", "debug"] },
+          "message": { "type": "string" },
+          "source": { "type": "string" },
+          "agentId": { "type": "string" }
+        }
+      },
+      "Message": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "agentId": { "type": "string" },
+          "sender": { "type": "string", "enum": ["user", "agent"] },
+          "content": { "type": "string" },
+          "timestamp": { "type": "string", "format": "date-time" },
+          "platform": { "type": "string", "enum": ["telegram", "discord", "whatsapp"] }
+        }
+      },
+      "VerifyRequest": {
+        "type": "object",
+        "required": ["verificationType"],
+        "properties": {
+          "verificationType": { "type": "string", "enum": ["eas", "coinbase", "ens", "webauthn"] },
+          "attestationUid": { "type": "string", "description": "Required for eas verification" },
+          "walletAddress": { "type": "string", "description": "Required for ens verification" },
+          "signature": { "type": "string", "description": "Required for coinbase, ens, and webauthn verification" }
+        }
+      },
+      "ProvisionRequest": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": { "type": "string" },
+          "model": { "type": "string", "default": "claude-opus-4-6" },
+          "config": { "type": "object" },
+          "tier": { "type": "string", "enum": ["starter", "pro", "enterprise"] }
+        }
+      },
+      "ApiKey": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "keyPreview": { "type": "string" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "lastUsed": { "type": "string", "format": "date-time", "nullable": true }
+        }
+      },
+      "PlatformMetrics": {
+        "type": "object",
+        "properties": {
+          "metrics": {
+            "type": "object",
+            "properties": {
+              "agents": {
+                "type": "object",
+                "properties": {
+                  "total": { "type": "integer" },
+                  "active": { "type": "integer" },
+                  "inactive": { "type": "integer" },
+                  "failed": { "type": "integer" }
+                }
+              },
+              "messages": {
+                "type": "object",
+                "properties": {
+                  "today": { "type": "integer" },
+                  "thisWeek": { "type": "integer" },
+                  "thisMonth": { "type": "integer" }
+                }
+              },
+              "deployments": {
+                "type": "object",
+                "properties": {
+                  "total": { "type": "integer" },
+                  "successful": { "type": "integer" },
+                  "failed": { "type": "integer" }
+                }
+              },
+              "uptime": {
+                "type": "object",
+                "properties": {
+                  "platformUptime": { "type": "number" },
+                  "averageAgentUptime": { "type": "number" }
+                }
+              },
+              "performance": {
+                "type": "object",
+                "properties": {
+                  "averageResponseTime": { "type": "number" },
+                  "successRate": { "type": "string" },
+                  "errorRate": { "type": "string" }
+                }
+              },
+              "storage": {
+                "type": "object",
+                "properties": {
+                  "used": { "type": "number" },
+                  "total": { "type": "number" },
+                  "percentUsed": { "type": "number" }
+                }
+              }
+            }
           },
-          "message": {
-            "type": "string"
-          }
+          "timestamp": { "type": "string", "format": "date-time" },
+          "status": { "type": "string" }
+        }
+      },
+      "HealthStatus": {
+        "type": "object",
+        "properties": {
+          "status": { "type": "string" },
+          "health": { "type": "string", "enum": ["healthy", "degraded", "unhealthy"] },
+          "timestamp": { "type": "string", "format": "date-time" },
+          "cpu": {
+            "type": "object",
+            "properties": {
+              "usage": { "type": "number" },
+              "cores": { "type": "integer" }
+            }
+          },
+          "memory": {
+            "type": "object",
+            "properties": {
+              "usage": { "type": "number" },
+              "total": { "type": "number" },
+              "used": { "type": "number" },
+              "free": { "type": "number" }
+            }
+          },
+          "uptime": { "type": "number" }
+        }
+      },
+      "CdpWallet": {
+        "type": "object",
+        "properties": {
+          "agenticWallet": {
+            "type": "object",
+            "properties": {
+              "status": { "type": "string" },
+              "projectId": { "type": "string" },
+              "features": { "type": "array", "items": { "type": "string" } }
+            }
+          },
+          "instructions": { "type": "string" }
+        }
+      },
+      "UserWallet": {
+        "type": "object",
+        "properties": {
+          "address": { "type": "string", "nullable": true },
+          "balance": { "type": "string" },
+          "network": { "type": "string" },
+          "hasWallet": { "type": "boolean" },
+          "createdAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": { "type": "string" }
         }
       }
     },
     "securitySchemes": {
-      "bearerAuth": {
-        "type": "http",
-        "scheme": "bearer"
+      "sessionAuth": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "next-auth.session-token",
+        "description": "NextAuth session cookie"
       }
     }
   }
