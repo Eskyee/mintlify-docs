@@ -72,6 +72,7 @@
           "api-reference/skills",
           "api-reference/memory",
           "api-reference/ai",
+          "api-reference/render-mcp",
           "api-reference/health"
         ]
       },
