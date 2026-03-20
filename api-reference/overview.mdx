@@ -60,6 +60,18 @@ All authenticated API requests are scoped to the calling user's data through row
 | `/api/auth/forgot-password` | Rate-limited per IP |
 | `/api/auth/reset-password` | Rate-limited per IP |
 
+## Request format
+
+All POST and PUT requests that include a JSON body must set the `Content-Type` header to `application/json`. The backend API uses the Express JSON body parser, and requests without this header may result in an empty or undefined request body.
+
+```bash
+curl -X POST https://agentbot.raveculture.xyz/api/ai/chat \
+  -H "Content-Type: application/json" \
+  -H "x-user-plan: solo" \
+  -H "x-stripe-subscription-id: sub_123" \
+  -d '{"messages": [{"role": "user", "content": "Hello"}]}'
+```
+
 ## Response format
 
 ### Success
@@ -108,7 +120,7 @@ All authenticated API requests are scoped to the calling user's data through row
 | `/api/agents/:id/config` | PUT | Update agent configuration |
 | `/api/agents/:id/messages` | GET | Get agent messages |
 | `/api/agents/:id/stats` | GET | Get agent stats |
-| `/api/agents/:id/verify` | GET | Get verification status |
+| `/api/agents/:id/verification` | GET | Get verification status (backend only) |
 | `/api/agents/:id/verify` | POST | Verify an agent |
 | `/api/agents/:id/verify` | DELETE | Remove verification |
 | `/api/instance/:userId` | GET | Get instance details |
@@ -182,6 +194,10 @@ All authenticated API requests are scoped to the calling user's data through row
 | `/api/render-mcp/validate-config` | POST | Validate Render API key (backend only) |
 | `/api/render-mcp/docs` | GET | Redirect to Render MCP docs (backend only) |
 | `/api/render-mcp/github` | GET | Redirect to Render MCP GitHub repo (backend only) |
+| `/api/openclaw/version` | GET | Get OpenClaw runtime version (backend only) |
+| `/api/openclaw/instances` | GET | List running agent instances (backend only, requires auth) |
+| `/api/openclaw/instances/:id/stats` | GET | Get instance container stats (backend only, requires auth) |
+| `/api/deployments` | POST | Deploy an agent container (backend only, requires auth) |
 
 ## SDK
 
