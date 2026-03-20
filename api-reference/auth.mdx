@@ -22,7 +22,7 @@ Protected by bot detection. Automated or non-browser requests may be rejected.
 | `email` | string | Yes | User email address |
 | `password` | string | Yes | Password (minimum 8 characters) |
 | `name` | string | No | Display name (defaults to email if omitted) |
-| `referralCode` | string | No | Alphanumeric referral code (max 20 characters). Both the new user and the referrer receive credit when a valid code is provided. |
+| `referralCode` | string | No | Alphanumeric referral code that may include hyphens (max 20 characters). Case-insensitive. Both the new user and the referrer receive credit when a valid code is provided. |
 
 ### Response
 
@@ -38,7 +38,7 @@ Protected by bot detection. Automated or non-browser requests may be rejected.
 
 | Code | Description |
 |------|-------------|
-| 400 | Email and password required, invalid email format, or password too short |
+| 400 | Email and password required, invalid email format, password too short, or invalid referral code |
 | 403 | Request blocked by bot detection |
 | 409 | User already exists |
 | 429 | Too many requests |
@@ -225,10 +225,10 @@ Protected by bot detection. Rate-limited per IP address. Always returns the same
 
 | Code | Description |
 |------|-------------|
-| 400 | Email is required or invalid email format |
+| 400 | Email is required, invalid email format, or email service validation error |
 | 403 | Request blocked by bot detection |
 | 429 | Too many requests |
-| 500 | Email service error |
+| 500 | Internal server error |
 
 ## Reset password
 
@@ -269,7 +269,11 @@ Rate-limited per IP address.
 POST /api/auth/farcaster/verify
 ```
 
-Verifies a Farcaster ID token and optionally checks `$RAVE` token gating on Base.
+```http
+GET /api/auth/farcaster/verify
+```
+
+The `GET` method returns endpoint metadata. The `POST` method verifies a Farcaster ID token and optionally checks `$RAVE` token gating on Base.
 
 #### Request body
 
@@ -304,6 +308,12 @@ Verifies a Farcaster ID token and optionally checks `$RAVE` token gating on Base
 ```http
 POST /api/auth/farcaster/refresh
 ```
+
+```http
+GET /api/auth/farcaster/refresh
+```
+
+The `GET` method returns endpoint metadata.
 
 #### Request body
 

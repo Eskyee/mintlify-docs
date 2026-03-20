@@ -89,7 +89,7 @@ Returns platform-wide metrics including agent counts, message volumes, deploymen
 
 | Code | Description |
 |------|-------------|
-| 500 | Failed to fetch metrics |
+| 500 | Failed to fetch metrics. The error response includes an empty `metrics` object alongside the `error` field: `{ "error": "Failed to fetch metrics", "metrics": {} }` |
 
 ## Historical metrics
 

@@ -142,6 +142,8 @@ Admin users (configured via `ADMIN_EMAILS`) are exempt from the following restri
 GET /api/agents/provision
 ```
 
+Requires session authentication.
+
 ### Response
 
 ```json
@@ -162,13 +164,20 @@ GET /api/agents/provision
 }
 ```
 
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | Unauthorized |
+| 500 | Failed to fetch provisioned agents |
+
 ## Get agent configuration
 
 ```http
 GET /api/agents/:id/config
 ```
 
-Requires authentication and ownership.
+Requires authentication and ownership. Returns `404` if the agent is not found or not owned by the authenticated user.
 
 ### Response
 

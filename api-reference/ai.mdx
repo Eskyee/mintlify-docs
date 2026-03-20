@@ -31,7 +31,16 @@ Returns the availability status of configured AI providers.
 
 The `status` field is `healthy` when all providers are reachable and `degraded` when one or more are down.
 
-### Errors
+### Error response
+
+When one or more providers fail, the response uses `status: "error"` and includes the error message:
+
+```json
+{
+  "status": "error",
+  "error": "Provider connection failed"
+}
+```
 
 | Code | Description |
 |------|-------------|
@@ -60,6 +69,12 @@ Returns all available AI models across providers.
   "timestamp": "2026-03-19T00:00:00Z"
 }
 ```
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 500 | Failed to fetch models |
 
 ## List models by provider
 
