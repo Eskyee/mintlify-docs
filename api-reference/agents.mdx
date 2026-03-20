@@ -7,6 +7,8 @@ description: "Create, manage, and interact with agents"
 
 Create, manage, and interact with agents.
 
+<Note>All agent endpoints that require authentication are scoped to the authenticated user's data through [row-level security](/security#row-level-security). You can only access agents that belong to your account.</Note>
+
 ## List agents
 
 ```http
@@ -402,6 +404,7 @@ All lifecycle endpoints return the following shape on failure:
 
 | Code | Description |
 |------|-------------|
+| 401 | `AUTH_REQUIRED` or `TOKEN_INVALID` — missing or invalid JWT token |
 | 403 | Forbidden — authenticated user does not own this agent instance |
 | 502 | Backend service unavailable |
 | 500 | Internal server error |
