@@ -90,7 +90,14 @@ Creates a new wallet for the authenticated user.
 }
 ```
 
-Returns `400` if a wallet already exists.
+Returns `400` if a wallet already exists. The error response includes the existing wallet address:
+
+```json
+{
+  "error": "Wallet already exists",
+  "address": "0x..."
+}
+```
 
 ### Action: `get_seed`
 
@@ -193,7 +200,7 @@ Creates a new wallet using the Coinbase Developer Platform SDK.
 | Code | Description |
 |------|-------------|
 | 400 | Email required |
-| 500 | CDP not configured (set `CDP_PROJECT_ID` in environment) |
+| 500 | CDP not configured. Response includes `error` and `setup` fields: `{ "error": "CDP not configured", "setup": "Set CDP_PROJECT_ID in environment" }` |
 
 ## CDP wallet status
 

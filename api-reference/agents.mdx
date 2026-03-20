@@ -82,7 +82,7 @@ Requires authentication and ownership of the agent.
 
 ## Delete agent
 
-<Warning>`DELETE /api/agents/:id` is deprecated. Use the lifecycle endpoints to manage agent state (for example, [`POST /api/instance/:userId/stop`](#stop-agent)).</Warning>
+<Warning>`DELETE /api/agents/:id` is deprecated. Use the lifecycle endpoints to manage agent state (for example, [`POST /api/agents/:id/stop`](#stop-agent)).</Warning>
 
 ## Provision agent
 
@@ -220,7 +220,7 @@ Requires authentication and ownership of the agent.
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `limit` | integer | 50 | Max log entries to return (max 100) |
-| `level` | string | — | Filter by log level (for example, `info`, `error`, `warn`) |
+| `level` | string | — | Filter by log level (for example, `info`, `error`, `warning`, `debug`) |
 
 ### Response
 
@@ -232,7 +232,7 @@ Requires authentication and ownership of the agent.
       "timestamp": "2026-03-19T00:00:00Z",
       "level": "info",
       "message": "Agent started successfully",
-      "source": "system",
+      "source": "agent",
       "agentId": "agent_123"
     }
   ],
@@ -277,6 +277,8 @@ GET /api/agents/:id/messages
 ```
 
 The `sender` field is either `user` or `agent`. The `platform` field indicates the messaging channel: `telegram`, `discord`, or `whatsapp`.
+
+<Note>The `total` field represents the current offset plus the number of messages returned, not the absolute total message count. Use it as a cursor for pagination.</Note>
 
 ## Get agent stats
 
@@ -332,25 +334,25 @@ When the backend is unavailable, mock data is returned with `"status": "mock"`:
 
 ## Agent lifecycle
 
-Lifecycle operations use the `/api/instance/:userId` endpoint pattern. These endpoints require session authentication and proxy to the backend agent management service.
+Lifecycle operations use the `/api/agents/:id` endpoint pattern on the backend service. The web application proxies these requests via `/api/instance/:userId` routes, which forward to the backend. These endpoints require session authentication.
 
 ### Start agent
 
 ```http
-POST /api/instance/:userId/start
+POST /api/agents/:id/start
 ```
 
 ```json
 {
   "success": true,
-  "status": "running"
+  "status": "active"
 }
 ```
 
 ### Stop agent
 
 ```http
-POST /api/instance/:userId/stop
+POST /api/agents/:id/stop
 ```
 
 ```json
@@ -363,20 +365,25 @@ POST /api/instance/:userId/stop
 ### Restart agent
 
 ```http
-POST /api/instance/:userId/restart
+POST /api/agents/:id/restart
 ```
 
 ```json
 {
   "success": true,
-  "status": "running"
+  "status": "active",
+  "healedLegacyModel": false,
+  "healMessage": null,
+  "openclawVersion": "2026.3.13"
 }
 ```
+
+The `healedLegacyModel` field indicates whether a legacy model was automatically migrated during the restart. When `true`, `healMessage` contains a description of the migration.
 
 ### Update agent image
 
 ```http
-POST /api/instance/:userId/update
+POST /api/agents/:id/update
 ```
 
 Triggers an image update on the backend.
@@ -384,14 +391,18 @@ Triggers an image update on the backend.
 ```json
 {
   "success": true,
-  "status": "running"
+  "status": "active",
+  "image": "agentbot:2026.3.13",
+  "previousImage": "agentbot:2026.3.12",
+  "backupPath": "/backups/agent_123_1710806400",
+  "openclawVersion": "2026.3.13"
 }
 ```
 
 ### Repair agent
 
 ```http
-POST /api/instance/:userId/repair
+POST /api/agents/:id/repair
 ```
 
 Returns the backend response directly.
@@ -406,7 +417,7 @@ Returns the backend response directly.
 ### Reset agent memory
 
 ```http
-POST /api/instance/:userId/reset-memory
+POST /api/agents/:id/reset-memory
 ```
 
 Returns the backend response directly.
@@ -435,44 +446,48 @@ All lifecycle endpoints return the following shape on failure:
 | 502 | Backend service unavailable |
 | 500 | Internal server error |
 
-## Get instance details
+## Get agent details (backend)
 
 ```http
-GET /api/instance/:userId
+GET /api/agents/:id
 ```
 
-Returns the current status and metadata for an agent instance.
+Returns the current status and metadata for an agent from the backend service.
 
 ### Response
 
 ```json
 {
-  "userId": "user_123",
-  "status": "running",
+  "id": "agent_123",
+  "status": "active",
   "startedAt": "2026-03-01T00:00:00Z",
-  "subdomain": "user_123.agents.localhost",
-  "url": "https://user_123.agents.localhost",
+  "subdomain": "agent_123.agents.localhost",
+  "url": "https://agent_123.agents.localhost",
   "plan": "free",
-  "openclawVersion": "2026.2.17"
+  "openclawVersion": "2026.3.13",
+  "verified": false,
+  "verificationType": null,
+  "attestationUid": null,
+  "verifiedAt": null
 }
 ```
 
-## Get instance stats
+## Get agent stats (backend)
 
 ```http
-GET /api/instance/:userId/stats
+GET /api/agents/:id/stats
 ```
 
-Returns resource usage statistics for an agent instance.
+Returns resource usage statistics for an agent from the backend service.
 
 ### Response
 
 ```json
 {
-  "userId": "user_123",
+  "id": "agent_123",
   "cpu": "0.15%",
   "memory": "128MiB",
-  "status": "running",
+  "status": "active",
   "plan": "starter",
   "openclawVersion": "2026.3.13"
 }
@@ -481,7 +496,7 @@ Returns resource usage statistics for an agent instance.
 ## Get agent gateway token
 
 ```http
-GET /api/instance/:userId/token
+GET /api/agents/:id/token
 ```
 
 Returns an auto-generated gateway token for the agent. A new token is created if none exists.
@@ -506,7 +521,7 @@ Agents can be verified using multiple verification types: `eas` (Ethereum Attest
 ### Get verification status
 
 ```http
-GET /api/agents/:id/verify
+GET /api/agents/:id/verification
 ```
 
 ```json
@@ -596,12 +611,42 @@ The request is proxied to the backend provisioning service. A dedicated Mux live
 {
   "success": true,
   "userId": "a1b2c3d4e5",
+  "agentId": "agent_789",
+  "id": "agent_789",
+  "telegramToken": "***",
+  "discordToken": null,
+  "whatsappToken": null,
+  "aiProvider": "openrouter",
+  "aiProviderConfig": {},
+  "plan": "free",
+  "streamKey": "sk-ab12-cd34-ef56",
+  "liveStreamId": "x7k9m2p4q1",
+  "rtmpServer": "rtmps://global-live.mux.com:443/app",
+  "playbackUrl": "https://stream.mux.com/abc123.m3u8",
   "subdomain": "dj-a1b2c3d4e5.agentbot.raveculture.xyz",
   "url": "https://dj-a1b2c3d4e5.agentbot.raveculture.xyz",
-  "streamKey": "sk-ab12-cd34-ef56",
-  "liveStreamId": "x7k9m2p4q1"
+  "hls": "https://stream.mux.com/abc123.m3u8",
+  "rtmp": "rtmps://global-live.mux.com:443/app/sk-ab12-cd34-ef56",
+  "status": "active",
+  "createdAt": "2026-03-19T00:00:00Z",
+  "metadata": {}
 }
 ```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `agentId` | string | Unique agent identifier |
+| `id` | string | Alias for `agentId` |
+| `aiProvider` | string | AI provider used by the agent |
+| `aiProviderConfig` | object | Provider-specific configuration |
+| `plan` | string | Plan tier assigned to the agent |
+| `rtmpServer` | string | RTMP server URL for live streaming |
+| `playbackUrl` | string | HLS playback URL for the live stream |
+| `hls` | string | HLS stream URL |
+| `rtmp` | string | Full RTMP ingest URL including stream key |
+| `status` | string | Agent status after provisioning |
+| `createdAt` | string | ISO 8601 creation timestamp |
+| `metadata` | object | Additional metadata from the provisioning service |
 
 ### Errors
 

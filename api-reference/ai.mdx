@@ -61,7 +61,14 @@ Returns all available AI models across providers.
   "models": [
     {
       "id": "anthropic/claude-sonnet-4-20250514",
-      "provider": "openrouter"
+      "name": "Claude Sonnet",
+      "provider": "openrouter",
+      "description": "Fast, intelligent model for everyday tasks",
+      "tags": ["general", "coding"],
+      "inputCost": 3.0,
+      "outputCost": 15.0,
+      "contextWindow": 200000,
+      "available": true
     }
   ],
   "count": 1,
@@ -69,6 +76,20 @@ Returns all available AI models across providers.
   "timestamp": "2026-03-19T00:00:00Z"
 }
 ```
+
+Each model object includes:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Model identifier |
+| `name` | string | Human-readable model name |
+| `provider` | string | Provider serving the model |
+| `description` | string | Short description of the model |
+| `tags` | string[] | Task categories the model is suited for |
+| `inputCost` | number | Cost per million input tokens (USD) |
+| `outputCost` | number | Cost per million output tokens (USD) |
+| `contextWindow` | number | Maximum context length in tokens |
+| `available` | boolean | Whether the model is currently available |
 
 ### Errors
 
@@ -99,6 +120,12 @@ GET /api/ai/models/:provider
 }
 ```
 
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 500 | Failed to fetch models for provider |
+
 ## Select model
 
 ```http
@@ -119,7 +146,14 @@ Automatically selects the best model for a given task type.
 {
   "model": {
     "id": "anthropic/claude-sonnet-4-20250514",
-    "provider": "openrouter"
+    "name": "Claude Sonnet",
+    "provider": "openrouter",
+    "description": "Fast, intelligent model for everyday tasks",
+    "tags": ["general", "coding"],
+    "inputCost": 3.0,
+    "outputCost": 15.0,
+    "contextWindow": 200000,
+    "available": true
   },
   "taskType": "general",
   "timestamp": "2026-03-19T00:00:00Z"
@@ -131,6 +165,7 @@ Automatically selects the best model for a given task type.
 | Code | Description |
 |------|-------------|
 | 404 | No models available |
+| 500 | Internal server error |
 
 ## Chat completion
 
@@ -210,3 +245,4 @@ Estimate the cost of a request based on token counts and model pricing.
 | Code | Description |
 |------|-------------|
 | 400 | Model, inputTokens, and outputTokens are all required |
+| 500 | Internal server error |

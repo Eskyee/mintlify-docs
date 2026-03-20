@@ -39,7 +39,7 @@ API keys use the `sk_` prefix and are shown only once at creation time. See the 
 | `/api/v1/gateway` | 100/min |
 | `/api/agents` | 100/min |
 | `/api/chat` | 60/min |
-| `/api/instance` | 30/min |
+| `/api/agents/:id/*` | 30/min |
 | `/api/provision` | Rate-limited per IP |
 | `/api/register` | Rate-limited per IP |
 | `/api/auth/forgot-password` | Rate-limited per IP |
@@ -93,18 +93,18 @@ API keys use the `sk_` prefix and are shown only once at creation time. See the 
 | `/api/agents/:id/config` | PUT | Update agent configuration |
 | `/api/agents/:id/messages` | GET | Get agent messages |
 | `/api/agents/:id/stats` | GET | Get agent stats |
-| `/api/agents/:id/verify` | GET | Get verification status |
+| `/api/agents/:id/verification` | GET | Get verification status |
 | `/api/agents/:id/verify` | POST | Verify an agent |
 | `/api/agents/:id/verify` | DELETE | Remove verification |
-| `/api/instance/:userId` | GET | Get instance details |
-| `/api/instance/:userId/start` | POST | Start an agent |
-| `/api/instance/:userId/stop` | POST | Stop an agent |
-| `/api/instance/:userId/restart` | POST | Restart an agent |
-| `/api/instance/:userId/update` | POST | Update agent image |
-| `/api/instance/:userId/repair` | POST | Repair an agent |
-| `/api/instance/:userId/reset-memory` | POST | Reset agent memory |
-| `/api/instance/:userId/token` | GET | Get agent gateway token |
-| `/api/instance/:userId/stats` | GET | Get instance stats |
+| `/api/agents/:id` | GET | Get agent details (backend) |
+| `/api/agents/:id/start` | POST | Start an agent |
+| `/api/agents/:id/stop` | POST | Stop an agent |
+| `/api/agents/:id/restart` | POST | Restart an agent |
+| `/api/agents/:id/update` | POST | Update agent image |
+| `/api/agents/:id/repair` | POST | Repair an agent |
+| `/api/agents/:id/reset-memory` | POST | Reset agent memory |
+| `/api/agents/:id/token` | GET | Get agent gateway token |
+| `/api/agents/:id/stats` | GET | Get agent stats (backend) |
 | `/api/agents/provision` | POST | Provision a new agent |
 | `/api/agents/provision` | GET | List provisioned agents |
 | `/api/chat` | GET | List message history |
@@ -150,6 +150,7 @@ API keys use the `sk_` prefix and are shown only once at creation time. See the 
 | `/api/stripe/checkout` | GET | Redirect to Stripe checkout (accepts `plan` query param: `solo`, `collective`, `label`, `network`) |
 | `/api/stripe/credits` | GET | Redirect to Stripe credit purchase (accepts `price` query param) |
 | `/api/stripe/storage-upgrade` | POST | Upgrade storage plan |
+| `/health` | GET | Health check (backend only, no `/api` prefix) |
 | `/api/metrics/:userId/historical` | GET | Get historical time-series metrics (backend only) |
 | `/api/metrics/:userId/performance` | GET | Get current performance metrics (backend only) |
 | `/api/metrics/:userId/summary` | GET | Get music industry metrics summary (backend only) |
