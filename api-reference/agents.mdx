@@ -169,7 +169,7 @@ Requires session authentication.
 | Code | Description |
 |------|-------------|
 | 401 | Unauthorized |
-| 500 | Failed to fetch provisioned agents |
+| 500 | Failed to list agents |
 
 ## Get agent configuration
 
@@ -209,7 +209,38 @@ Arbitrary JSON configuration to apply.
 
 ## Get agent logs
 
-<Warning>This endpoint is planned for a future release and is not yet implemented.</Warning>
+```http
+GET /api/agents/:id/logs
+```
+
+Requires authentication and ownership of the agent.
+
+### Query parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `limit` | integer | 50 | Max log entries to return (max 100) |
+| `level` | string | — | Filter by log level (for example, `info`, `error`, `warn`) |
+
+### Response
+
+```json
+{
+  "logs": [
+    {
+      "id": "log_001",
+      "timestamp": "2026-03-19T00:00:00Z",
+      "level": "info",
+      "message": "Agent started successfully",
+      "source": "system",
+      "agentId": "agent_123"
+    }
+  ],
+  "total": 1,
+  "limit": 50,
+  "status": "ok"
+}
+```
 
 ## Get agent messages
 
@@ -578,7 +609,7 @@ A dedicated Mux live stream is automatically created for the agent.
 
 | Code | Description |
 |------|-------------|
-| 400 | At least one channel token required (Telegram, WhatsApp, or Discord), invalid `aiProvider`, or invalid `plan` |
+| 400 | At least one channel token required (Telegram, WhatsApp, or Discord) |
 | 401 | Unauthorized |
 | 429 | Too many requests |
 | 500 | Internal server error |
@@ -802,6 +833,8 @@ POST /api/agent
 POST /api/chat
 ```
 
+Requires session authentication.
+
 ### Request body
 
 | Field | Type | Required | Description |
@@ -823,11 +856,19 @@ POST /api/chat
   "id": "msg_123",
   "message": "Hello!",
   "topic": "general",
-  "status": "received",
+  "status": "sent",
   "timestamp": "2026-03-19T00:00:00Z",
   "reply": "Hi! How can I help?"
 }
 ```
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | Message required |
+| 401 | Unauthorized |
+| 500 | Failed to send message |
 
 ## List messages
 
@@ -835,7 +876,7 @@ POST /api/chat
 GET /api/chat
 ```
 
-Returns the message history. No authentication required.
+Returns the message history. Requires session authentication.
 
 ### Response
 
@@ -845,3 +886,9 @@ Returns the message history. No authentication required.
   "count": 0
 }
 ```
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | Unauthorized |
