@@ -55,7 +55,7 @@ Requires authentication and ownership of the agent.
     "id": "agent_123",
     "status": "active",
     "startedAt": "2026-03-01T00:00:00Z",
-    "plan": "starter",
+    "plan": "free",
     "subdomain": "agent_123.agents.localhost",
     "url": "https://agent_123.agents.localhost",
     "openclawVersion": "2026.3.13",
@@ -99,9 +99,9 @@ Provisions a new agent. Requires an active subscription unless the caller is an 
 | `name` | string | Yes | Agent name |
 | `model` | string | No | AI model (default: `claude-opus-4-6`). Options: `claude-opus-4-6`, `gpt-4`, `custom` |
 | `config` | object | No | Agent configuration |
-| `tier` | string | No | Subscription tier hint. Options: `starter`, `pro`, `enterprise` |
+| `tier` | string | No | Subscription tier hint. Options: `free`, `pro`, `enterprise` |
 
-<Note>The agent limit is determined by the subscription plan on the authenticated user's account (`starter`: 1, `pro`: 3, `enterprise`: 100). It cannot be overridden in the request body.</Note>
+<Note>The agent limit is determined by the subscription plan on the authenticated user's account (`free`: 1, `pro`: 3, `enterprise`: 100). It cannot be overridden in the request body.</Note>
 
 ### Admin bypass
 
@@ -133,7 +133,7 @@ Admin users (configured via `ADMIN_EMAILS`) are exempt from the following restri
 | 400 | Agent name is required |
 | 401 | Unauthorized |
 | 402 | Active subscription required to provision agents |
-| 429 | Agent limit reached for your plan. Response includes `current` (agent count) and `limit` fields. Limits: `starter` 1, `pro` 3, `enterprise` 100. Users without a recognized plan default to a limit of 1. |
+| 429 | Agent limit reached for your plan. Response includes `current` (agent count) and `limit` fields. Limits: `free` 1, `pro` 3, `enterprise` 100. Users without a recognized plan default to a limit of 1. |
 | 500 | Failed to provision agent |
 
 ## List provisioned agents
@@ -473,8 +473,8 @@ Returns resource usage statistics for an agent instance.
   "cpu": "0.15%",
   "memory": "128MiB",
   "status": "running",
-  "plan": "starter",
-  "openclawVersion": "2026.3.13"
+  "plan": "free",
+    "openclawVersion": "2026.3.13"
 }
 ```
 
