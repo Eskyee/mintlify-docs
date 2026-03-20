@@ -32,12 +32,13 @@
       },
       {
         "group": "Payments",
-        "pages": ["payments/stripe", "payments/x402"]
+        "pages": ["payments/stripe", "payments/x402", "payments/mpp"]
       },
       {
         "group": "API Reference",
         "pages": [
           "api-reference/overview",
+          "api-reference/gateway",
           "api-reference/agents",
           "api-reference/auth",
           "api-reference/keys",

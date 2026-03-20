@@ -36,6 +36,7 @@ API keys use the `sk_` prefix and are shown only once at creation time. See the 
 
 | Endpoint | Limit |
 |----------|-------|
+| `/api/v1/gateway` | 100/min |
 | `/api/agents` | 100/min |
 | `/api/chat` | 60/min |
 | `/api/instance` | 30/min |
@@ -73,7 +74,7 @@ API keys use the `sk_` prefix and are shown only once at creation time. See the 
 | 201 | Resource created |
 | 400 | Bad request or validation error |
 | 401 | Unauthorized (missing or invalid authentication) |
-| 402 | Payment required (no active subscription) |
+| 402 | Payment required (no active subscription or missing [MPP](/payments/mpp) credential) |
 | 403 | Forbidden (insufficient permissions, token gating failure, or bot detection) |
 | 404 | Resource not found |
 | 429 | Too many requests or tier limit reached |
@@ -85,6 +86,7 @@ API keys use the `sk_` prefix and are shown only once at creation time. See the 
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
+| `/api/v1/gateway` | POST | Route requests to plugins with Stripe or [MPP](/payments/mpp) payment |
 | `/api/agents` | GET | List all agents |
 | `/api/agents` | POST | Create an agent |
 | `/api/agents/:id` | GET | Get agent details |
