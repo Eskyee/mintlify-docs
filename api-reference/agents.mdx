@@ -135,7 +135,7 @@ DELETE /api/agents/:id
 POST /api/agents/provision
 ```
 
-Provisions a new agent. Requires an active subscription.
+Provisions a new agent. Requires an active subscription unless the caller is an admin.
 
 ### Request body
 
@@ -144,8 +144,16 @@ Provisions a new agent. Requires an active subscription.
 | `name` | string | Yes | Agent name |
 | `model` | string | No | AI model (default: `claude-opus-4-6`). Options: `claude-opus-4-6`, `gpt-4`, `custom` |
 | `config` | object | No | Agent configuration |
+| `tier` | string | No | Subscription tier hint. Options: `starter`, `pro`, `enterprise` |
 
 <Note>The agent limit is determined by the subscription plan on the authenticated user's account (`starter`: 1, `pro`: 3, `enterprise`: 100). It cannot be overridden in the request body.</Note>
+
+### Admin bypass
+
+Admin users (configured via `ADMIN_EMAILS`) are exempt from the following restrictions:
+
+- **Subscription requirement** — admins can provision agents without an active subscription (the `402` error is not returned).
+- **Agent limit** — admins receive an elevated agent slot limit instead of the plan-based cap.
 
 ### Response
 
