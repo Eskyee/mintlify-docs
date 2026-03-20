@@ -616,9 +616,9 @@ DELETE /api/agents/:id/verify
 POST /api/provision
 ```
 
-Provisions a new agent with messaging channel tokens. No authentication is required. Rate-limited per IP. At least one channel token is required.
+Provisions a new agent with messaging channel tokens. Authentication is not required, but when a session is active the user's email is automatically resolved from it. At least one channel token is required.
 
-The request is proxied to the backend provisioning service. A dedicated Mux live stream is automatically created for the agent. The backend may enqueue the provisioning job to the `provision` queue for asynchronous processing.
+The request is proxied to the backend provisioning service. The backend may create a dedicated Mux live stream and enqueue the provisioning job for asynchronous processing.
 
 ### Request body
 
@@ -630,15 +630,12 @@ The request is proxied to the backend provisioning service. A dedicated Mux live
 | `discordBotToken` | string | Conditional | Discord bot token. At least one channel token is required. |
 | `aiProvider` | string | No | AI provider (default: `openrouter`). Options: `openrouter`, `gemini`, `groq`, `anthropic`, `openai`. Each provider maps to a default model — see [AI provider defaults](#ai-provider-defaults) below. |
 | `apiKey` | string | No | API key for the AI provider |
-| `plan` | string | No | Plan tier. Options: `solo`, `collective`, `label`, `network`. A paid plan is required — requests with `plan` set to `free` (or omitted) return `402 Payment Required`. |
-| `email` | string | No | User email address. Used for admin and tester bypass of payment enforcement. When omitted, the email is automatically populated from the authenticated session if one exists. |
-| `stripeSubscriptionId` | string | No | Active Stripe subscription ID. Required for non-admin, non-tester users on paid plans. When absent and the user is not an admin or tester, the endpoint returns `402 Payment Required`. |
+| `plan` | string | No | Plan tier (default: `free`). Options: `free`, `solo`, `collective`, `label`, `network`. |
+| `email` | string | No | User email address. When omitted, the email is automatically populated from the authenticated session if one exists. The resolved email is forwarded to the backend in the `X-User-Email` header. |
 
-<Note>When a session is active, the resolved email (from the request body or the session) is forwarded to the backend provisioning service in the `X-User-Email` header. The backend uses this header as a fallback when the `email` field is not present in the request body.</Note>
+<Note>When a session is active, the server resolves the user email from the session via `getServerSession`. If the `email` field is also present in the request body, the request body value takes precedence. The resolved email is sent to the backend provisioning service in the `X-User-Email` header.</Note>
 
-<Warning>The `free` plan value is deprecated. The provisioning service now requires a paid plan (`solo`, `collective`, `label`, or `network`) and a valid Stripe subscription. Requests with `plan` set to `free` return `402 Payment Required` with `code: "PAYMENT_REQUIRED"`.</Warning>
-
-<Warning>The following request fields are deprecated and no longer accepted: `whatsappPhoneNumberId`, `whatsappBusinessAccountId`, `discordGuildId`, `discordChannelId`.</Warning>
+<Warning>The following request fields are deprecated and no longer accepted: `whatsappPhoneNumberId`, `whatsappBusinessAccountId`, `discordGuildId`, `discordChannelId`, `stripeSubscriptionId`.</Warning>
 
 ### Response
 
@@ -710,11 +707,8 @@ When calling the backend provisioning service directly, the response includes ad
 | Code | Description |
 |------|-------------|
 | 400 | At least one channel token required (Telegram, WhatsApp, or Discord) |
-| 402 | Payment required. Returned when `plan` is `free` or when no valid Stripe subscription is present. The response includes `code: "PAYMENT_REQUIRED"` and a message directing the user to choose a paid plan. |
-| 429 | Too many requests |
 | 500 | Internal server error |
-| 502 | Provisioning service unavailable or returned an error |
-| 503 | Provisioning temporarily disabled (kill switch active). The response includes `success: false` and an error message directing you to contact support. |
+| 502 | Provisioning service unavailable or returned an error. All backend URLs failed or returned non-success responses. |
 
 ### AI provider defaults
 
