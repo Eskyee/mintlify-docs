@@ -88,13 +88,9 @@ API keys use the `sk_` prefix and are shown only once at creation time. See the 
 |----------|--------|-------------|
 | `/api/v1/gateway` | POST | Route requests to plugins with Stripe or [MPP](/payments/mpp) payment |
 | `/api/agents` | GET | List all agents |
-| `/api/agents` | POST | Create an agent |
 | `/api/agents/:id` | GET | Get agent details |
-| `/api/agents/:id` | PUT | Update an agent |
-| `/api/agents/:id` | DELETE | Delete an agent |
 | `/api/agents/:id/config` | GET | Get agent configuration |
 | `/api/agents/:id/config` | PUT | Update agent configuration |
-| `/api/agents/:id/logs` | GET | Get agent logs |
 | `/api/agents/:id/messages` | GET | Get agent messages |
 | `/api/agents/:id/stats` | GET | Get agent stats |
 | `/api/agents/:id/verify` | GET | Get verification status |
@@ -111,6 +107,7 @@ API keys use the `sk_` prefix and are shown only once at creation time. See the 
 | `/api/instance/:userId/stats` | GET | Get instance stats |
 | `/api/agents/provision` | POST | Provision a new agent |
 | `/api/agents/provision` | GET | List provisioned agents |
+| `/api/chat` | GET | List message history |
 | `/api/chat` | POST | Send message to agent |
 | `/api/health` | GET | Health check |
 | `/api/heartbeat` | GET | Get heartbeat settings |
@@ -119,9 +116,6 @@ API keys use the `sk_` prefix and are shown only once at creation time. See the 
 | `/api/memory` | GET | Get agent memory |
 | `/api/memory` | POST | Store agent memory |
 | `/api/metrics` | GET | Get platform-wide metrics |
-| `/api/metrics/:userId/historical` | GET | Get historical time-series metrics |
-| `/api/metrics/:userId/performance` | GET | Get current performance metrics |
-| `/api/metrics/:userId/summary` | GET | Get music industry metrics summary |
 | `/api/credits` | GET | Get credit balance |
 | `/api/keys` | GET | List API keys |
 | `/api/keys` | POST | Create API key |
@@ -141,6 +135,9 @@ API keys use the `sk_` prefix and are shown only once at creation time. See the 
 | `/api/provision` | POST | Provision agent with channel tokens |
 | `/api/agent` | GET | Agent interaction (health, sessions, memory, skills, credentials) |
 | `/api/agent` | POST | Agent interaction (chat, create-session, update-skill, set-credential) |
+| `/api/settings` | GET | Get current user profile |
+| `/api/settings` | POST, PATCH | Update user profile |
+| `/api/settings/password` | POST | Change password |
 | `/api/register` | POST | Create a new account |
 | `/api/auth/callback/wallet` | POST | Wallet sign in (SIWE) |
 | `/api/auth/forgot-password` | POST | Request password reset |
@@ -149,16 +146,19 @@ API keys use the `sk_` prefix and are shown only once at creation time. See the 
 | `/api/auth/farcaster/refresh` | POST | Refresh Farcaster token |
 | `/api/auth/token-gating/verify` | GET, POST | Verify token gating access |
 | `/api/billing` | GET | Get billing info |
-| `/api/billing` | POST | Billing actions (checkout, BYOK, usage, credits) |
-| `/api/stripe/checkout` | GET | Start Stripe checkout |
-| `/api/stripe/credits` | GET | Purchase credit top-ups |
+| `/api/billing` | POST | Billing actions (`create-checkout`, `enable-byok`, `disable-byok`, `get-usage`, `buy-credits`) |
+| `/api/stripe/checkout` | GET | Redirect to Stripe checkout (accepts `plan` query param: `solo`, `collective`, `label`, `network`) |
+| `/api/stripe/credits` | GET | Redirect to Stripe credit purchase (accepts `price` query param) |
 | `/api/stripe/storage-upgrade` | POST | Upgrade storage plan |
-| `/api/ai/health` | GET | AI provider availability |
-| `/api/ai/models` | GET | List available AI models |
-| `/api/ai/models/:provider` | GET | List models for a provider |
-| `/api/ai/models/select` | POST | Smart model selection for a task type |
-| `/api/ai/chat` | POST | Universal chat completion |
-| `/api/ai/estimate-cost` | POST | Estimate token cost |
+| `/api/metrics/:userId/historical` | GET | Get historical time-series metrics (backend only) |
+| `/api/metrics/:userId/performance` | GET | Get current performance metrics (backend only) |
+| `/api/metrics/:userId/summary` | GET | Get music industry metrics summary (backend only) |
+| `/api/ai/health` | GET | AI provider availability (backend only) |
+| `/api/ai/models` | GET | List available AI models (backend only) |
+| `/api/ai/models/:provider` | GET | List models for a provider (backend only) |
+| `/api/ai/models/select` | POST | Smart model selection for a task type (backend only) |
+| `/api/ai/chat` | POST | Universal chat completion (backend only) |
+| `/api/ai/estimate-cost` | POST | Estimate token cost (backend only) |
 
 ## SDK
 

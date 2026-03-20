@@ -5,7 +5,9 @@ description: "AI provider endpoints for model selection, chat completion, and co
 
 # AI API
 
-Endpoints for interacting with AI models through a unified provider layer. These endpoints are served by the backend API and do not require session authentication.
+Endpoints for interacting with AI models through a unified provider layer. These endpoints are served by the backend API service, not the web application. They are available at the backend base URL, which may differ from the web API base URL depending on your deployment.
+
+<Note>These endpoints do not require session authentication. They are internal backend endpoints and are not exposed through the web application's `/api` routes.</Note>
 
 ## Health check
 
