@@ -1,0 +1,169 @@
+---
+title: Architecture
+description: "System overview and how the pieces fit together."
+---
+
+# Architecture
+
+How Agentbot is built. A reference for contributors, self-hosters, and anyone who wants to understand the system.
+
+## System Overview
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│                        USERS                                 │
+│         Telegram · Discord · WhatsApp · Web Dashboard        │
+└──────────────────────────┬───────────────────────────────────┘
+                           │
+                    ┌──────▼──────┐
+                    │   VERCEL    │
+                    │  Next.js 16 │
+                    │  (Frontend) │
+                    └──────┬──────┘
+                           │
+              ┌────────────┼────────────┐
+              │            │            │
+       ┌──────▼──────┐ ┌──▼───┐ ┌──────▼──────┐
+       │   RENDER    │ │Redis │ │  Neon PG    │
+       │  Backend    │ │Cache │ │  Database   │
+       │  (Express)  │ │      │ │             │
+       └──────┬──────┘ └──────┘ └─────────────┘
+              │
+    ┌─────────┼─────────┐
+    │         │         │
+┌───▼───┐ ┌──▼──┐ ┌────▼────┐
+│Worker │ │Ollama│ │  A2A    │
+│Service│ │ AI  │ │  Bus    │
+└───────┘ └─────┘ └─────────┘
+```
+
+## Components
+
+### Frontend (Vercel)
+
+**Stack:** Next.js 16 (App Router) + React 19 + Tailwind CSS v4
+
+The web dashboard, onboarding flow, billing, and all user-facing pages. Deployed on Vercel with automatic Git-based deploys.
+
+Key directories:
+- `web/app/` — Pages and API routes
+- `web/app/api/` — Server-side API proxies (provision, billing, auth)
+- `web/app/components/` — Shared UI components
+- `web/app/lib/` — Utilities (auth, Stripe, security)
+
+### Backend (Render)
+
+**Stack:** Express.js + TypeScript
+
+The core API server. Handles agent provisioning, deployments, A2A communication, and skill management.
+
+Key services:
+- `POST /api/provision` — Create new agents (public, no auth)
+- `POST /api/deployments` — Deploy agent containers (auth required)
+- `GET /api/agents` — List and manage agents
+- `POST /api/ai/*` — AI provider proxy (OpenRouter, Anthropic, etc.)
+
+### Worker Service (Render)
+
+Background job processor for:
+- Scheduled tasks (cron jobs per agent)
+- A2A message routing between agents
+- Webhook processing (Stripe, Telegram, Discord)
+- Skill execution and sandboxing
+
+### Database (Neon PostgreSQL)
+
+Stores:
+- User accounts and authentication
+- Agent configurations and metadata
+- Billing, subscriptions, and usage tracking
+- Skill marketplace data
+- A2A message history
+
+### Cache (Redis)
+
+Used for:
+- Rate limiting
+- Session management
+- Real-time agent status
+- A2A message queues
+- Webhook deduplication
+
+### AI Layer (Ollama + BYOK)
+
+Two modes:
+- **Ollama (self-hosted):** Local inference for free-tier agents (Llama 3, Mistral)
+- **BYOK:** Users bring their own API keys for OpenRouter, Anthropic, OpenAI, Google, or Groq
+
+### A2A Bus (Agent-to-Agent)
+
+Enables agents to communicate directly:
+- Request/response patterns
+- Fire-and-forget messages
+- Skill delegation between agents
+- Cross-tenant isolation enforced
+
+## Data Flow: Agent Provisioning
+
+```
+User fills form (frontend)
+       │
+       ▼
+POST /api/provision (Vercel)
+       │
+       ▼
+POST /api/provision (Render backend)
+       │
+       ├── Validate input (plan, provider, tokens)
+       ├── Generate userId + agentId
+       ├── Store config in PostgreSQL
+       ├── Allocate port + subdomain
+       ├── Deploy Docker container
+       ├── Configure Caddy reverse proxy
+       │
+       ▼
+Return agent URL + stream key to user
+```
+
+## Data Flow: Agent Runtime
+
+```
+User sends message (Telegram/Discord/WhatsApp)
+       │
+       ▼
+Webhook → Worker Service
+       │
+       ├── Route to correct agent container
+       ├── Load agent config + memory
+       ├── Execute skills if needed
+       ├── Call AI provider (BYOK or Ollama)
+       ├── Check A2A bus for delegated tasks
+       │
+       ▼
+Response sent back to user
+```
+
+## Self-Hosting
+
+Agentbot is fully open source. To self-host:
+
+1. **Frontend:** Deploy `web/` to Vercel or any Next.js-compatible host
+2. **Backend:** Run `agentbot-backend/` on any Docker-capable server
+3. **Worker:** Run `agentbot-worker/` alongside the backend
+4. **Database:** Neon Postgres (free tier available) or any PostgreSQL 15+
+5. **Redis:** Any Redis 7+ instance
+6. **AI:** Ollama for local inference, or configure BYOK providers
+
+See [Installation](/installation) for full setup instructions.
+
+## Tech Decisions
+
+| Choice | Why |
+|--------|-----|
+| Next.js 16 | App Router, server components, Vercel-native DX |
+| Express (not serverless) | Long-running agent processes need persistent connections |
+| Neon Postgres | Serverless, scales to zero, generous free tier |
+| Redis | Fast rate limiting and session management |
+| Docker | Isolated agent environments per user |
+| BYOK over reselling | Users pay providers directly — no markup, no lock-in |
+| Base (not Ethereum) | Low fees, fast finality, Coinbase ecosystem |

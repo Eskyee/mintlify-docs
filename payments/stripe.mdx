@@ -122,8 +122,9 @@ Admin users (configured via `ADMIN_EMAILS`) skip the Stripe checkout flow entire
 
 **Example**
 
-```html
-<a href="/api/stripe/checkout?plan=collective">Subscribe to Collective</a>
+```bash
+# Redirect user to checkout
+window.location.href = '/api/stripe/checkout?plan=collective'
 ```
 
 <Warning>
@@ -148,8 +149,9 @@ The endpoint redirects the user to a Stripe checkout page for the selected credi
 
 **Example**
 
-```html
-<a href="/api/stripe/credits?price=price_xxx">Buy credits</a>
+```bash
+# Redirect user to credit purchase
+window.location.href = '/api/stripe/credits?price=price_xxx'
 ```
 
 ## Billing API

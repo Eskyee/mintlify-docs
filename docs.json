@@ -21,7 +21,8 @@
           "quickstart",
           "installation",
           "build",
-          "development-standard"
+          "development-standard",
+          "troubleshooting"
         ]
       },
       {
@@ -29,7 +30,8 @@
         "pages": [
           "concepts/agents",
           "concepts/workflows",
-          "concepts/api-keys"
+          "concepts/api-keys",
+          "concepts/architecture"
         ]
       },
       {
