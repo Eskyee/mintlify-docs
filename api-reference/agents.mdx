@@ -631,8 +631,10 @@ The request is proxied to the backend provisioning service. A dedicated Mux live
 | `aiProvider` | string | No | AI provider (default: `openrouter`). Options: `openrouter`, `gemini`, `groq`, `anthropic`, `openai`. Each provider maps to a default model — see [AI provider defaults](#ai-provider-defaults) below. |
 | `apiKey` | string | No | API key for the AI provider |
 | `plan` | string | No | Plan tier. Options: `solo`, `collective`, `label`, `network`. A paid plan is required — requests with `plan` set to `free` (or omitted) return `402 Payment Required`. |
-| `email` | string | No | User email address. Used for admin and tester bypass of payment enforcement. |
+| `email` | string | No | User email address. Used for admin and tester bypass of payment enforcement. When omitted, the email is automatically populated from the authenticated session if one exists. |
 | `stripeSubscriptionId` | string | No | Active Stripe subscription ID. Required for non-admin, non-tester users on paid plans. When absent and the user is not an admin or tester, the endpoint returns `402 Payment Required`. |
+
+<Note>When a session is active, the resolved email (from the request body or the session) is forwarded to the backend provisioning service in the `X-User-Email` header. The backend uses this header as a fallback when the `email` field is not present in the request body.</Note>
 
 <Warning>The `free` plan value is deprecated. The provisioning service now requires a paid plan (`solo`, `collective`, `label`, or `network`) and a valid Stripe subscription. Requests with `plan` set to `free` return `402 Payment Required` with `code: "PAYMENT_REQUIRED"`.</Warning>
 
