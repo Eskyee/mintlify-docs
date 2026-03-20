@@ -13,7 +13,7 @@ Create, manage, and interact with agents.
 GET /api/agents
 ```
 
-Returns all agents owned by the authenticated user.
+Returns all agents owned by the authenticated user. When no session is present, returns an empty list instead of a `401` error.
 
 ### Response
 
@@ -144,7 +144,8 @@ Provisions a new agent. Requires an active subscription.
 | `name` | string | Yes | Agent name |
 | `model` | string | No | AI model (default: `claude-opus-4-6`). Options: `claude-opus-4-6`, `gpt-4`, `custom` |
 | `config` | object | No | Agent configuration |
-| `tier` | string | No | Subscription tier: `starter`, `pro`, `enterprise` |
+
+<Note>The agent limit is determined by the subscription plan on the authenticated user's account (`starter`: 1, `pro`: 3, `enterprise`: 100). It cannot be overridden in the request body.</Note>
 
 ### Response
 
@@ -169,7 +170,7 @@ Provisions a new agent. Requires an active subscription.
 | 400 | Agent name is required |
 | 401 | Unauthorized |
 | 402 | Active subscription required to provision agents |
-| 429 | Agent limit reached for your tier (`starter`: 1, `pro`: 3, `enterprise`: 100) |
+| 429 | Agent limit reached for your plan. Response includes `current` (agent count) and `limit` fields. Limits: `starter` 1, `pro` 3, `enterprise` 100 |
 | 500 | Failed to provision agent |
 
 ## List provisioned agents
@@ -614,9 +615,9 @@ A dedicated Mux live stream is automatically created for the agent.
 | `discordBotToken` | string | Conditional | Discord bot token. At least one channel token is required. |
 | `discordGuildId` | string | No | Discord guild (server) ID |
 | `discordChannelId` | string | No | Discord channel ID |
-| `aiProvider` | string | No | AI provider (default: `openrouter`) |
+| `aiProvider` | string | No | AI provider (default: `openrouter`). Options: `openrouter`, `gemini`, `groq`, `anthropic`, `openai` |
 | `apiKey` | string | No | API key for the AI provider |
-| `plan` | string | No | Plan tier (default: `free`) |
+| `plan` | string | No | Plan tier (default: `free`). Options: `free`, `pro`, `enterprise` |
 
 ### Response
 
@@ -635,7 +636,7 @@ A dedicated Mux live stream is automatically created for the agent.
 
 | Code | Description |
 |------|-------------|
-| 400 | At least one channel token required (Telegram, WhatsApp, or Discord) |
+| 400 | At least one channel token required (Telegram, WhatsApp, or Discord), invalid `aiProvider`, or invalid `plan` |
 | 401 | Unauthorized |
 | 429 | Too many requests |
 | 500 | Internal server error |
