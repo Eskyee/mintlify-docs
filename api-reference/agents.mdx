@@ -630,7 +630,7 @@ The request is proxied to the backend provisioning service. The backend may crea
 | `discordBotToken` | string | Conditional | Discord bot token. At least one channel token is required. |
 | `aiProvider` | string | No | AI provider (default: `openrouter`). Options: `openrouter`, `gemini`, `groq`, `anthropic`, `openai`. Each provider maps to a default model — see [AI provider defaults](#ai-provider-defaults) below. |
 | `apiKey` | string | No | API key for the AI provider |
-| `plan` | string | No | Plan tier (default: `free`). Options: `free`, `solo`, `collective`, `label`, `network`. |
+| `plan` | string | No | Plan tier (default: `solo`). Options: `solo`, `collective`, `label`, `network`. The `free` value is deprecated and now returns `402 Payment Required`. |
 | `email` | string | No | User email address. When omitted, the email is automatically populated from the authenticated session if one exists. The resolved email is forwarded to the backend in the `X-User-Email` header. |
 
 <Note>When a session is active, the server resolves the user email from the session via `getServerSession`. If the `email` field is also present in the request body, the request body value takes precedence. The resolved email is sent to the backend provisioning service in the `X-User-Email` header.</Note>
@@ -740,7 +740,7 @@ POST /api/deployments
 | `config.ownerIds` | string[] | No | Telegram owner user IDs |
 | `config.aiProvider` | string | No | AI provider (default: `openrouter`) |
 | `config.apiKey` | string | No | API key for the AI provider |
-| `config.plan` | string | No | Plan tier (default: `free`) |
+| `config.plan` | string | No | Plan tier (default: `solo`). The `free` value is deprecated and now returns `402 Payment Required`. |
 
 ### Response (201 Created)
 
