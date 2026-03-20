@@ -89,6 +89,8 @@ POST /api/agents/provision
 
 Provisions a new agent. Requires an active subscription unless the caller is an admin.
 
+<Note>Provisioning requests may be processed asynchronously through the background task queue. The agent is created immediately with a `provisioning` status and transitions to `running` once the gateway confirms the deployment. If gateway provisioning fails, the status changes to `error`.</Note>
+
 ### Request body
 
 | Field | Type | Required | Description |
@@ -486,7 +488,7 @@ POST /api/provision
 
 Provisions a new agent with messaging channel tokens. No authentication is required. Rate-limited per IP. At least one channel token is required.
 
-The request is proxied to the backend provisioning service. A dedicated Mux live stream is automatically created for the agent.
+The request is proxied to the backend provisioning service. A dedicated Mux live stream is automatically created for the agent. The backend may enqueue the provisioning job to the `provision` queue for asynchronous processing.
 
 ### Request body
 
