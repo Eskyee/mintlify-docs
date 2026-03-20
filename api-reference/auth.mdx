@@ -129,14 +129,12 @@ Requires session authentication. Returns the current user profile.
 
 ```json
 {
-  "success": true,
-  "user": {
-    "id": "user_123",
-    "email": "user@example.com",
-    "name": "John Doe",
-    "plan": "solo",
-    "createdAt": "2026-01-01T00:00:00Z"
-  }
+  "id": "user_123",
+  "email": "user@example.com",
+  "name": "John Doe",
+  "plan": "solo",
+  "credits": 0,
+  "twoFactorEnabled": false
 }
 ```
 
@@ -145,6 +143,7 @@ Requires session authentication. Returns the current user profile.
 | Code | Description |
 |------|-------------|
 | 401 | Unauthorized |
+| 404 | User not found |
 
 ## Update profile
 
@@ -165,6 +164,7 @@ POST /api/settings
 
 | Code | Description |
 |------|-------------|
+| 400 | Invalid email format |
 | 401 | Unauthorized |
 | 409 | Email address already in use |
 
@@ -191,6 +191,14 @@ POST /api/settings/password
 |-------|------|----------|-------------|
 | `currentPassword` | string | Yes | Current password |
 | `newPassword` | string | Yes | New password (minimum 8 characters) |
+
+### Response
+
+```json
+{
+  "success": true
+}
+```
 
 ### Errors
 
