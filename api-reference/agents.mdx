@@ -51,17 +51,20 @@ Requires authentication and ownership of the agent.
 
 ```json
 {
-  "id": "agent_123",
-  "status": "active",
-  "startedAt": "2026-03-01T00:00:00Z",
-  "plan": "starter",
-  "subdomain": "agent_123.agents.localhost",
-  "url": "https://agent_123.agents.localhost",
-  "openclawVersion": "2026.3.13",
-  "verified": false,
-  "verificationType": null,
-  "attestationUid": null,
-  "verifiedAt": null
+  "agent": {
+    "id": "agent_123",
+    "status": "active",
+    "startedAt": "2026-03-01T00:00:00Z",
+    "plan": "starter",
+    "subdomain": "agent_123.agents.localhost",
+    "url": "https://agent_123.agents.localhost",
+    "openclawVersion": "2026.3.13",
+    "verified": false,
+    "verificationType": null,
+    "attestationUid": null,
+    "verifiedAt": null
+  },
+  "status": "ok"
 }
 ```
 
@@ -172,11 +175,41 @@ Requires session authentication.
 
 ## Get agent configuration
 
-<Warning>`GET /api/agents/:id/config` is deprecated. This endpoint is not currently implemented and may be removed in a future release.</Warning>
+```http
+GET /api/agents/:id/config
+```
+
+Returns the current configuration for an agent. Requires authentication and ownership.
+
+### Response
+
+```json
+{
+  "config": {}
+}
+```
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | Unauthorized |
+| 502 | Backend service unavailable |
 
 ## Update agent configuration
 
-<Warning>`PUT /api/agents/:id/config` is deprecated. This endpoint is not currently implemented and may be removed in a future release.</Warning>
+```http
+PUT /api/agents/:id/config
+```
+
+Updates the configuration for an agent. Requires authentication and ownership. The request body is forwarded to the backend.
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | Unauthorized |
+| 502 | Backend service unavailable |
 
 ## Get agent logs
 
@@ -184,7 +217,37 @@ Requires session authentication.
 
 ## Get agent messages
 
-<Warning>`GET /api/agents/:id/messages` is deprecated. This endpoint is not currently implemented and may be removed in a future release.</Warning>
+```http
+GET /api/agents/:id/messages
+```
+
+Returns paginated messages for an agent. Requires authentication and ownership.
+
+### Query parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `limit` | number | Maximum messages to return (default: 50) |
+| `offset` | number | Offset for pagination (default: 0) |
+
+### Response
+
+```json
+{
+  "messages": [],
+  "total": 0,
+  "limit": 50,
+  "offset": 0,
+  "status": "ok"
+}
+```
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | Unauthorized |
+| 502 | Backend service unavailable |
 
 ## Get agent stats
 
@@ -251,11 +314,9 @@ POST /api/instance/:userId/start
 ```json
 {
   "success": true,
-  "status": "active"
+  "status": "running"
 }
 ```
-
-<Note>The backend returns `"active"` as the status value. The Next.js proxy layer may normalize this to `"running"` in some deployments.</Note>
 
 ### Stop agent
 
@@ -279,10 +340,7 @@ POST /api/instance/:userId/restart
 ```json
 {
   "success": true,
-  "status": "active",
-  "healedLegacyModel": false,
-  "healMessage": null,
-  "openclawVersion": "2026.3.13"
+  "status": "running"
 }
 ```
 
@@ -419,7 +477,7 @@ Agents can be verified using multiple verification types: `eas` (Ethereum Attest
 ### Get verification status
 
 ```http
-GET /api/agents/:id/verification
+GET /api/agents/:id/verify
 ```
 
 ```json
@@ -444,10 +502,9 @@ POST /api/agents/:id/verify
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `verificationType` | string | Yes | One of: `eas`, `coinbase`, `ens`, `webauthn` |
-| `verified` | boolean | No | Verification status flag |
 | `attestationUid` | string | For `eas` | Attestation UID from EAS |
-| `verifierAddress` | string | No | Address of the verifying wallet |
-| `metadata` | object | No | Additional verification metadata |
+| `walletAddress` | string | No | Address of the verifying wallet |
+| `signature` | string | Conditional | Cryptographic signature. Required for `coinbase`, `ens`, and `webauthn` verification types. |
 
 #### Response
 
@@ -506,26 +563,20 @@ The request is proxied to the backend provisioning service. A dedicated Mux live
 
 ### Response
 
-The response includes the following fields. Additional fields may be present depending on the backend configuration.
+The proxy returns a filtered subset of the backend response:
 
 ```json
 {
   "success": true,
   "userId": "a1b2c3d4e5",
-  "agentId": "agent_789",
   "subdomain": "dj-a1b2c3d4e5.agentbot.raveculture.xyz",
   "url": "https://dj-a1b2c3d4e5.agentbot.raveculture.xyz",
   "streamKey": "sk-ab12-cd34-ef56",
-  "liveStreamId": "x7k9m2p4q1",
-  "aiProvider": "openrouter",
-  "plan": "free",
-  "playbackUrl": "https://stream.mux.com/playback_id.m3u8",
-  "status": "active",
-  "createdAt": "2026-03-19T00:00:00Z"
+  "liveStreamId": "x7k9m2p4q1"
 }
 ```
 
-<Note>The Next.js proxy at `/api/provision` filters the response to a subset of fields (`success`, `userId`, `subdomain`, `url`, `streamKey`, `liveStreamId`). The full response is available when calling the backend provisioning service directly.</Note>
+<Note>The `/api/provision` proxy returns only `success`, `userId`, `subdomain`, `url`, `streamKey`, and `liveStreamId`. Additional fields such as `aiProvider`, `plan`, and `playbackUrl` are available when calling the backend provisioning service directly.</Note>
 
 ### Errors
 
@@ -713,7 +764,7 @@ POST /api/agent
 |-------|------|----------|-------------|
 | `action` | string | Yes | `update-skill` |
 | `skillId` | string | Yes | Skill ID to enable or disable |
-| `enabled` | boolean | Yes | Whether to enable or disable the skill |
+| `enabled` | boolean | No | Whether to enable or disable the skill. Defaults to `false` (removes the skill) when omitted. |
 
 ```json
 {
@@ -729,7 +780,7 @@ POST /api/agent
 |-------|------|----------|-------------|
 | `action` | string | Yes | `set-credential` |
 | `key` | string | Yes | Credential key (for example, `anthropic`, `telegram`) |
-| `value` | string | Yes | Credential value |
+| `value` | string | No | Credential value. When omitted, the credential is marked as unconfigured. |
 
 ```json
 {
