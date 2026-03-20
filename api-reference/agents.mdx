@@ -561,6 +561,8 @@ The request is proxied to the backend provisioning service. A dedicated Mux live
 | `aiProvider` | string | No | AI provider (default: `openrouter`). Options: `openrouter`, `gemini`, `groq`, `anthropic`, `openai` |
 | `apiKey` | string | No | API key for the AI provider |
 | `plan` | string | No | Plan tier. Options: `solo`, `collective`, `label`, `network`. A paid plan is required — requests with `plan` set to `free` (or omitted) return `402 Payment Required`. |
+| `email` | string | No | User email address. Used for admin and tester bypass of payment requirements. |
+| `stripeSubscriptionId` | string | No | Stripe subscription ID. Required for paid plans unless the caller is an admin or tester. |
 
 <Warning>The `free` plan value is deprecated. The provisioning service now requires a paid plan (`solo`, `collective`, `label`, or `network`) and a valid Stripe subscription. Requests with `plan` set to `free` return `402 Payment Required` with `code: "PAYMENT_REQUIRED"`.</Warning>
 
@@ -581,17 +583,18 @@ The proxy returns a filtered subset of the backend response:
 }
 ```
 
-<Note>The `/api/provision` proxy returns only `success`, `userId`, `subdomain`, `url`, `streamKey`, and `liveStreamId`. Additional fields such as `aiProvider`, `plan`, and `playbackUrl` are available when calling the backend provisioning service directly.</Note>
+<Note>The `/api/provision` proxy returns only `success`, `userId`, `subdomain`, `url`, `streamKey`, and `liveStreamId`. Additional fields such as `agentId`, `aiProvider`, `aiProviderConfig`, `plan`, `playbackUrl`, `hls`, `rtmp`, `status`, `createdAt`, and `metadata` are available when calling the backend provisioning service directly.</Note>
 
 ### Errors
 
 | Code | Description |
 |------|-------------|
-| 400 | At least one channel token required (Telegram, WhatsApp, or Discord) |
+| 400 | At least one channel token required (Telegram, WhatsApp, or Discord), invalid `aiProvider` value, or invalid `plan` value |
 | 402 | Payment required. Returned when `plan` is `free` or when no valid Stripe subscription is present. The response includes `code: "PAYMENT_REQUIRED"` and a message directing the user to choose a paid plan. |
 | 429 | Too many requests |
 | 500 | Internal server error |
 | 502 | Provisioning service unavailable or returned an error |
+| 503 | Provisioning is temporarily disabled (kill switch is active) |
 
 ## Agent interaction
 
