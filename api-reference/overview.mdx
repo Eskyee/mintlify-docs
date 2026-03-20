@@ -15,7 +15,7 @@ https://agentbot.raveculture.xyz/api
 
 ## Authentication
 
-Agentbot supports two authentication methods depending on the endpoint.
+Agentbot supports multiple authentication methods depending on the endpoint.
 
 ### Session authentication
 
@@ -31,6 +31,21 @@ curl -X GET https://agentbot.raveculture.xyz/api/agents \
 ```
 
 API keys use the `sk_` prefix and are shown only once at creation time. See the [keys API](/api-reference/keys) for details.
+
+### JWT authentication (backend API)
+
+Backend API endpoints use JWT bearer tokens for authentication. Include the token in the `Authorization` header:
+
+```bash
+curl -X GET https://agentbot.raveculture.xyz/api/instance/user_123 \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+The JWT payload contains `userId`, `email`, and `role`. Tokens expire after 7 days. See the [auth API](/api-reference/auth) for token generation details.
+
+## Data isolation
+
+All authenticated API requests are scoped to the calling user's data through row-level security (RLS) policies at the database level. You can only read and modify resources that belong to your account. See [Security](/security#row-level-security) for the full list of protected tables and how isolation works.
 
 ## Rate limits
 
@@ -75,7 +90,7 @@ API keys use the `sk_` prefix and are shown only once at creation time. See the 
 | 400 | Bad request or validation error |
 | 401 | Unauthorized (missing or invalid authentication) |
 | 402 | Payment required — a paid subscription is mandatory for all agent provisioning and usage. Also returned when an [MPP](/payments/mpp) credential is missing for gateway requests. Requests using the deprecated `free` plan value receive this status. |
-| 403 | Forbidden (insufficient permissions, token gating failure, or bot detection) |
+| 403 | Forbidden (insufficient permissions, token gating failure, bot detection, or missing CSRF token) |
 | 404 | Resource not found |
 | 429 | Too many requests or tier limit reached |
 | 500 | Internal server error |

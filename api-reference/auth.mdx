@@ -7,6 +7,38 @@ description: "Authentication API endpoints for user management and identity veri
 
 Manage user authentication, password resets, wallet sign-in, Farcaster identity, and token gating.
 
+## Auth middleware
+
+Protected backend endpoints require a valid JWT in the `Authorization` header. The middleware verifies the token, attaches user context to the request, and sets the row-level security (RLS) context on the database connection before any query runs.
+
+### Request format
+
+```bash
+curl -X GET https://agentbot.raveculture.xyz/api/instance/user_123 \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+### JWT payload
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `userId` | string | Unique user identifier |
+| `email` | string | User email address |
+| `role` | string | User role (for example, `user` or `admin`) |
+
+Tokens expire after 7 days.
+
+### Error responses
+
+| HTTP status | Error code | Description |
+|-------------|------------|-------------|
+| 401 | `AUTH_REQUIRED` | No `Authorization` header or missing `Bearer` prefix |
+| 401 | `TOKEN_INVALID` | JWT signature verification failed or token has expired |
+| 403 | `ADMIN_REQUIRED` | Endpoint requires admin privileges |
+| 500 | `AUTH_ERROR` | Unexpected error during authentication |
+
+<Note>After successful authentication, the middleware sets the database-level user context for RLS. All subsequent queries in that request are automatically scoped to the authenticated user's data. See [Security](/security#row-level-security) for details.</Note>
+
 ## Sign up
 
 ```http

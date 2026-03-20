@@ -63,6 +63,8 @@ Key services:
 - `GET /api/agents` — List and manage agents
 - `POST /api/ai/*` — AI provider proxy (OpenRouter, Anthropic, etc.)
 
+Protected endpoints use JWT auth middleware that verifies the token, attaches user context, and sets the RLS context on the database connection. See the [auth API](/api-reference/auth#auth-middleware) for details.
+
 ### Worker service (Render)
 
 A standalone background job processor built on BullMQ. It connects to the same Redis instance used by the backend and processes jobs from two queues:
@@ -87,6 +89,8 @@ Stores:
 - Billing, subscriptions, and usage tracking
 - Skill marketplace data
 - A2A message history
+
+All user-scoped tables are protected by PostgreSQL row-level security (RLS) policies. Each authenticated request sets a database-level user context so queries automatically return only the calling user's data. Admin users bypass RLS and can access all rows. See [Security](/security#row-level-security) for the full list of protected tables.
 
 ### Cache (Redis)
 
