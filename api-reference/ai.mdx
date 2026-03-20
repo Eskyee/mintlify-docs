@@ -61,7 +61,14 @@ Returns all available AI models across providers.
   "models": [
     {
       "id": "anthropic/claude-sonnet-4-20250514",
-      "provider": "openrouter"
+      "name": "Claude Sonnet",
+      "provider": "openrouter",
+      "description": "Fast, intelligent model for everyday tasks",
+      "tags": ["chat", "code"],
+      "inputCost": 0.003,
+      "outputCost": 0.015,
+      "contextWindow": 200000,
+      "available": true
     }
   ],
   "count": 1,
@@ -166,7 +173,25 @@ Send a chat completion request through the unified AI provider layer. The model 
 
 ### Response
 
-Returns the AI provider's chat completion response. The exact shape depends on the provider used.
+Returns a structured response with the following shape:
+
+```json
+{
+  "id": "chatcmpl-abc123",
+  "model": "anthropic/claude-sonnet-4-20250514",
+  "provider": "openrouter",
+  "message": {
+    "role": "assistant",
+    "content": "Hello! How can I help you today?"
+  },
+  "usage": {
+    "promptTokens": 25,
+    "completionTokens": 10,
+    "totalTokens": 35
+  },
+  "timestamp": "2026-03-19T00:00:00Z"
+}
+```
 
 ### Errors
 

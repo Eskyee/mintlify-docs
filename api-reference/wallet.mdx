@@ -193,7 +193,7 @@ Creates a new wallet using the Coinbase Developer Platform SDK.
 | Code | Description |
 |------|-------------|
 | 400 | Email required |
-| 500 | CDP not configured (set `CDP_PROJECT_ID` in environment) |
+| 500 | CDP not configured. Response includes a `setup` field with configuration instructions. Generic errors include a `details` field with the error message. |
 
 ## CDP wallet status
 

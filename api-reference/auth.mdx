@@ -204,8 +204,9 @@ POST /api/settings/password
 
 | Code | Description |
 |------|-------------|
-| 400 | New password must be at least 8 characters |
+| 400 | Current and new password required, or password must be at least 8 characters |
 | 401 | Unauthorized or current password incorrect |
+| 404 | User not found |
 
 ## Forgot password
 
