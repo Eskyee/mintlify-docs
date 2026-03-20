@@ -480,8 +480,10 @@ Agents can be verified using multiple verification types: `eas` (Ethereum Attest
 ### Get verification status
 
 ```http
-GET /api/agents/:id/verify
+GET /api/agents/:id/verification
 ```
+
+<Note>The GET endpoint uses `/verification` while POST and DELETE use `/verify`.</Note>
 
 ```json
 {
@@ -502,12 +504,15 @@ POST /api/agents/:id/verify
 
 #### Request body
 
+<Note>Requires `Content-Type: application/json` header.</Note>
+
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `verificationType` | string | Yes | One of: `eas`, `coinbase`, `ens`, `webauthn` |
-| `attestationUid` | string | For `eas` | Attestation UID from EAS |
-| `walletAddress` | string | No | Address of the verifying wallet |
-| `signature` | string | Conditional | Cryptographic signature. Required for `coinbase`, `ens`, and `webauthn` verification types. |
+| `verified` | boolean | Yes | Whether the agent is verified |
+| `attestationUid` | string | No | Attestation UID from EAS |
+| `verifierAddress` | string | No | Address of the verifying wallet |
+| `metadata` | object | No | Additional verification metadata |
 
 #### Response
 
@@ -642,6 +647,135 @@ When calling the backend provisioning service directly, the response includes ad
 | 429 | Too many requests |
 | 500 | Internal server error |
 | 502 | Provisioning service unavailable or returned an error |
+
+## Deploy agent (backend)
+
+```http
+POST /api/deployments
+```
+
+<Note>This is a backend-only endpoint. It deploys an agent container directly and requires a `Content-Type: application/json` header. Requires bearer token authentication.</Note>
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `agentId` | string | Yes | Unique agent identifier |
+| `config` | object | No | Deployment configuration |
+| `config.telegramToken` | string | Yes | Telegram bot token |
+| `config.ownerIds` | string[] | No | Telegram owner user IDs |
+| `config.aiProvider` | string | No | AI provider (default: `openrouter`) |
+| `config.apiKey` | string | No | API key for the AI provider |
+| `config.plan` | string | No | Plan tier (default: `free`) |
+
+### Response (201 Created)
+
+```json
+{
+  "id": "deploy-agent_123",
+  "agentId": "agent_123",
+  "subdomain": "agent_123.agents.localhost",
+  "url": "https://agent_123.agents.localhost",
+  "status": "active",
+  "openclawVersion": "2026.03.14.002"
+}
+```
+
+### Response (200 Already Active)
+
+If the agent container is already running, returns the existing deployment details with the same shape as the 201 response.
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | `agentId is required`, `Invalid agentId`, or `telegramToken is required` |
+| 401 | Unauthorized |
+| 500 | Deployment failed |
+
+## OpenClaw version (backend)
+
+```http
+GET /api/openclaw/version
+```
+
+Returns the current OpenClaw runtime version. No authentication required.
+
+### Response
+
+```json
+{
+  "openclawVersion": "2026.03.14.002",
+  "image": "ghcr.io/openclaw/openclaw:latest",
+  "deployedAt": "2026-03-20T00:00:00Z"
+}
+```
+
+## List instances (backend)
+
+```http
+GET /api/openclaw/instances
+```
+
+Returns all running agent instances. Requires bearer token authentication.
+
+### Response
+
+```json
+{
+  "instances": [
+    {
+      "agentId": "agent_123",
+      "name": "openclaw-agent_123",
+      "image": "ghcr.io/openclaw/openclaw:latest",
+      "status": "running",
+      "createdAt": "2026-03-01T00:00:00Z",
+      "version": "2026.03.14.002",
+      "metadata": null
+    }
+  ],
+  "count": 1
+}
+```
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | Unauthorized |
+| 500 | Failed to list instances |
+
+## Get instance container stats (backend)
+
+```http
+GET /api/openclaw/instances/:id/stats
+```
+
+Returns container resource usage for a specific agent. Requires bearer token authentication.
+
+### Path parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `id` | string | Agent ID |
+
+### Response
+
+```json
+{
+  "agentId": "agent_123",
+  "cpu": "12.5%",
+  "memory": "100MiB / 1GiB",
+  "memoryPercent": "10.0%",
+  "network": "1.2kB / 3.4kB",
+  "blockIO": "0B / 0B",
+  "pids": "12",
+  "status": "running",
+  "uptime": 86400000,
+  "uptimeFormatted": "1d 0h",
+  "timestamp": "2026-03-20T00:00:00Z"
+}
+```
 
 ## Agent interaction
 
