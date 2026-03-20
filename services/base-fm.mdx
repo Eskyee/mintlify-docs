@@ -5,103 +5,87 @@ description: "Direct pipeline to the onchain radio station"
 
 # Base FM Integration
 
-**Direct pipeline to the onchain radio station.** Submit demos, host shows, get paid in USDC.
+**Direct pipeline to the onchain radio station.** Check who's live, verify DJ access with $RAVE tokens, and spin up Mux-powered RTMP streams.
 
 ## Overview
 
-Base FM is the world's first onchain radio station, broadcasting from Base. Agentbot integrates directly with Base FM, enabling your agents to submit music, host shows, and track royalties—all settled in USDC.
+Base FM is the world's first onchain radio station, broadcasting from Base. Agentbot integrates directly with Base FM via Mux live streaming and onchain token gating, enabling your agents to manage DJ sessions, verify access, and route listeners to live streams.
+
+## How It Works
+
+```
+DJ Wallet → Verify $RAVE Balance → Provision Mux Stream → Go Live on Base FM
+                (5,000+)              (RTMP key)
+```
 
 ## Features
 
-### Submission Queue
+### Check Live DJs
 
-Your agent can submit demos directly to Base FM A&R:
-
-```javascript
-// Submit a demo via agent
-await agent.basefm.submit({
-  track: './my-demo.wav',
-  metadata: {
-    artist: 'My Label',
-    title: 'Midnight Systems',
-    bpm: 138,
-    key: 'Amin',
-    genre: 'Techno'
-  },
-  message: 'Dark basement techno with industrial textures'
-});
-```
-
-**What happens:**
-1. Audio analyzed by Music Lens
-2. Added to submission queue
-3. A&R reviews within 48 hours
-4. If accepted: scheduled for broadcast + USDC royalties
-
-### Live Broadcast
-
-Agent-hosted radio segments with scheduled airtime:
-
-| Show Type | Duration | Frequency | Pay |
-|-----------|----------|-----------|-----|
-| Guest Mix | 60 min | One-off | £50 USDC |
-| Weekly Show | 60 min | Weekly | £150 USDC |
-| Daily Show | 30 min | Daily | £200 USDC |
-
-Your agent can:
-- Curate tracklists automatically
-- Mix live or play pre-recorded sets
-- Take listener requests via Telegram
-- Announce tour dates and merch drops
-
-### Attribution Layer
-
-Every play triggers onchain royalty distribution:
-
-```
-Play Event → BlockDB Attribution → Smart Contract → USDC to Wallet
-```
-
-**Royalty split:**
-- Artist: 70%
-- Label: 20%
-- Base FM: 10%
-
-All transparent, all onchain, all automatic.
-
-## Setup
-
-### Connect Base FM
+Query which DJs are currently streaming on Base FM:
 
 ```javascript
-// Authorize agent to access Base FM
-await agent.basefm.connect({
-  wallet: '0x...', // Your agent's wallet
-  permissions: ['submit', 'broadcast', 'royalties']
-});
+const djs = await getLiveDJs();
+// Returns: [{ name, wallet, genre, listeners, playbackId }]
 ```
 
-### Configure Notifications
+### Verify DJ Access (Token Gating)
+
+Check if a wallet holds enough $RAVE tokens to stream. The threshold is **5,000 $RAVE**:
 
 ```javascript
-// Get notified when your track plays
-await agent.basefm.on('play', async (event) => {
-  console.log(`Played on Base FM! Earned ${event.royaltyUSDC} USDC`);
-});
+const result = await verifyDJ("0xabc...");
+// Returns: { wallet: "0xabc...", balance: "7500000000000000000000", hasAccess: true }
 ```
+
+**$RAVE Token:** `0xdf3c79a5759eeedb844e7481309a75037b8e86f5` (Base network)
+
+### Create Stream (Verified DJs Only)
+
+Provision a new Mux RTMP stream for a verified DJ:
+
+```javascript
+const stream = await createStream("0xabc", "DJ Snake");
+// Returns: { streamKey, playbackId, rtmpUrl }
+```
+
+### Go Live via OBS
+
+Once your stream is provisioned, configure OBS with:
+
+| Setting | Value |
+|---------|-------|
+| **Server** | `rtmp://global-live.mux.com:5222/app` |
+| **Stream Key** | `[from createStream response]` |
+
+Then start streaming — listeners auto-tune via Base FM.
+
+## Pricing
+
+| Tier | Access |
+|------|--------|
+| **Free** | Hold 5,000+ $RAVE tokens (community perk) |
+| **Paid** | £10/month for non-RAVE holders (covers Mux costs) |
 
 ## Use Cases
 
-- **Demo submission automation** — Agent scans folder, submits new tracks
-- **Radio show hosting** — Weekly curated show with track context
-- **Royalty tracking** — Real-time USDC streaming income dashboard
-- **Fan engagement** — "Track just played on Base FM" Telegram announcements
+- **Live DJ sessions** — Verified agents host shows on Base FM
+- **RAVE token gating** — Only holders can stream (5,000 $RAVE minimum)
+- **Listener routing** — Fans tune in via Base FM with automatic playback
+- **Real-time notifications** — "DJ Snake just went live on Base FM" via Telegram
 
 ## Requirements
 
-| Tier | Submission Queue | Live Broadcast | Attribution |
-|------|------------------|----------------|-------------|
-| Solo | ✅ | ❌ | ✅ |
-| Collective | ✅ | ❌ | ✅ |
+| Tier | Check Live DJs | Verify Access | Create Stream |
+|------|----------------|---------------|---------------|
+| Solo | ✅ | ✅ | ❌ |
+| Collective | ✅ | ✅ | ❌ |
 | Label | ✅ | ✅ | ✅ |
 | Network | ✅ | ✅ | ✅ |
+
+## Integration Points
+
+- **$RAVE Token:** `0xdf3c79a5759eeedb844e7481309a75037b8e86f5`
+- **Base FM API:** `https://api.basefm.space`
+- **Mux:** [mux.com/docs](https://mux.com/docs)
+- **Base FM:** [basefm.space](https://basefm.space)
