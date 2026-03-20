@@ -7,6 +7,40 @@ description: "AI provider endpoints for model selection, chat completion, and co
 
 Endpoints for interacting with AI models through a unified provider layer. These endpoints are served by the backend API and do not require session authentication.
 
+## List models (frontend)
+
+```http
+GET /api/models
+```
+
+Returns available AI models from OpenRouter with additional featured models. No authentication required.
+
+### Response
+
+```json
+{
+  "models": [
+    {
+      "id": "anthropic/claude-sonnet-4-20250514",
+      "name": "Claude Sonnet",
+      "contextLength": 200000,
+      "pricing": {
+        "prompt": 0.003,
+        "completion": 0.015
+      },
+      "featured": true,
+      "description": "Anthropic's Claude Sonnet model"
+    }
+  ]
+}
+```
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 500 | Failed to fetch models or invalid response from provider |
+
 ## Health check
 
 ```http

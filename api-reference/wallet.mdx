@@ -115,7 +115,9 @@ Seed export is disabled for security. Returns `403`.
 |------|-------------|
 | 400 | Invalid action or wallet already exists |
 | 401 | Unauthorized |
+| 403 | Seed export is disabled for security (for `export_seed`) |
 | 404 | No wallet found (for `get_seed`) |
+| 500 | Failed to fetch wallet or failed to process request |
 
 ## Get CDP wallet address
 

@@ -29,6 +29,13 @@ GET /api/keys
 }
 ```
 
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | Unauthorized |
+| 500 | Failed to fetch keys |
+
 ## Create key
 
 ```http
@@ -88,6 +95,7 @@ Requires ownership of the key.
 |------|-------------|
 | 401 | Unauthorized |
 | 404 | Key not found |
+| 500 | Failed to fetch key |
 
 ## Delete key
 
@@ -111,3 +119,4 @@ Requires ownership of the key.
 |------|-------------|
 | 401 | Unauthorized |
 | 404 | Key not found |
+| 500 | Failed to delete key |

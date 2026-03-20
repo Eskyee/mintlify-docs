@@ -35,29 +35,6 @@ Returns all agents owned by the authenticated user.
 }
 ```
 
-## Create agent
-
-```http
-POST /api/agents
-```
-
-### Request body
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `name` | string | Yes | Name of the agent |
-| `config` | object | No | Agent configuration |
-
-### Response
-
-```json
-{
-  "id": "agent_456",
-  "name": "My Agent",
-  "status": "deploying"
-}
-```
-
 ## Get agent
 
 ```http
@@ -94,40 +71,6 @@ Requires authentication and ownership of the agent.
 | 401 | Unauthorized |
 | 404 | Agent not found or not owned by user |
 | 500 | Failed to fetch agent |
-
-## Update agent
-
-```http
-PUT /api/agents/:id
-```
-
-### Request body
-
-Any valid agent configuration fields.
-
-### Response
-
-```json
-{
-  "id": "agent_123",
-  "message": "Agent updated"
-}
-```
-
-## Delete agent
-
-```http
-DELETE /api/agents/:id
-```
-
-### Response
-
-```json
-{
-  "id": "agent_123",
-  "message": "Agent deleted"
-}
-```
 
 ## Provision agent
 
@@ -624,10 +567,43 @@ A dedicated Mux live stream is automatically created for the agent.
 {
   "success": true,
   "userId": "a1b2c3d4e5f6g7h8",
+  "agentId": "agent_789",
+  "id": "a1b2c3d4e5f6g7h8",
+  "aiProvider": "openrouter",
+  "aiProviderConfig": {
+    "model": "anthropic/claude-sonnet-4-20250514",
+    "baseUrl": "https://openrouter.ai/api/v1",
+    "requiresKey": true
+  },
+  "plan": "free",
+  "streamKey": "live_abc123",
+  "liveStreamId": "stream_456",
+  "rtmpServer": "rtmps://global-live.mux.com:443/app",
+  "playbackUrl": "https://stream.mux.com/abc123.m3u8",
   "subdomain": "a1b2c3d4e5f6g7h8.agents.localhost",
   "url": "https://a1b2c3d4e5f6g7h8.agents.localhost",
-  "streamKey": "live_abc123",
-  "liveStreamId": "stream_456"
+  "hls": {
+    "playlistUrl": "https://stream.mux.com/abc123.m3u8"
+  },
+  "rtmp": {
+    "server": "rtmps://global-live.mux.com:443/app",
+    "key": "live_abc123"
+  },
+  "status": "active",
+  "createdAt": "2026-03-19T00:00:00Z",
+  "metadata": {
+    "channels": {
+      "telegram": true,
+      "discord": false,
+      "whatsapp": false
+    },
+    "streaming": {
+      "provider": "mux",
+      "lowLatency": true,
+      "resolution": "1080p",
+      "bitrate": "5000kbps"
+    }
+  }
 }
 ```
 
@@ -635,7 +611,7 @@ A dedicated Mux live stream is automatically created for the agent.
 
 | Code | Description |
 |------|-------------|
-| 400 | At least one channel token required (Telegram, WhatsApp, or Discord) |
+| 400 | At least one channel token required, invalid AI provider, or invalid plan |
 | 401 | Unauthorized |
 | 429 | Too many requests |
 | 500 | Internal server error |
@@ -859,12 +835,48 @@ POST /api/agent
 POST /api/chat
 ```
 
+Requires session authentication.
+
 ### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `message` | string | Yes | Message to send |
+| `topic` | string | No | Conversation topic |
+
+### Response
 
 ```json
 {
-  "agentId": "agent_123",
+  "id": "msg_abc123",
   "message": "Hello!",
-  "platform": "telegram"
+  "topic": "general",
+  "status": "sent",
+  "timestamp": "2026-03-19T00:00:00Z",
+  "reply": "Message received by agent"
 }
+```
+
+### Get chat history
+
+```http
+GET /api/chat
+```
+
+Requires session authentication.
+
+```json
+{
+  "messages": [],
+  "count": 0
+}
+```
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | Message required |
+| 401 | Unauthorized |
+| 500 | Failed to send message or failed to fetch messages |
 ```

@@ -88,10 +88,7 @@ API keys use the `sk_` prefix and are shown only once at creation time. See the 
 |----------|--------|-------------|
 | `/api/v1/gateway` | POST | Route requests to plugins with Stripe or [MPP](/payments/mpp) payment |
 | `/api/agents` | GET | List all agents |
-| `/api/agents` | POST | Create an agent |
 | `/api/agents/:id` | GET | Get agent details |
-| `/api/agents/:id` | PUT | Update an agent |
-| `/api/agents/:id` | DELETE | Delete an agent |
 | `/api/agents/:id/config` | GET | Get agent configuration |
 | `/api/agents/:id/config` | PUT | Update agent configuration |
 | `/api/agents/:id/logs` | GET | Get agent logs |
@@ -112,6 +109,8 @@ API keys use the `sk_` prefix and are shown only once at creation time. See the 
 | `/api/agents/provision` | POST | Provision a new agent |
 | `/api/agents/provision` | GET | List provisioned agents |
 | `/api/chat` | POST | Send message to agent |
+| `/api/chat` | GET | Get chat history |
+| `/api/models` | GET | List available AI models |
 | `/api/health` | GET | Health check |
 | `/api/heartbeat` | GET | Get heartbeat settings |
 | `/api/heartbeat` | POST | Update heartbeat settings |
