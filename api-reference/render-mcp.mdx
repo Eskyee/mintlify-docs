@@ -7,6 +7,8 @@ description: "Gateway endpoints for the Render MCP Server integration"
 
 Gateway endpoints that provide information about the Render MCP Server and validate configuration. These endpoints are served by the backend API service.
 
+<Warning>All `/api/render-mcp/*` endpoints require bearer token authentication. Include the API key in the `Authorization` header as `Bearer YOUR_API_KEY`.</Warning>
+
 <Note>These endpoints are informational. Most users should use the official Render MCP Server Docker image directly. See the [MCP page](/mcp) for Agentbot's own MCP server.</Note>
 
 ## Health check

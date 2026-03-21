@@ -7,7 +7,9 @@ description: "AI provider endpoints for model selection, chat completion, and co
 
 Endpoints for interacting with AI models through a unified provider layer. These endpoints are served by the backend API service, not the web application. They are available at the backend base URL, which may differ from the web API base URL depending on your deployment.
 
-<Note>These endpoints are internal backend endpoints and are not exposed through the web application's `/api` routes. The chat endpoint requires a valid subscription plan; other endpoints in this group do not require authentication. All POST requests must include the `Content-Type: application/json` header.</Note>
+<Note>These endpoints are internal backend endpoints and are not exposed through the web application's `/api` routes. All endpoints in this group require bearer token authentication via the `authenticate` middleware. The chat endpoint additionally requires a valid subscription plan. All POST requests must include the `Content-Type: application/json` header.</Note>
+
+<Warning>All `/api/ai/*` endpoints share a rate limit of 30 requests per minute per IP, not just the chat endpoint.</Warning>
 
 ## Health check
 
@@ -243,10 +245,10 @@ Each subscription plan grants access to a specific set of AI models. The chat en
 
 | Plan | Price | Models | Agent limit | Skill limit | A2A messages/day |
 |------|-------|--------|-------------|-------------|------------------|
-| `label` | $29/mo | `openai/gpt-4o-mini`, `google/gemini-2.0-flash` | 1 | 3 | 100 |
-| `solo` | $79/mo | `openai/gpt-4o-mini`, `openai/gpt-4o`, `google/gemini-2.0-flash`, `anthropic/claude-3.5-sonnet` | 3 | 10 | 500 |
-| `collective` | $199/mo | `openai/gpt-4o-mini`, `openai/gpt-4o`, `openai/gpt-4-turbo`, `google/gemini-2.0-flash`, `anthropic/claude-3.5-sonnet`, `anthropic/claude-3-opus` | 10 | 25 | 2,000 |
-| `network` | $499/mo | All models | 100 | 100 | 10,000 |
+| `solo` | £29/mo | `openai/gpt-4o-mini`, `google/gemini-2.0-flash` | 1 | 3 | 100 |
+| `collective` | £69/mo | `openai/gpt-4o-mini`, `openai/gpt-4o`, `google/gemini-2.0-flash`, `anthropic/claude-3.5-sonnet` | 3 | 10 | 500 |
+| `label` | £149/mo | `openai/gpt-4o-mini`, `openai/gpt-4o`, `openai/gpt-4-turbo`, `google/gemini-2.0-flash`, `anthropic/claude-3.5-sonnet`, `anthropic/claude-3-opus` | 10 | 25 | 2,000 |
+| `network` | £499/mo | All models | Unlimited | 100 | 10,000 |
 
 <Note>Admin users are automatically granted `network`-level access regardless of their subscription plan.</Note>
 

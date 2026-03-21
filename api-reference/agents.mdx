@@ -57,7 +57,7 @@ Requires authentication and ownership of the agent.
     "id": "agent_123",
     "status": "active",
     "startedAt": "2026-03-01T00:00:00Z",
-    "plan": "starter",
+    "plan": "solo",
     "subdomain": "agent_123.agents.localhost",
     "url": "https://agent_123.agents.localhost",
     "openclawVersion": "2026.3.13",
@@ -105,9 +105,9 @@ Provisions a new agent. Requires an active subscription unless the caller is an 
 | `name` | string | Yes | Agent name |
 | `model` | string | No | AI model (default: `claude-opus-4-6`). Options: `claude-opus-4-6`, `gpt-4`, `custom` |
 | `config` | object | No | Agent configuration |
-| `tier` | string | No | Subscription tier hint. Options: `starter`, `pro`, `enterprise`. This value is forwarded to the backend as the `plan` field (mapped to `label`, `solo`, `collective`, `network`). When omitted, the backend deployment defaults to `label`. |
+| `tier` | string | No | Subscription tier hint. Options: `starter`, `pro`, `enterprise`. This value is forwarded to the backend as the `plan` field (mapped to `solo`, `collective`, `label`, `network`). When omitted, the backend deployment defaults to `label`. |
 
-<Note>The agent limit is determined by the subscription plan on the authenticated user's account (`starter`: 1, `pro`: 3, `enterprise`: 100). It cannot be overridden in the request body.</Note>
+<Note>The web proxy enforces agent limits based on the subscription tier (`starter`: 1, `pro`: 3, `enterprise`: 100). The backend enforces separate plan-based limits (`solo`: 1, `collective`: 3, `label`: 10, `network`: unlimited). The limit cannot be overridden in the request body.</Note>
 
 ### Admin bypass
 
@@ -139,7 +139,7 @@ Admin users (configured via `ADMIN_EMAILS`) are exempt from the following restri
 | 400 | Agent name is required |
 | 401 | Unauthorized |
 | 402 | Active subscription required to provision agents |
-| 429 | Agent limit reached for your plan. Response includes `current` (agent count) and `limit` fields. Limits: `starter` 1, `pro` 3, `enterprise` 100. Users without a recognized plan default to a limit of 1. |
+| 429 | Agent limit reached for your plan (web proxy). Response includes `current` (agent count) and `limit` fields. Limits: `starter` 1, `pro` 3, `enterprise` 100. Users without a recognized plan default to a limit of 1. The backend returns `402` with code `AGENT_LIMIT_REACHED` for the same condition. |
 | 500 | Failed to provision agent |
 
 ## List provisioned agents
@@ -550,11 +550,11 @@ Returns resource usage statistics for an agent instance.
 GET /api/agents/:id/token
 ```
 
-Returns the gateway token for the agent. If no token exists, a new cryptographically random token is generated using 32 bytes of entropy (returned as a 64-character hex string).
+Returns the gateway token for the agent. If no token exists, a new cryptographically random token is generated using 32 bytes of entropy (returned as a 64-character hex string). Note that tokens generated during initial provisioning use 24 bytes (48 hex characters) instead.
 
 ```json
 {
-  "token": "a1b2c3d4e5f6...64 hex characters"
+  "token": "a1b2c3d4e5f6...48 or 64 hex characters"
 }
 ```
 
@@ -762,9 +762,13 @@ When calling the backend provisioning service directly, the response includes ad
 
 ### AI provider defaults
 
-Each `aiProvider` value maps to a default model and base URL:
+Each `aiProvider` value maps to a default model and base URL. There are two model configurations: the **container config** (used by the agent's internal gateway) and the **provision response metadata** (`aiProviderConfig` field). These may differ.
 
-| Provider | Default model | Fallback model | Base URL |
+#### Container config models
+
+These models are configured inside the agent container at provisioning time and are used by the gateway's model fallback chain:
+
+| Provider | Primary model | Fallback model | Base URL |
 |----------|--------------|----------------|----------|
 | `openrouter` | `moonshotai/kimi-k2.5` | `openrouter/openai/gpt-4o-mini` | `https://openrouter.ai/api/v1` |
 | `gemini` | `google/gemini-2.0-flash` | `openrouter/anthropic/claude-sonnet-4-5` | `https://generativelanguage.googleapis.com/v1beta/models` |
@@ -773,7 +777,20 @@ Each `aiProvider` value maps to a default model and base URL:
 | `openai` | `openai/gpt-4o` | `openai/gpt-4o-mini` | `https://api.openai.com/v1` |
 | `minimax` | `MiniMax/MiniMax-Text-01` | `openai/gpt-4o-mini` | `https://api.minimax.chat/v1` |
 
-Each provider now includes a fallback model that is used automatically when the primary model is unavailable or returns an error.
+#### Provision response metadata models
+
+The `aiProviderConfig` object returned in the provision response uses different default models:
+
+| Provider | Default model | Base URL |
+|----------|--------------|----------|
+| `openrouter` | `openai/gpt-4o-mini` | `https://openrouter.ai/api/v1` |
+| `gemini` | `gemini-2.0-flash` | `https://generativelanguage.googleapis.com/v1beta/models` |
+| `groq` | `mixtral-8x7b-32768` | `https://api.groq.com/openai/v1` |
+| `anthropic` | `claude-3-sonnet-20240229` | `https://api.anthropic.com/v1` |
+| `openai` | `openai/gpt-4o` | `https://api.openai.com/v1` |
+| `minimax` | `MiniMax-Text-01` | `https://api.minimax.chat/v1` |
+
+Each provider includes a fallback model in the container config that is used automatically when the primary model is unavailable or returns an error.
 
 <Note>`minimax` is available as a fallback in the provider configuration map but is not currently accepted as a value for the `aiProvider` request parameter. Passing `minimax` as `aiProvider` returns a `400` validation error. This provider may be enabled in a future release.</Note>
 
@@ -859,7 +876,7 @@ POST /api/deployments
   "subdomain": "agent_123.agents.localhost",
   "url": "https://agent_123.agents.localhost",
   "status": "active",
-  "openclawVersion": "2026.03.14.002"
+  "openclawVersion": "2026.3.13"
 }
 ```
 
@@ -887,7 +904,7 @@ Returns the current OpenClaw runtime version. No authentication required.
 
 ```json
 {
-  "openclawVersion": "2026.03.14.002",
+  "openclawVersion": "2026.3.13",
   "image": "ghcr.io/openclaw/openclaw:latest",
   "deployedAt": "2026-03-20T00:00:00Z"
 }

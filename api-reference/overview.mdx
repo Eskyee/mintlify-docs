@@ -56,7 +56,7 @@ The backend API enforces per-IP rate limits using standard `RateLimit-*` respons
 | Scope | Applies to | Limit | Error message |
 |-------|-----------|-------|---------------|
 | General | All `/api/*` routes | 120 req/min per IP | `Too many requests, please slow down.` |
-| AI chat | `/api/ai/*` routes | 30 req/min per IP | `AI rate limit exceeded.` |
+| AI (all endpoints) | `/api/ai/*` routes | 30 req/min per IP | `AI rate limit exceeded.` |
 | Deployments | `POST /api/deployments` | 5 req/min per IP | `Deployment rate limit exceeded.` |
 
 ### Web API rate limits

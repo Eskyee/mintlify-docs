@@ -95,7 +95,7 @@ Returns platform-wide metrics including agent counts, message volumes, deploymen
 
 ## Historical metrics
 
-<Note>The per-user metrics endpoints below are served by the backend API service, not the web application. They are available at the backend base URL, which may differ from the web API base URL depending on your deployment.</Note>
+<Note>The per-user metrics endpoints below are served by the backend API service, not the web application. They are available at the backend base URL, which may differ from the web API base URL depending on your deployment. All per-user metrics endpoints require bearer token authentication.</Note>
 
 ```http
 GET /api/metrics/:userId/historical
