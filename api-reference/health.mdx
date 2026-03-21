@@ -158,6 +158,6 @@ Agent containers expose an internal health endpoint on port `18789`. The backend
 
 ### Health check behavior
 
-- The health check retries up to 10 times by default, with a 2-second delay between attempts when the health endpoint fails and a 1-second delay between Docker inspect failures.
-- The internal health endpoint has a 5-second timeout per attempt.
+- Container health is determined by a process-level check (`pgrep`) that verifies the gateway process is running, rather than an HTTP endpoint probe.
+- Docker runs the health check every 30 seconds with a 5-second timeout and 3 retries before marking the container as unhealthy.
 - The `waitForHealthy` function polls container health every 2 seconds, with a default overall timeout of 60 seconds.
