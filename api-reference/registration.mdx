@@ -15,13 +15,13 @@ Register self-hosted (Home) and linked (Link) agent installations. These endpoin
 POST /api/validate-key
 ```
 
-Validates a bearer token and returns the associated user information. No session authentication is required — the API key is passed in the `Authorization` header.
+Validates a bearer token by delegating to the web application's [key validation endpoint](/api-reference/keys#validate-key). The web app verifies the key hash using bcrypt against the database. No session authentication is required — the API key is passed in the `Authorization` header.
 
 ### Headers
 
 | Header | Required | Description |
 |--------|----------|-------------|
-| `Authorization` | Yes | Bearer token in the format `Bearer YOUR_API_KEY`. The key must be at least 10 characters. |
+| `Authorization` | Yes | Bearer token in the format `Bearer YOUR_API_KEY`. The key must start with the `sk_` prefix. |
 
 ### Response
 
@@ -29,7 +29,9 @@ Validates a bearer token and returns the associated user information. No session
 {
   "valid": true,
   "userId": "user-a1b2c3d4",
+  "email": "user@example.com",
   "plan": "solo",
+  "subscriptionStatus": "active",
   "features": ["dashboard", "marketplace", "analytics"]
 }
 ```
@@ -37,15 +39,18 @@ Validates a bearer token and returns the associated user information. No session
 | Field | Type | Description |
 |-------|------|-------------|
 | `valid` | boolean | Whether the key is valid |
-| `userId` | string | User identifier derived from the key |
-| `plan` | string | Current subscription plan |
+| `userId` | string | User identifier |
+| `email` | string | User email address |
+| `plan` | string | Current subscription plan (`solo`, `collective`, `label`, or `network`) |
+| `subscriptionStatus` | string | Stripe subscription status (e.g. `active`, `past_due`, `canceled`) |
 | `features` | string[] | List of features available to the user |
 
 ### Errors
 
 | Code | Description |
 |------|-------------|
-| 401 | Missing or invalid API key. The key must be provided as a bearer token and be at least 10 characters long. |
+| 401 | Missing bearer token, key does not start with `sk_`, or key is invalid |
+| 503 | Key validation service is temporarily unavailable |
 
 ## Register Home installation
 

@@ -112,7 +112,7 @@ Users with the `admin` role bypass RLS policies and can access all rows across t
 
 ## Auth middleware
 
-The backend API uses a JWT-based auth middleware that runs before protected endpoints. API key comparison uses `crypto.timingSafeEqual` to prevent timing-based key enumeration.
+The backend API uses auth middleware that runs before protected endpoints. API key comparison uses `crypto.timingSafeEqual` to prevent timing-based key enumeration. Two middleware functions are available: the inline `authenticate` function on the main router, and a standalone `requireAuth` middleware that can be applied to individual route handlers not mounted through the main router.
 
 ### Authentication flow
 

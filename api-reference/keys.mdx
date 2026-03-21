@@ -111,3 +111,55 @@ Requires ownership of the key.
 |------|-------------|
 | 401 | Unauthorized |
 | 404 | Key not found |
+
+## Validate key
+
+```http
+POST /api/keys/validate
+```
+
+Verifies an API key against its bcrypt hash in the database and returns the associated user information. This endpoint is called by the backend API to validate keys provided during install and link scripts. No session authentication is required.
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `apiKey` | string | Yes | The full API key. Must start with the `sk_` prefix. |
+
+### Response
+
+```json
+{
+  "valid": true,
+  "userId": "user-a1b2c3d4",
+  "email": "user@example.com",
+  "plan": "solo",
+  "subscriptionStatus": "active",
+  "features": ["dashboard", "marketplace", "analytics"]
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `valid` | boolean | Whether the key is valid |
+| `userId` | string | User identifier |
+| `email` | string | User email address |
+| `plan` | string | Current subscription plan (`solo`, `collective`, `label`, or `network`) |
+| `subscriptionStatus` | string | Stripe subscription status (e.g. `active`, `past_due`, `canceled`) |
+| `features` | string[] | List of features available to the user |
+
+<Note>On a successful match, the `lastUsed` timestamp on the API key record is automatically updated.</Note>
+
+### How it works
+
+1. The key prefix (first 10 characters) is used for a fast database lookup.
+2. Candidate keys matching the prefix are compared using `bcrypt.compare` against the stored hash.
+3. On match, the user's profile and subscription information are returned.
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | Missing or non-string `apiKey` in the request body |
+| 401 | Key does not start with `sk_` or no matching key found |
+| 500 | Validation failed due to a server error |
