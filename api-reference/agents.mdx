@@ -94,7 +94,9 @@ POST /api/agents/provision
 
 Provisions a new agent. Requires an active subscription unless the caller is an admin.
 
-<Note>Provisioning requests may be processed asynchronously through the background task queue. The agent is created immediately with a `provisioning` status and transitions to `running` once the gateway confirms the deployment. If gateway provisioning fails, the status changes to `error`.</Note>
+<Note>Provisioning requests may be processed asynchronously through the background task queue. The agent is created immediately with a `provisioning` status and transitions to `running` once the backend deployment endpoint confirms the deployment. If deployment fails, the status changes to `error`.</Note>
+
+<Note>The provisioning endpoint calls `POST /api/deployments` on the backend to deploy the agent container. The request includes a 30-second timeout. When the model is set to `claude-opus-4-6`, the AI provider is automatically set to `anthropic`; otherwise it falls back to the provider specified in the agent configuration (default: `openrouter`). The plan sent to the backend defaults to `label` when no tier is specified.</Note>
 
 ### Request body
 
@@ -103,7 +105,7 @@ Provisions a new agent. Requires an active subscription unless the caller is an 
 | `name` | string | Yes | Agent name |
 | `model` | string | No | AI model (default: `claude-opus-4-6`). Options: `claude-opus-4-6`, `gpt-4`, `custom` |
 | `config` | object | No | Agent configuration |
-| `tier` | string | No | Subscription tier hint. Options: `starter`, `pro`, `enterprise` |
+| `tier` | string | No | Subscription tier hint. Options: `starter`, `pro`, `enterprise`. This value is forwarded to the backend as the `plan` field (mapped to `label`, `solo`, `collective`, `network`). When omitted, the backend deployment defaults to `label`. |
 
 <Note>The agent limit is determined by the subscription plan on the authenticated user's account (`starter`: 1, `pro`: 3, `enterprise`: 100). It cannot be overridden in the request body.</Note>
 
