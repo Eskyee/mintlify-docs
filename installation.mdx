@@ -88,6 +88,8 @@ services:
     environment:
       - HOME=/home/node
       - TERM=xterm-256color
+      - NODE_COMPILE_CACHE=/var/tmp/openclaw-compile-cache
+      - OPENCLAW_NO_RESPAWN=1
     env_file:
       - .env
 
@@ -95,7 +97,7 @@ volumes:
   postgres_data:
 ```
 
-<Note>The `init: true` flag enables proper signal forwarding and prevents zombie processes (PID 1 handling). The `HOME` and `TERM` environment variables are required by the official OpenClaw image which runs as the `node` user.</Note>
+<Note>The `init: true` flag enables proper signal forwarding and prevents zombie processes (PID 1 handling). The `HOME` and `TERM` environment variables are required by the official OpenClaw image which runs as the `node` user. `NODE_COMPILE_CACHE` enables the Node.js compile cache for faster startup, and `OPENCLAW_NO_RESPAWN=1` prevents the OpenClaw process from automatically respawning inside the container (Docker's `restart` policy handles restarts instead).</Note>
 
 ```bash
 docker-compose up -d

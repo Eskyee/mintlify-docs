@@ -151,6 +151,23 @@ Each agent container receives a unique gateway auth token at provisioning time. 
 
 When an agent is provisioned, the backend generates an OpenClaw configuration with the following parameters. These values are set automatically and cannot be overridden by the caller.
 
+### Container environment variables
+
+The following environment variables are set on every agent container at launch:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `HOME` | `/home/node` | Home directory for the `node` user that the official OpenClaw image runs as |
+| `TERM` | `xterm-256color` | Terminal type |
+| `NODE_COMPILE_CACHE` | `/var/tmp/openclaw-compile-cache` | Directory for the Node.js compile cache. Speeds up cold starts by caching compiled bytecode across process restarts. |
+| `OPENCLAW_NO_RESPAWN` | `1` | When set to `1`, prevents the OpenClaw process from automatically respawning after exit. Container-level restart policies (Docker `--restart` or orchestrator health checks) handle process recovery instead. |
+| `OPENCLAW_GATEWAY_TOKEN` | Auto-generated | Gateway authentication token. When not set, the entrypoint generates a 32-character hex token. See [per-agent gateway authentication](#per-agent-gateway-authentication). |
+| `OPENCLAW_GATEWAY_PORT` | `18789` | Port the gateway listens on inside the container |
+| `AGENTBOT_USER_ID` | Per-user | Owner user ID passed at provisioning time |
+| `AGENTBOT_PLAN` | `solo` | Subscription plan tier (`solo`, `collective`, `label`, or `network`) |
+| `AGENTBOT_MODE` | `home` | Installation mode (`home` for self-hosted, `link` for existing OpenClaw) |
+| `AGENTBOT_API_KEY` | Per-user | API key for authenticating with the Agentbot platform |
+
 ### Gateway settings
 
 | Parameter | Value | Description |
