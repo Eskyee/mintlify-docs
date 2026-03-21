@@ -57,7 +57,7 @@ The backend API enforces per-IP rate limits using standard `RateLimit-*` respons
 |-------|-----------|-------|---------------|
 | General | All `/api/*` routes | 120 req/min per IP | `Too many requests, please slow down.` |
 | AI (all endpoints) | `/api/ai/*` routes | 30 req/min per IP | `AI rate limit exceeded.` |
-| Deployments | `POST /api/deployments` | 5 req/min per IP | `Deployment rate limit exceeded.` |
+| Deployments | `POST /api/deployments`, `POST /api/provision` | 5 req/min per IP | `Deployment rate limit exceeded.` |
 
 ### Web API rate limits
 
@@ -67,7 +67,7 @@ The backend API enforces per-IP rate limits using standard `RateLimit-*` respons
 | `/api/agents` | 100/min |
 | `/api/chat` | 60/min |
 | `/api/instance/*` | 30/min |
-| `/api/provision` | Rate-limited per IP |
+| `/api/provision` | 5/min (deployment limiter) |
 | `/api/register` | Rate-limited per IP |
 | `/api/auth/forgot-password` | Rate-limited per IP |
 | `/api/auth/reset-password` | Rate-limited per IP |
@@ -186,7 +186,7 @@ curl -X POST https://agentbot.raveculture.xyz/api/ai/chat \
 | `/api/wallet/create` | POST | Create a CDP wallet |
 | `/api/wallet/cdp` | GET | Get CDP wallet status |
 | `/api/wallet/cdp` | POST | Create a CDP wallet client |
-| `/api/provision` | POST | Provision agent with channel tokens |
+| `/api/provision` | POST | Provision agent with channel tokens (requires auth) |
 | `/api/validate-key` | POST | Validate an API key (backend only) |
 | `/api/register-home` | POST | Register a Home mode installation (backend only, requires auth) |
 | `/api/register-link` | POST | Register a Link mode installation (backend only, requires auth) |
