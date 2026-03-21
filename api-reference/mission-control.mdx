@@ -1,0 +1,243 @@
+---
+title: Mission control API
+description: "Monitor your agent fleet with real-time graphs, execution traces, cost attribution, and booking data"
+---
+
+# Mission control API
+
+Mission control provides a real-time view of your agent fleet. Use these endpoints to visualize agent relationships, trace execution activity, attribute costs per agent, and track talent bookings.
+
+<Note>All mission control endpoints require authentication and are scoped to the authenticated user's data through [row-level security](/security#row-level-security).</Note>
+
+## Fleet graph
+
+```http
+GET /api/mission-control/fleet/graph
+```
+
+Returns a constellation graph of your agent fleet as a set of nodes and edges. Each node represents an agent, and edges represent coordination relationships (delegation, monitoring) between agents.
+
+### Query parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `userId` | number | Yes | The user ID to fetch the fleet graph for |
+
+### Response
+
+```json
+{
+  "nodes": [
+    {
+      "id": "atlas",
+      "name": "Atlas",
+      "type": "coordinator",
+      "status": "active",
+      "x": 400,
+      "y": 300,
+      "load": 72,
+      "memory": 58
+    },
+    {
+      "id": "djbot",
+      "name": "DJ Bot",
+      "type": "specialist",
+      "status": "active",
+      "x": 600,
+      "y": 150,
+      "load": 44,
+      "memory": 61
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "source": "atlas",
+      "target": "djbot",
+      "type": "delegates"
+    }
+  ],
+  "timestamp": "2026-03-21T12:00:00.000Z"
+}
+```
+
+### Node object
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Unique agent identifier |
+| `name` | string | Agent display name |
+| `type` | string | Agent role. One of `coordinator`, `monitor`, `specialist`, or `worker` |
+| `status` | string | Current status. One of `active`, `idle`, or `error` |
+| `x` | number | Horizontal position for graph layout |
+| `y` | number | Vertical position for graph layout |
+| `load` | number | Current CPU load percentage |
+| `memory` | number | Current memory usage percentage |
+
+### Edge object
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Unique edge identifier |
+| `source` | string | Source agent ID |
+| `target` | string | Target agent ID |
+| `type` | string | Relationship type, such as `delegates` or `monitors` |
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | Unauthorized |
+| 500 | Failed to fetch fleet graph |
+
+## Execution traces
+
+```http
+GET /api/mission-control/fleet/traces
+```
+
+Returns real-time execution traces for your agent fleet. Each trace represents a single task execution, including tool calls, inference steps, and monitoring events.
+
+### Query parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `userId` | number | Yes | The user ID to fetch traces for |
+
+### Response
+
+```json
+[
+  {
+    "id": "trace-1711022400000-0",
+    "type": "tool_call",
+    "label": "fetch_calendar_events",
+    "agent": "Atlas",
+    "status": "success",
+    "duration": "142ms",
+    "startedAt": "2026-03-21T12:00:00.000Z",
+    "tokens": null
+  },
+  {
+    "id": "trace-1711022400000-1",
+    "type": "inference",
+    "label": "summarise_messages",
+    "agent": "Atlas",
+    "status": "success",
+    "duration": "285ms",
+    "startedAt": "2026-03-21T11:59:56.000Z",
+    "tokens": 542
+  }
+]
+```
+
+### Trace object
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Unique trace identifier |
+| `type` | string | Task type. One of `tool_call`, `inference`, or `monitor` |
+| `label` | string | Description of the task executed |
+| `agent` | string | Name of the agent that executed the task |
+| `status` | string | Execution result. One of `success` or `running` |
+| `duration` | string | Execution time in milliseconds (for example `"142ms"`) |
+| `startedAt` | string | ISO 8601 timestamp when the task started |
+| `tokens` | number \| null | Token count for inference tasks. `null` for non-inference tasks |
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | Unauthorized |
+| 500 | Failed to fetch traces |
+
+## Cost attribution
+
+```http
+GET /api/mission-control/fleet/costs
+```
+
+Returns per-agent cost attribution metrics grouped by spending category. Use this to understand how costs are distributed across your agent fleet.
+
+### Query parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `userId` | number | Yes | The user ID to fetch cost metrics for |
+
+### Response
+
+```json
+[
+  {
+    "agent_id": "atlas",
+    "total_spend": "12.50",
+    "category": "ai_metric"
+  },
+  {
+    "agent_id": "djbot",
+    "total_spend": "8.30",
+    "category": "agent_message"
+  }
+]
+```
+
+### Cost object
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `agent_id` | string | Agent identifier |
+| `total_spend` | string | Total spend in USDC for this agent and category |
+| `category` | string | Spending category, such as `ai_metric` or `agent_message` |
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | Unauthorized |
+| 500 | Failed to fetch cost metrics |
+
+## Talent bookings
+
+```http
+GET /api/mission-control/fleet/bookings
+```
+
+Returns talent bookings associated with your agent fleet. Each booking includes the linked event name and booking details.
+
+### Query parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `userId` | number | Yes | The user ID to fetch bookings for |
+
+### Response
+
+```json
+[
+  {
+    "id": 1,
+    "event_id": 42,
+    "event_name": "Underground Rave",
+    "status": "confirmed",
+    "created_at": "2026-03-20T18:00:00.000Z"
+  }
+]
+```
+
+### Booking object
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | number | Booking identifier |
+| `event_id` | number | Associated event identifier |
+| `event_name` | string | Name of the associated event |
+| `status` | string | Booking status |
+| `created_at` | string | ISO 8601 timestamp when the booking was created |
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | Unauthorized |
+| 500 | Failed to fetch bookings |
