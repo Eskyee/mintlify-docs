@@ -135,6 +135,26 @@ When paid via MPP, the response includes a `Payment-Receipt` header and the `pay
 | 500 | `internal` | Internal server error |
 | 502 | `no_plugin` | No plugin registered for the given ID |
 
+## Per-agent gateway authentication
+
+Each agent container receives a unique gateway auth token at provisioning time. The internal gateway authenticates requests using token-based auth on port `18789`.
+
+| Field | Description |
+|-------|-------------|
+| `gateway.auth.mode` | `token` |
+| `gateway.auth.token` | Unique 48-character hex string generated from 24 random bytes |
+| `gateway.port` | `18789` |
+
+## Health monitoring
+
+The gateway monitors channel health for each agent container. When a channel becomes unresponsive, the gateway can automatically restart it.
+
+| Parameter | Value | Description |
+|-----------|-------|-------------|
+| `channelHealthCheckMinutes` | `5` | Interval between health checks for each channel |
+| `channelStaleEventThresholdMinutes` | `30` | Channel is considered stale if no events are received within this window |
+| `channelMaxRestartsPerHour` | `10` | Maximum number of automatic channel restarts per hour |
+
 ## CORS
 
 The gateway supports CORS preflight via `OPTIONS /api/v1/gateway`. Allowed methods are `POST` and `OPTIONS`. The `Authorization`, `Content-Type`, `X-Plugin-Id`, and `X-Payment-Method` headers are permitted.
