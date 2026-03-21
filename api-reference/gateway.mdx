@@ -170,7 +170,7 @@ When an agent is provisioned, the backend generates an OpenClaw configuration wi
 | `tools.profile` | `messaging` or `coding` | `messaging` for solo plan, `coding` for all other plans |
 | `tools.deny` | `["browser", "canvas"]` | Tools disabled in container environments |
 | `tools.exec.allowedCommands` | Array of whitelisted commands | Commands the agent is permitted to execute (includes `git`, `node`, `npm`, `python3`, `curl`, `ls`, `cat`, `grep`, `find`, `wget`, `mkdir`, `cp`, `mv`, `rm`, `echo`, `date`, `whoami`, `chmod`, `chown`, `touch`, `head`, `tail`, `wc`, `sort`, `uniq`, `awk`, `sed`, `tar`, `zip`, `unzip`, `docker`, `ps`, `df`, `du`) |
-| `tools.exec.allowedPaths` | `["~/.openclaw/workspace", "/tmp", "/home/node"]` | Filesystem paths the agent can access |
+| `tools.exec.allowedPaths` | `["~/.openclaw/workspace", "/tmp", "/home/node"]` | Filesystem paths the agent can access. The official OpenClaw image runs as the `node` user (`/home/node`). |
 | `tools.exec.denyPaths` | `["/etc/shadow", "/etc/passwd", "/proc", "/sys"]` | Filesystem paths the agent is blocked from accessing |
 | `tools.web.maxChars` | `50000` | Maximum characters returned from web tool requests |
 | `tools.loopDetection.maxIterations` | `20` | Maximum loop iterations before the agent is interrupted |
