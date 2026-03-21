@@ -134,6 +134,20 @@ The backend API uses a JWT-based auth middleware that runs before protected endp
 
 Endpoints that require admin access use an additional `requireAdmin` check after authentication. Non-admin users receive a `403` response with code `ADMIN_REQUIRED`.
 
+## Header stripping
+
+Both the backend API and the web frontend strip or reject requests that include headers commonly used to bypass URL-based access controls. The following headers are removed from every inbound request before it reaches any route handler:
+
+| Header | Reason |
+|--------|--------|
+| `X-Original-URL` | Prevents IIS/reverse-proxy URL override attacks |
+| `X-Rewrite-URL` | Prevents IIS/reverse-proxy URL rewrite attacks |
+| `X-Forwarded-Host` | Prevents host header injection and routing manipulation |
+
+On the backend API, these headers are deleted in a global middleware that runs before all routes. On the web frontend, `X-Original-URL` and `X-Rewrite-URL` are additionally scanned for injection patterns and the request is rejected with a `400` status if a suspicious payload is detected.
+
+<Note>If your reverse proxy or CDN injects any of these headers, they will be silently removed. Do not rely on them for application logic.</Note>
+
 ## Web API security middleware
 
 The web frontend wraps API routes with security middleware that provides:
@@ -145,6 +159,7 @@ The web frontend wraps API routes with security middleware that provides:
 - **XSS prevention** — payloads containing script tags or event handlers are rejected
 - **JSON validation** — `Content-Type` enforcement and body parsing on mutation endpoints
 - **CSRF protection** — token-based verification using the `x-csrf-token` or `x-xsrf-token` header
+- **Header stripping** — bypass headers (`X-Original-URL`, `X-Rewrite-URL`, `X-Forwarded-Host`) are removed or rejected
 
 ### Route protection levels
 
