@@ -126,3 +126,22 @@ Requires session authentication. Resets heartbeat configuration to defaults.
   "message": "Heartbeat settings reset - database cleanup will occur once integration is complete"
 }
 ```
+
+## Container health checks
+
+Agent containers expose an internal health endpoint on port `18789`. The backend uses this to determine container readiness during provisioning and ongoing monitoring.
+
+### Container health statuses
+
+| Status | Condition |
+|--------|-----------|
+| `healthy` | Container is running and the internal `/health` endpoint responds successfully |
+| `starting` | Container is running but the health endpoint is not yet responding after all retries |
+| `stopped` | Container has exited |
+| `unhealthy` | Container is in an unexpected state or cannot be inspected |
+
+### Health check behavior
+
+- The health check retries up to 10 times by default, with a 2-second delay between attempts when the health endpoint fails and a 1-second delay between Docker inspect failures.
+- The internal health endpoint has a 5-second timeout per attempt.
+- The `waitForHealthy` function polls container health every 2 seconds, with a default overall timeout of 60 seconds.

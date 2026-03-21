@@ -721,16 +721,71 @@ When calling the backend provisioning service directly, the response includes ad
 
 Each `aiProvider` value maps to a default model and base URL:
 
-| Provider | Default model | Base URL |
-|----------|--------------|----------|
-| `openrouter` | `openai/gpt-4o-mini` | `https://openrouter.ai/api/v1` |
-| `gemini` | `gemini-2.0-flash` | `https://generativelanguage.googleapis.com/v1beta/models` |
-| `groq` | `mixtral-8x7b-32768` | `https://api.groq.com/openai/v1` |
-| `anthropic` | `claude-3-sonnet-20240229` | `https://api.anthropic.com/v1` |
-| `openai` | `gpt-4o` | `https://api.openai.com/v1` |
-| `minimax` | `MiniMax/MiniMax-Text-01` | `https://api.minimax.chat/v1` |
+| Provider | Default model | Fallback model | Base URL |
+|----------|--------------|----------------|----------|
+| `openrouter` | `moonshotai/kimi-k2.5` | `openrouter/openai/gpt-4o-mini` | `https://openrouter.ai/api/v1` |
+| `gemini` | `google/gemini-2.0-flash` | `openrouter/anthropic/claude-sonnet-4-5` | `https://generativelanguage.googleapis.com/v1beta/models` |
+| `groq` | `groq/gemma2-9b-it` | `openai/gpt-4o-mini` | `https://api.groq.com/openai/v1` |
+| `anthropic` | `anthropic/claude-sonnet-4-5` | `openai/gpt-4o` | `https://api.anthropic.com/v1` |
+| `openai` | `openai/gpt-4o` | `openai/gpt-4o-mini` | `https://api.openai.com/v1` |
+| `minimax` | `MiniMax/MiniMax-Text-01` | `openai/gpt-4o-mini` | `https://api.minimax.chat/v1` |
+
+Each provider now includes a fallback model that is used automatically when the primary model is unavailable or returns an error.
 
 <Note>`minimax` is available as a fallback in the provider configuration map but is not currently accepted as a value for the `aiProvider` request parameter. Passing `minimax` as `aiProvider` returns a `400` validation error. This provider may be enabled in a future release.</Note>
+
+## Channel configuration
+
+When an agent is provisioned, its channel configuration is generated based on the tokens provided. All channels share a set of defaults and each channel type has specific settings.
+
+### Channel defaults
+
+| Setting | Value | Description |
+|---------|-------|-------------|
+| `groupPolicy` | `allowlist` | Only explicitly allowed users can interact with the agent in group contexts |
+| `heartbeat.showOk` | `false` | Suppress heartbeat OK messages |
+| `heartbeat.showAlerts` | `true` | Show heartbeat alert messages |
+| `heartbeat.useIndicator` | `true` | Display a status indicator |
+
+### Telegram channel settings
+
+| Setting | Value | Description |
+|---------|-------|-------------|
+| `dmPolicy` | `allowlist` or `pairing` | `allowlist` when owner IDs are provided, `pairing` otherwise |
+| `groups.*.requireMention` | `true` | Agent only responds in groups when mentioned |
+| `historyLimit` | `50` | Number of messages retained in context |
+| `replyToMode` | `first` | Reply threading mode |
+| `streaming` | `partial` | Enable partial message streaming |
+| `retry.attempts` | `3` | Maximum retry attempts |
+| `retry.minDelayMs` | `400` | Minimum delay between retries |
+| `retry.maxDelayMs` | `30000` | Maximum delay between retries |
+| `retry.jitter` | `0.1` | Jitter factor for retry delays |
+
+### Discord channel settings
+
+| Setting | Value | Description |
+|---------|-------|-------------|
+| `dmPolicy` | `allowlist` or `pairing` | `allowlist` when owner IDs are provided, `pairing` otherwise |
+| `dm.enabled` | `true` | Accept direct messages |
+| `dm.groupEnabled` | `false` | Group DMs are disabled |
+| `historyLimit` | `20` | Number of messages retained in context |
+| `streaming` | `partial` | Enable partial message streaming |
+| `retry.attempts` | `3` | Maximum retry attempts |
+| `retry.minDelayMs` | `500` | Minimum delay between retries |
+| `retry.maxDelayMs` | `30000` | Maximum delay between retries |
+| `retry.jitter` | `0.1` | Jitter factor for retry delays |
+
+### WhatsApp channel settings
+
+| Setting | Value | Description |
+|---------|-------|-------------|
+| `dmPolicy` | `allowlist` or `pairing` | `allowlist` when owner IDs are provided, `pairing` otherwise |
+| `groups.*.requireMention` | `true` | Agent only responds in groups when mentioned |
+| `sendReadReceipts` | `true` | Send read receipts for incoming messages |
+
+### Group chat mention patterns
+
+All channels that support group chat use the following default mention patterns: `@agent` and `agent`. The agent only responds in group conversations when one of these patterns is detected in the message.
 
 ## Deploy agent (backend)
 

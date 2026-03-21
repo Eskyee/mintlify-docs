@@ -248,6 +248,20 @@ Each subscription plan grants access to a specific set of AI models. The chat en
 
 <Note>Admin users are automatically granted `network`-level access regardless of their subscription plan.</Note>
 
+## Model fallbacks
+
+Each AI provider is configured with a primary model and a fallback model. When the primary model is unavailable or returns an error, the system automatically retries the request using the fallback model.
+
+| Provider | Primary model | Fallback model |
+|----------|--------------|----------------|
+| `openrouter` | `moonshotai/kimi-k2.5` | `openrouter/openai/gpt-4o-mini` |
+| `gemini` | `google/gemini-2.0-flash` | `openrouter/anthropic/claude-sonnet-4-5` |
+| `groq` | `groq/gemma2-9b-it` | `openai/gpt-4o-mini` |
+| `anthropic` | `anthropic/claude-sonnet-4-5` | `openai/gpt-4o` |
+| `openai` | `openai/gpt-4o` | `openai/gpt-4o-mini` |
+
+Fallback routing is handled transparently. The response always indicates which model ultimately served the request via the `model` field.
+
 ## Estimate cost
 
 ```http
