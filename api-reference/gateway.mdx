@@ -153,7 +153,7 @@ When an agent is provisioned, the backend generates an OpenClaw configuration wi
 
 | Parameter | Value | Description |
 |-----------|-------|-------------|
-| `gateway.bind` | `lan` | Bind address for the gateway. Set to `lan` so the container listens on all interfaces, which is required for Docker port mapping. |
+| `gateway.bind` | `loopback` | Bind address for the gateway. The container entrypoint overrides this to `loopback` via the `--bind loopback` CLI flag, so the gateway only listens on `127.0.0.1`. Docker port mapping forwards external traffic to the loopback address inside the container. The provisioning config sets `lan` but the entrypoint takes precedence at runtime. |
 | `gateway.port` | `18789` | Internal gateway port |
 | `gateway.auth.mode` | `token` | Authentication mode |
 | `gateway.auth.rateLimit.maxAttempts` | `10` | Maximum authentication attempts before lockout |

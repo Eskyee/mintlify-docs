@@ -442,7 +442,7 @@ Triggers an image update on the backend.
 {
   "success": true,
   "status": "active",
-  "image": "ghcr.io/openclaw/openclaw:latest",
+  "image": "ghcr.io/openclaw/openclaw:2026.3.13-1",
   "previousImage": "ghcr.io/openclaw/openclaw:2026.3.13",
   "backupPath": "/backups/agent_123_2026-03-20",
   "openclawVersion": "2026.03.14.002"
@@ -451,7 +451,7 @@ Triggers an image update on the backend.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `image` | string | New container image |
+| `image` | string | New container image. The platform default is pinned to `ghcr.io/openclaw/openclaw:2026.3.13-1`. |
 | `previousImage` | string | Previous container image before the update |
 | `backupPath` | string | Path to the pre-update backup |
 | `openclawVersion` | string | Current OpenClaw runtime version |
@@ -908,8 +908,8 @@ Returns the current OpenClaw runtime version. No authentication required.
 ```json
 {
   "openclawVersion": "2026.03.14.002",
-  "image": "ghcr.io/openclaw/openclaw:latest",
-  "deployedAt": "2026-03-20T00:00:00Z"
+  "image": "ghcr.io/openclaw/openclaw:2026.3.13-1",
+      "deployedAt": "2026-03-20T00:00:00Z"
 }
 ```
 
@@ -929,7 +929,7 @@ Returns all running agent instances. Requires bearer token authentication.
     {
       "agentId": "agent_123",
       "name": "openclaw-agent_123",
-      "image": "ghcr.io/openclaw/openclaw:latest",
+      "image": "ghcr.io/openclaw/openclaw:2026.3.13-1",
       "status": "running",
       "createdAt": "2026-03-01T00:00:00Z",
       "version": "2026.03.14.002",
