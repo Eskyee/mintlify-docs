@@ -729,9 +729,24 @@ When calling the backend provisioning service directly, the response includes ad
       "resolution": "1920x1080",
       "bitrate": "5000k"
     }
+  },
+  "container": {
+    "name": "openclaw-a1b2c3d4e5",
+    "status": "running",
+    "port": 19000,
+    "gatewayUrl": "http://127.0.0.1:19000"
   }
 }
 ```
+
+<Note>The `container` object is included when the backend successfully creates a Docker container for the agent. If container creation fails, provisioning still succeeds and the `container` field is omitted. The agent can operate using API-side processing until a container becomes available.</Note>
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `container.name` | string | Docker container name |
+| `container.status` | string | Container status (for example, `running`) |
+| `container.port` | number | Host port mapped to the container |
+| `container.gatewayUrl` | string | Local URL for the container gateway |
 
 ### Errors
 
@@ -740,6 +755,7 @@ When calling the backend provisioning service directly, the response includes ad
 | 400 | At least one channel token required (Telegram, WhatsApp, or Discord), or invalid `aiProvider` or `plan` value |
 | 400 | Invalid plan value. The `plan` field must be one of `label`, `solo`, `collective`, or `network`. The default value `free` is not a recognized plan. |
 | 402 | No free tier. A paid subscription is required. The response body includes a `code` field set to `PAYMENT_REQUIRED`. |
+| 402 | Agent limit reached for your plan. The response body includes a `code` field set to `AGENT_LIMIT_REACHED`, along with `current` (current agent count) and `limit` (maximum allowed) fields. |
 | 500 | Internal server error |
 | 502 | Provisioning service unavailable or returned an error. All backend URLs failed or returned non-success responses. |
 | 503 | Provisioning is temporarily disabled (kill switch active) |

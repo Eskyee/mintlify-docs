@@ -186,6 +186,10 @@ curl -X POST https://agentbot.raveculture.xyz/api/ai/chat \
 | `/api/wallet/cdp` | GET | Get CDP wallet status |
 | `/api/wallet/cdp` | POST | Create a CDP wallet client |
 | `/api/provision` | POST | Provision agent with channel tokens |
+| `/api/validate-key` | POST | Validate an API key (backend only) |
+| `/api/register-home` | POST | Register a Home mode installation (backend only, requires auth) |
+| `/api/register-link` | POST | Register a Link mode installation (backend only, requires auth) |
+| `/api/installations` | GET | List registered installations (backend only, requires auth) |
 | `/api/agent` | GET | Agent interaction (health, sessions, memory, skills, credentials) |
 | `/api/agent` | POST | Agent interaction (chat, create-session, update-skill, set-credential) |
 | `/api/settings` | GET | Get current user profile |
