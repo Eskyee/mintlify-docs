@@ -7,13 +7,15 @@ description: "Health check and heartbeat endpoints for monitoring"
 
 Monitor system health and configure heartbeat schedules.
 
-## Health check
+## Health check (web)
 
 ```http
 GET /api/health
 ```
 
 No authentication required. Returns system health metrics including CPU and memory usage.
+
+<Note>The backend service exposes its own health check at `GET /health` (without the `/api` prefix). The web and backend health endpoints are independent — the web endpoint reports on the web application process while the backend endpoint reports on the API service.</Note>
 
 ### Response
 

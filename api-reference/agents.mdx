@@ -19,23 +19,27 @@ Returns all agents owned by the authenticated user. When no session is present, 
 
 ### Response
 
+The backend returns a flat array of agent objects (not wrapped in an `agents` key):
+
 ```json
-{
-  "agents": [
-    {
-      "id": "agent_123",
-      "name": "My Agent",
-      "model": "claude-opus-4-6",
-      "status": "running",
-      "websocketUrl": "ws://openclaw-gateway:10000/agent/user_123",
-      "createdAt": "2026-03-01T00:00:00Z",
-      "updatedAt": "2026-03-18T00:00:00Z"
-    }
-  ],
-  "count": 1,
-  "status": "ok"
-}
+[
+  {
+    "id": "agent_123",
+    "status": "running",
+    "created": "2026-03-01T00:00:00Z",
+    "subdomain": "agent_123.agents.localhost",
+    "url": "https://agent_123.agents.localhost"
+  }
+]
 ```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Agent identifier |
+| `status` | string | Current agent status |
+| `created` | string | ISO 8601 creation timestamp |
+| `subdomain` | string | Agent subdomain |
+| `url` | string | Agent URL |
 
 ## Create agent
 
@@ -51,22 +55,21 @@ Requires authentication and ownership of the agent.
 
 ### Response
 
+The backend returns a flat object (not wrapped in an `agent` key):
+
 ```json
 {
-  "agent": {
-    "id": "agent_123",
-    "status": "active",
-    "startedAt": "2026-03-01T00:00:00Z",
-    "plan": "starter",
-    "subdomain": "agent_123.agents.localhost",
-    "url": "https://agent_123.agents.localhost",
-    "openclawVersion": "2026.3.13",
-    "verified": false,
-    "verificationType": null,
-    "attestationUid": null,
-    "verifiedAt": null
-  },
-  "status": "ok"
+  "id": "agent_123",
+  "status": "active",
+  "startedAt": "2026-03-01T00:00:00Z",
+  "plan": "free",
+  "subdomain": "agent_123.agents.localhost",
+  "url": "https://agent_123.agents.localhost",
+  "openclawVersion": "2026.3.13",
+  "verified": false,
+  "verificationType": null,
+  "attestationUid": null,
+  "verifiedAt": null
 }
 ```
 
@@ -96,7 +99,7 @@ Provisions a new agent. Requires an active subscription unless the caller is an 
 
 <Note>Provisioning requests may be processed asynchronously through the background task queue. The agent is created immediately with a `provisioning` status and transitions to `running` once the backend deployment endpoint confirms the deployment. If deployment fails, the status changes to `error`.</Note>
 
-<Note>The provisioning endpoint calls `POST /api/deployments` on the backend to deploy the agent container. The request includes a 30-second timeout. When the model is set to `claude-opus-4-6`, the AI provider is automatically set to `anthropic`; otherwise it falls back to the provider specified in the agent configuration (default: `openrouter`). The plan sent to the backend defaults to `label` when no tier is specified.</Note>
+<Note>The provisioning endpoint calls `POST /api/deployments` on the backend to deploy the agent container. The request includes a 15-second timeout. When the model is set to `claude-opus-4-6`, the AI provider is automatically set to `anthropic`; otherwise it falls back to the provider specified in the agent configuration (default: `openrouter`). The plan sent to the backend defaults to `label` when no tier is specified.</Note>
 
 ### Request body
 
@@ -105,9 +108,9 @@ Provisions a new agent. Requires an active subscription unless the caller is an 
 | `name` | string | Yes | Agent name |
 | `model` | string | No | AI model (default: `claude-opus-4-6`). Options: `claude-opus-4-6`, `gpt-4`, `custom` |
 | `config` | object | No | Agent configuration |
-| `tier` | string | No | Subscription tier hint. Options: `starter`, `pro`, `enterprise`. This value is forwarded to the backend as the `plan` field (mapped to `label`, `solo`, `collective`, `network`). When omitted, the backend deployment defaults to `label`. |
+| `tier` | string | No | Subscription tier hint. Options: `label`, `solo`, `collective`, `network`. This value is forwarded to the backend as the `plan` field. When omitted, the backend deployment defaults to `label`. |
 
-<Note>The agent limit is determined by the subscription plan on the authenticated user's account (`starter`: 1, `pro`: 3, `enterprise`: 100). It cannot be overridden in the request body.</Note>
+<Note>The agent limit is determined by the subscription plan on the authenticated user's account (`label`: 1, `solo`: 3, `collective`: 10, `network`: 100). It cannot be overridden in the request body.</Note>
 
 ### Admin bypass
 
@@ -139,7 +142,7 @@ Admin users (configured via `ADMIN_EMAILS`) are exempt from the following restri
 | 400 | Agent name is required |
 | 401 | Unauthorized |
 | 402 | Active subscription required to provision agents |
-| 429 | Agent limit reached for your plan. Response includes `current` (agent count) and `limit` fields. Limits: `starter` 1, `pro` 3, `enterprise` 100. Users without a recognized plan default to a limit of 1. |
+| 429 | Agent limit reached for your plan. Response includes `current` (agent count) and `limit` fields. Limits: `label` 1, `solo` 3, `collective` 10, `network` 100. Users without a recognized plan default to a limit of 1. |
 | 500 | Failed to provision agent |
 
 ## List provisioned agents

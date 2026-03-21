@@ -142,7 +142,7 @@ Each agent container receives a unique gateway auth token at provisioning time. 
 | Field | Description |
 |-------|-------------|
 | `gateway.auth.mode` | `token` |
-| `gateway.auth.token` | Unique 32-character hex string auto-generated per container |
+| `gateway.auth.token` | Unique 48-character hex string (24 bytes of entropy) auto-generated per container |
 | `gateway.port` | `18789` |
 
 ## Agent container configuration
@@ -153,7 +153,7 @@ When an agent is provisioned, the backend generates an OpenClaw configuration wi
 
 | Parameter | Value | Description |
 |-----------|-------|-------------|
-| `gateway.bind` | `loopback` | Bind address for the gateway. Set to `loopback` for container isolation — the container port is mapped to the host via Docker. |
+| `gateway.bind` | `lan` | Bind address for the gateway. Set to `lan` so the container listens on all interfaces, which is required for Docker port mapping. |
 | `gateway.port` | `18789` | Internal gateway port |
 | `gateway.auth.mode` | `token` | Authentication mode |
 | `gateway.auth.rateLimit.maxAttempts` | `10` | Maximum authentication attempts before lockout |
@@ -161,7 +161,7 @@ When an agent is provisioned, the backend generates an OpenClaw configuration wi
 | `gateway.auth.rateLimit.lockoutMs` | `300000` | Lockout duration in milliseconds (5 minutes) |
 | `gateway.auth.rateLimit.exemptLoopback` | `true` | Exempt loopback addresses from rate limiting |
 | `gateway.auth.allowTailscale` | `true` | Allow Tailscale network connections |
-| `gateway.controlUi.enabled` | `false` | Gateway control UI is disabled in containers. Use the Agentbot dashboard instead. |
+| `gateway.controlUi.enabled` | `true` | Gateway control UI is enabled in containers. |
 
 ### Tool settings
 
@@ -169,7 +169,7 @@ When an agent is provisioned, the backend generates an OpenClaw configuration wi
 |-----------|-------|-------------|
 | `tools.profile` | `messaging` or `coding` | `messaging` for solo plan, `coding` for all other plans |
 | `tools.deny` | `["browser", "canvas"]` | Tools disabled in container environments |
-| `tools.exec.allowedCommands` | Array of whitelisted commands | Commands the agent is permitted to execute (includes `git`, `node`, `npm`, `python`, `curl`, and others) |
+| `tools.exec.allowedCommands` | Array of whitelisted commands | Commands the agent is permitted to execute (includes `git`, `node`, `npm`, `python3`, `curl`, `ls`, `cat`, `grep`, `find`, `wget`, `mkdir`, `cp`, `mv`, `rm`, `echo`, `date`, `whoami`, `chmod`, `chown`, `touch`, `head`, `tail`, `wc`, `sort`, `uniq`, `awk`, `sed`, `tar`, `zip`, `unzip`, `docker`, `ps`, `df`, `du`) |
 | `tools.exec.allowedPaths` | `["~/.openclaw/workspace", "/tmp", "/home/node"]` | Filesystem paths the agent can access |
 | `tools.exec.denyPaths` | `["/etc/shadow", "/etc/passwd", "/proc", "/sys"]` | Filesystem paths the agent is blocked from accessing |
 | `tools.web.maxChars` | `50000` | Maximum characters returned from web tool requests |
