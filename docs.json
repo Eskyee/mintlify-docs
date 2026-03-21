@@ -75,7 +75,9 @@
           "api-reference/render-mcp",
           "api-reference/streaming",
           "api-reference/registration",
-          "api-reference/health"
+          "api-reference/health",
+          "api-reference/mission-control",
+          "api-reference/swarms"
         ]
       },
       {
