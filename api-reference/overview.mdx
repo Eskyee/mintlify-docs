@@ -49,6 +49,18 @@ All authenticated API requests are scoped to the calling user's data through row
 
 ## Rate limits
 
+The backend API enforces per-IP rate limits using standard `RateLimit-*` response headers. When a limit is exceeded, the API returns `429 Too Many Requests`.
+
+### Backend API rate limits
+
+| Scope | Applies to | Limit | Error message |
+|-------|-----------|-------|---------------|
+| General | All `/api/*` routes | 120 req/min per IP | `Too many requests, please slow down.` |
+| AI chat | `/api/ai/*` routes | 30 req/min per IP | `AI rate limit exceeded.` |
+| Deployments | `POST /api/deployments` | 5 req/min per IP | `Deployment rate limit exceeded.` |
+
+### Web API rate limits
+
 | Endpoint | Limit |
 |----------|-------|
 | `/api/v1/gateway` | 100/min |
@@ -60,9 +72,23 @@ All authenticated API requests are scoped to the calling user's data through row
 | `/api/auth/forgot-password` | Rate-limited per IP |
 | `/api/auth/reset-password` | Rate-limited per IP |
 
+### Rate limit response headers
+
+All rate-limited responses include standard headers:
+
+| Header | Description |
+|--------|-------------|
+| `RateLimit-Limit` | Maximum requests allowed in the current window |
+| `RateLimit-Remaining` | Requests remaining in the current window |
+| `RateLimit-Reset` | Time in seconds until the rate limit window resets |
+
+<Note>Legacy `X-RateLimit-*` headers are not sent. Use the unprefixed `RateLimit-*` headers instead.</Note>
+
 ## Request format
 
 All POST and PUT requests that include a JSON body must set the `Content-Type` header to `application/json`. The backend API uses the Express JSON body parser, and requests without this header may result in an empty or undefined request body.
+
+Request bodies are limited to **1 MB**. Requests exceeding this limit are rejected before reaching the endpoint handler.
 
 ```bash
 curl -X POST https://agentbot.raveculture.xyz/api/ai/chat \

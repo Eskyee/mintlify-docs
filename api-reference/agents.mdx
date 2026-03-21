@@ -523,11 +523,11 @@ Returns resource usage statistics for an agent instance.
 GET /api/instance/:userId/token
 ```
 
-Returns an auto-generated gateway token for the agent. A new token is created if none exists.
+Returns the gateway token for the agent. If no token exists, a new cryptographically random token is generated using 32 bytes of entropy (returned as a 64-character hex string).
 
 ```json
 {
-  "token": "abc123def456"
+  "token": "a1b2c3d4e5f6...64 hex characters"
 }
 ```
 
@@ -657,7 +657,9 @@ The proxy returns a filtered subset of the backend response:
 
 ### Full backend response
 
-When calling the backend provisioning service directly, the response includes additional fields:
+When calling the backend provisioning service directly, the response includes additional fields.
+
+<Warning>Channel tokens (`telegramToken`, `discordBotToken`, `whatsappToken`) are no longer included in the provision response. Tokens are write-only secrets — they are stored server-side but never returned to the caller.</Warning>
 
 ```json
 {
@@ -665,9 +667,6 @@ When calling the backend provisioning service directly, the response includes ad
   "userId": "a1b2c3d4e5",
   "agentId": "a1b2c3d4e5",
   "id": "a1b2c3d4e5",
-  "telegramToken": "123456:ABC-DEF...",
-  "discordToken": "MTIz...",
-  "whatsappToken": "EAAx...",
   "aiProvider": "openrouter",
   "aiProviderConfig": {
     "model": "openai/gpt-4o-mini",
@@ -737,7 +736,7 @@ Each `aiProvider` value maps to a default model and base URL:
 POST /api/deployments
 ```
 
-<Note>This is a backend-only endpoint. It deploys an agent container directly and requires a `Content-Type: application/json` header. Requires bearer token authentication.</Note>
+<Note>This is a backend-only endpoint. It deploys an agent container directly and requires a `Content-Type: application/json` header. Requires bearer token authentication. Rate limited to 5 requests per minute per IP.</Note>
 
 ### Request body
 

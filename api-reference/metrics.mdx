@@ -99,7 +99,7 @@ Returns platform-wide metrics including agent counts, message volumes, deploymen
 GET /api/metrics/:userId/historical
 ```
 
-Returns time-series metrics for an agent over a specified time range.
+Requires bearer token authentication. Returns time-series metrics for an agent over a specified time range.
 
 ### Path parameters
 
@@ -158,6 +158,8 @@ Returns time-series metrics for an agent over a specified time range.
 
 | Code | Description |
 |------|-------------|
+| 401 | Unauthorized — missing or invalid bearer token |
+| 403 | Forbidden — invalid API key |
 | 500 | Failed to fetch historical metrics |
 
 ## Performance metrics
@@ -166,7 +168,7 @@ Returns time-series metrics for an agent over a specified time range.
 GET /api/metrics/:userId/performance
 ```
 
-Returns current real-time performance data for an agent.
+Requires bearer token authentication. Returns current real-time performance data for an agent.
 
 ### Path parameters
 
@@ -198,6 +200,8 @@ Returns current real-time performance data for an agent.
 
 | Code | Description |
 |------|-------------|
+| 401 | Unauthorized — missing or invalid bearer token |
+| 403 | Forbidden — invalid API key |
 | 500 | Failed to fetch performance data |
 
 ## Metrics summary
@@ -206,7 +210,7 @@ Returns current real-time performance data for an agent.
 GET /api/metrics/:userId/summary
 ```
 
-Returns a music industry analytics summary for an agent, including revenue, bookings, fan engagement, streaming stats, and active skills.
+Requires bearer token authentication. Returns a music industry analytics summary for an agent, including revenue, bookings, fan engagement, streaming stats, and active skills.
 
 ### Path parameters
 
@@ -278,4 +282,6 @@ Returns a music industry analytics summary for an agent, including revenue, book
 
 | Code | Description |
 |------|-------------|
+| 401 | Unauthorized — missing or invalid bearer token |
+| 403 | Forbidden — invalid API key |
 | 500 | Failed to fetch metrics summary |

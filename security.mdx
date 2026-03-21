@@ -12,11 +12,14 @@ Agentbot is committed to keeping your data safe. Here's our security posture.
 | Category | Status | Notes |
 |----------|--------|-------|
 | Data Encryption | ✅ | TLS 1.3 in transit |
-| API Authorization | ✅ | Session-based auth + JWT middleware |
+| API Authorization | ✅ | Session-based auth + JWT middleware, timing-safe key comparison |
 | Data Isolation | ✅ | Row-level security (RLS) policies |
 | Bot Detection | ✅ | Automated request filtering on sensitive endpoints |
 | Input Validation | ✅ | Allowlist + sanitization |
-| Rate Limiting | ✅ | Per-IP limits |
+| Rate Limiting | ✅ | Per-IP limits (120/min general, 30/min AI, 5/min deploys) |
+| CORS | ✅ | Configurable allowed origins |
+| SSRF Protection | ✅ | Webhook URLs validated against private/internal IP ranges |
+| A2A Authentication | ✅ | Message verification enforced before delivery |
 | Audit Logging | ✅ | All actions logged |
 
 ## Skill Security Matrix
@@ -109,12 +112,12 @@ Users with the `admin` role bypass RLS policies and can access all rows across t
 
 ## Auth middleware
 
-The backend API uses a JWT-based auth middleware that runs before protected endpoints.
+The backend API uses a JWT-based auth middleware that runs before protected endpoints. API key comparison uses `crypto.timingSafeEqual` to prevent timing-based key enumeration.
 
 ### Authentication flow
 
 1. The client includes a `Bearer` token in the `Authorization` header.
-2. The middleware verifies the JWT signature and expiration.
+2. The middleware performs a constant-time comparison of the token against the server key.
 3. On success, the middleware attaches `userId`, `userEmail`, and `userRole` to the request and sets the RLS context.
 4. On failure, the endpoint returns one of the error codes below.
 
@@ -162,6 +165,24 @@ The web frontend wraps API routes with security middleware that provides:
 | 403 | Invalid or missing CSRF token |
 | 405 | HTTP method not allowed (non-POST request on a mutation endpoint) |
 | 429 | Too many failed authentication attempts from the same IP |
+
+## SSRF protection
+
+Webhook URLs are validated before any outbound request is made. URLs that resolve to private or internal IP ranges are rejected, including:
+
+- `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`
+- `127.0.0.0/8` (localhost) and `::1`
+- Link-local and other reserved ranges
+
+This prevents server-side request forgery (SSRF) attacks where an attacker could use webhook configuration to probe internal services.
+
+## Agent-to-agent authentication
+
+All agent-to-agent (A2A) messages are verified before delivery. The `verifyMessage()` check runs before `deliverMessage()`, ensuring that unauthenticated A2A messages are blocked. Additionally, negotiation actions (accepting or declining bookings) enforce ownership checks — only the originating agent can modify its own bookings.
+
+## CORS
+
+The backend API enables CORS with configurable allowed origins. When the `ALLOWED_ORIGINS` environment variable is set (comma-separated list of domains), only those origins are permitted. When unset, all origins are allowed (`*`). Credentials are supported.
 
 ## Known limitations
 
