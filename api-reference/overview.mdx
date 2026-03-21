@@ -32,16 +32,16 @@ curl -X GET https://agentbot.raveculture.xyz/api/agents \
 
 API keys use the `sk_` prefix and are shown only once at creation time. See the [keys API](/api-reference/keys) for details.
 
-### JWT authentication (backend API)
+### API key authentication (backend)
 
-Backend API endpoints use JWT bearer tokens for authentication. Include the token in the `Authorization` header:
+Backend endpoints such as `/api/deployments` and `/api/openclaw/instances` use a shared internal API key for authentication. Include the key as a bearer token:
 
 ```bash
-curl -X GET https://agentbot.raveculture.xyz/api/instance/user_123 \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+curl -X GET https://backend.example.com/api/openclaw/instances \
+  -H "Authorization: Bearer YOUR_INTERNAL_API_KEY"
 ```
 
-The JWT payload contains `userId`, `email`, and `role`. Tokens expire after 7 days. See the [auth API](/api-reference/auth) for token generation details.
+See the [auth API](/api-reference/auth#api-key-authentication-backend-core-endpoints) for details.
 
 ## Data isolation
 
@@ -66,7 +66,7 @@ The backend API enforces per-IP rate limits using standard `RateLimit-*` respons
 | `/api/v1/gateway` | 100/min |
 | `/api/agents` | 100/min |
 | `/api/chat` | 60/min |
-| `/api/instance` | 30/min |
+| `/api/instance/*` | 30/min |
 | `/api/provision` | Rate-limited per IP |
 | `/api/register` | Rate-limited per IP |
 | `/api/auth/forgot-password` | Rate-limited per IP |
@@ -146,18 +146,18 @@ curl -X POST https://agentbot.raveculture.xyz/api/ai/chat \
 | `/api/agents/:id/config` | PUT | Update agent configuration |
 | `/api/agents/:id/messages` | GET | Get agent messages |
 | `/api/agents/:id/stats` | GET | Get agent stats |
-| `/api/agents/:id/verification` | GET | Get verification status (backend only) |
+| `/api/agents/:id/verify` | GET | Get verification status |
 | `/api/agents/:id/verify` | POST | Verify an agent |
 | `/api/agents/:id/verify` | DELETE | Remove verification |
-| `/api/instance/:userId` | GET | Get instance details |
-| `/api/instance/:userId/start` | POST | Start an agent |
-| `/api/instance/:userId/stop` | POST | Stop an agent |
-| `/api/instance/:userId/restart` | POST | Restart an agent |
-| `/api/instance/:userId/update` | POST | Update agent image |
-| `/api/instance/:userId/repair` | POST | Repair an agent |
-| `/api/instance/:userId/reset-memory` | POST | Reset agent memory |
-| `/api/instance/:userId/token` | GET | Get agent gateway token |
-| `/api/instance/:userId/stats` | GET | Get instance stats |
+| `/api/agents/:id/start` | POST | Start an agent |
+| `/api/agents/:id/stop` | POST | Stop an agent |
+| `/api/agents/:id/restart` | POST | Restart an agent |
+| `/api/agents/:id/update` | POST | Update agent image |
+| `/api/agents/:id/repair` | POST | Repair an agent |
+| `/api/agents/:id/reset-memory` | POST | Reset agent memory |
+| `/api/agents/:id/token` | GET | Get agent gateway token |
+| `/api/instance/:userId` | GET | Get instance details (web proxy) |
+| `/api/instance/:userId/stats` | GET | Get instance stats (web proxy) |
 | `/api/agents/provision` | POST | Provision a new agent |
 | `/api/agents/provision` | GET | List provisioned agents |
 | `/api/chat` | GET | List message history |
@@ -224,6 +224,7 @@ curl -X POST https://agentbot.raveculture.xyz/api/ai/chat \
 | `/api/openclaw/instances` | GET | List running agent instances (backend only, requires auth) |
 | `/api/openclaw/instances/:id/stats` | GET | Get instance container stats (backend only, requires auth) |
 | `/api/deployments` | POST | Deploy an agent container (backend only, requires auth) |
+| `/api/models` | GET | List available OpenRouter AI models |
 | `/api/basefm/live` | GET | List active Mux live streams |
 | `/api/basefm/streams` | POST | Create a Mux live stream (RAVE token-gated) |
 | `/api/generate-video` | POST | Generate and upload a video (requires session) |

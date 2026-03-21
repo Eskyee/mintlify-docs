@@ -145,6 +145,59 @@ Each agent container receives a unique gateway auth token at provisioning time. 
 | `gateway.auth.token` | Unique 48-character hex string generated from 24 random bytes |
 | `gateway.port` | `18789` |
 
+## Agent container configuration
+
+When an agent is provisioned, the backend generates an OpenClaw configuration with the following parameters. These values are set automatically and cannot be overridden by the caller.
+
+### Gateway settings
+
+| Parameter | Value | Description |
+|-----------|-------|-------------|
+| `gateway.bind` | `lan` | Bind address for the gateway. Set to `lan` for Docker networking (loopback does not receive external traffic). |
+| `gateway.port` | `18789` | Internal gateway port |
+| `gateway.auth.mode` | `token` | Authentication mode |
+| `gateway.auth.rateLimit.maxAttempts` | `10` | Maximum authentication attempts before lockout |
+| `gateway.auth.rateLimit.windowMs` | `60000` | Rate limit window in milliseconds (1 minute) |
+| `gateway.auth.rateLimit.lockoutMs` | `300000` | Lockout duration in milliseconds (5 minutes) |
+| `gateway.auth.rateLimit.exemptLoopback` | `true` | Exempt loopback addresses from rate limiting |
+| `gateway.auth.allowTailscale` | `true` | Allow Tailscale network connections |
+| `gateway.controlUi.enabled` | `true` | Enable the gateway control UI |
+
+### Tool settings
+
+| Parameter | Value | Description |
+|-----------|-------|-------------|
+| `tools.profile` | `messaging` or `coding` | `messaging` for solo plan, `coding` for all other plans |
+| `tools.deny` | `["browser", "canvas"]` | Tools disabled in container environments |
+| `tools.exec.allowedCommands` | Array of whitelisted commands | Commands the agent is permitted to execute (includes `git`, `node`, `npm`, `python`, `curl`, and others) |
+| `tools.exec.allowedPaths` | `["~/.openclaw/workspace", "/tmp", "/home/node"]` | Filesystem paths the agent can access |
+| `tools.exec.denyPaths` | `["/etc/shadow", "/etc/passwd", "/proc", "/sys"]` | Filesystem paths the agent is blocked from accessing |
+| `tools.web.maxChars` | `50000` | Maximum characters returned from web tool requests |
+| `tools.loopDetection.maxIterations` | `20` | Maximum loop iterations before the agent is interrupted |
+| `tools.loopDetection.windowMinutes` | `5` | Time window for loop detection |
+
+### Session settings
+
+| Parameter | Value | Description |
+|-----------|-------|-------------|
+| `session.maxTokens` | `100000` | Maximum tokens per session |
+| `session.compaction.strategy` | `auto` | Automatic context compaction strategy |
+| `session.compaction.triggerAtPercent` | `80` | Compaction triggers when token usage reaches this percentage |
+
+### Agent defaults
+
+| Parameter | Value | Description |
+|-----------|-------|-------------|
+| `agents.defaults.workspace` | `~/.openclaw/workspace` | Default workspace directory |
+| `agents.defaults.imageMaxDimensionPx` | `1200` | Maximum image dimension in pixels (optimizes vision token usage) |
+| `agents.defaults.userTimezone` | `Europe/London` | Default timezone (overridden by signup timezone when available) |
+| `agents.defaults.timeFormat` | `24h` | Time format |
+| `agents.defaults.compaction.maxMessages` | `200` | Maximum messages before compaction |
+| `agents.defaults.compaction.keepLastN` | `20` | Number of recent messages preserved after compaction |
+| `agents.defaults.heartbeat.every` | `30m` | Self-monitoring heartbeat interval |
+| `agents.defaults.skipBootstrap` | `false` | Whether to skip the bootstrap phase |
+| `agents.defaults.bootstrapMaxChars` | `4000` | Maximum characters for bootstrap content |
+
 ## Health monitoring
 
 The gateway monitors channel health for each agent container. When a channel becomes unresponsive, the gateway can automatically restart it.

@@ -21,6 +21,8 @@ GET /api/metrics
 
 Returns platform-wide metrics including agent counts, message volumes, deployment stats, uptime, performance, and storage usage. No authentication required.
 
+<Warning>The `messages`, `performance`, and `storage.used` fields currently return randomized mock data. Agent and deployment counts are retrieved from the database. A future release will connect all fields to real telemetry.</Warning>
+
 ### Response
 
 ```json
