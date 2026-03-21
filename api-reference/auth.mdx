@@ -25,6 +25,16 @@ curl -X GET https://backend.example.com/api/openclaw/instances \
 | 401 | `Unauthorized` | Missing or invalid API key |
 | 403 | `Forbidden` | API key does not match |
 
+### Standalone auth middleware (`requireAuth`)
+
+Routes that are not mounted through the main API key middleware can use the standalone `requireAuth` middleware. This performs the same timing-safe Bearer token verification against `INTERNAL_API_KEY` and can be applied to individual route handlers.
+
+| HTTP status | Error | Description |
+|-------------|-------|-------------|
+| 401 | `Unauthorized` | Missing `Authorization` header or missing `Bearer` prefix |
+| 403 | `Forbidden` | Token does not match `INTERNAL_API_KEY` |
+| 500 | `Server misconfigured` | `INTERNAL_API_KEY` is not set |
+
 ### Header-based authentication (AI routes)
 
 The AI chat endpoint (`/api/ai/chat`) reads user context from request headers rather than verifying a token. The following headers are used:
