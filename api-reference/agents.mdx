@@ -630,12 +630,13 @@ The request is proxied to the backend provisioning service. The backend may crea
 | `discordBotToken` | string | Conditional | Discord bot token. At least one channel token is required. |
 | `aiProvider` | string | No | AI provider (default: `openrouter`). Options: `openrouter`, `gemini`, `groq`, `anthropic`, `openai`. Each provider maps to a default model — see [AI provider defaults](#ai-provider-defaults) below. |
 | `apiKey` | string | No | API key for the AI provider |
-| `plan` | string | No | Plan tier (default: `solo`). Options: `solo`, `collective`, `label`, `network`. The `free` value is deprecated and now returns `402 Payment Required`. |
+| `plan` | string | No | Plan tier (default: `free`, which returns `402 Payment Required`). Options: `label`, `solo`, `collective`, `network`. A paid plan must be specified explicitly. |
 | `email` | string | No | User email address. When omitted, the email is automatically populated from the authenticated session if one exists. The resolved email is forwarded to the backend in the `X-User-Email` header. |
+| `stripeSubscriptionId` | string | No | Stripe subscription ID from checkout |
 
 <Note>When a session is active, the server resolves the user email from the session via `getServerSession`. If the `email` field is also present in the request body, the request body value takes precedence. The resolved email is sent to the backend provisioning service in the `X-User-Email` header.</Note>
 
-<Warning>The following request fields are deprecated and no longer accepted: `whatsappPhoneNumberId`, `whatsappBusinessAccountId`, `discordGuildId`, `discordChannelId`, `stripeSubscriptionId`.</Warning>
+<Warning>The following request fields are deprecated and no longer accepted: `whatsappPhoneNumberId`, `whatsappBusinessAccountId`, `discordGuildId`, `discordChannelId`.</Warning>
 
 ### Response
 
@@ -664,6 +665,9 @@ When calling the backend provisioning service directly, the response includes ad
   "userId": "a1b2c3d4e5",
   "agentId": "a1b2c3d4e5",
   "id": "a1b2c3d4e5",
+  "telegramToken": "123456:ABC-DEF...",
+  "discordToken": "MTIz...",
+  "whatsappToken": "EAAx...",
   "aiProvider": "openrouter",
   "aiProviderConfig": {
     "model": "openai/gpt-4o-mini",
@@ -706,9 +710,11 @@ When calling the backend provisioning service directly, the response includes ad
 
 | Code | Description |
 |------|-------------|
-| 400 | At least one channel token required (Telegram, WhatsApp, or Discord) |
+| 400 | At least one channel token required (Telegram, WhatsApp, or Discord), or invalid `aiProvider` or `plan` value |
+| 402 | No free tier. A paid plan (`label`, `solo`, `collective`, or `network`) must be specified. Returned when the `plan` field is omitted or set to `free`. |
 | 500 | Internal server error |
 | 502 | Provisioning service unavailable or returned an error. All backend URLs failed or returned non-success responses. |
+| 503 | Provisioning is temporarily disabled (kill switch active) |
 
 ### AI provider defaults
 
@@ -717,7 +723,7 @@ Each `aiProvider` value maps to a default model and base URL:
 | Provider | Default model | Base URL |
 |----------|--------------|----------|
 | `openrouter` | `openai/gpt-4o-mini` | `https://openrouter.ai/api/v1` |
-| `gemini` | `gemini-2.0-flash` | `https://generativelanguage.googleapis.com/v1beta` |
+| `gemini` | `gemini-2.0-flash` | `https://generativelanguage.googleapis.com/v1beta/models` |
 | `groq` | `mixtral-8x7b-32768` | `https://api.groq.com/openai/v1` |
 | `anthropic` | `claude-3-sonnet-20240229` | `https://api.anthropic.com/v1` |
 | `openai` | `gpt-4o` | `https://api.openai.com/v1` |
@@ -740,7 +746,7 @@ POST /api/deployments
 | `config.ownerIds` | string[] | No | Telegram owner user IDs |
 | `config.aiProvider` | string | No | AI provider (default: `openrouter`) |
 | `config.apiKey` | string | No | API key for the AI provider |
-| `config.plan` | string | No | Plan tier (default: `solo`). The `free` value is deprecated and now returns `402 Payment Required`. |
+| `config.plan` | string | No | Plan tier. Options: `label`, `solo`, `collective`, `network`. |
 
 ### Response (201 Created)
 
