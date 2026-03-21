@@ -149,6 +149,8 @@ Send a chat completion request through the unified AI provider layer. The model 
 
 <Warning>This endpoint requires a valid subscription plan. Requests without a recognized plan or active Stripe subscription receive a `402` response. The requested model must also be available on your plan — see [plan-based model access](#plan-based-model-access) below.</Warning>
 
+<Note>The chat endpoint uses [header-based authentication](/api-reference/auth#header-based-authentication-ai-routes). Access control is enforced through the `x-user-plan` and `x-stripe-subscription-id` headers rather than JWT verification. Admin emails (configured via `ADMIN_EMAILS`) bypass both plan and subscription requirements.</Note>
+
 ### Request headers
 
 The following headers are required for plan enforcement:
@@ -259,6 +261,8 @@ Each AI provider is configured with a primary model and a fallback model. When t
 | `groq` | `groq/gemma2-9b-it` | `openai/gpt-4o-mini` |
 | `anthropic` | `anthropic/claude-sonnet-4-5` | `openai/gpt-4o` |
 | `openai` | `openai/gpt-4o` | `openai/gpt-4o-mini` |
+
+<Note>`minimax` (`MiniMax/MiniMax-Text-01`) is available in the provider configuration map but is not currently supported in the model fallback chain. It may be enabled in a future release.</Note>
 
 Fallback routing is handled transparently. The response always indicates which model ultimately served the request via the `model` field.
 

@@ -84,7 +84,7 @@ Requires authentication and ownership of the agent.
 
 ## Delete agent
 
-<Warning>`DELETE /api/agents/:id` is deprecated. Use the lifecycle endpoints to manage agent state (for example, [`POST /api/instance/:userId/stop`](#stop-agent)).</Warning>
+<Warning>`DELETE /api/agents/:id` is deprecated. Use the lifecycle endpoints to manage agent state (for example, [`POST /api/agents/:id/stop`](#stop-agent)).</Warning>
 
 ## Provision agent
 
@@ -372,25 +372,30 @@ When the backend is unavailable, mock data is returned with `"status": "mock"`:
 
 ## Agent lifecycle
 
-Lifecycle operations use the `/api/instance/:userId` endpoint pattern. These endpoints require session authentication and proxy to the backend agent management service.
+Lifecycle operations are available at two endpoint patterns depending on which service you call:
+
+- **Web proxy:** `/api/instance/:userId/{action}` — requires session authentication and proxies to the backend.
+- **Backend direct:** `/api/agents/:id/{action}` — requires API key authentication.
+
+Both patterns support the same actions. The examples below use the backend pattern.
 
 ### Start agent
 
 ```http
-POST /api/instance/:userId/start
+POST /api/agents/:id/start
 ```
 
 ```json
 {
   "success": true,
-  "status": "running"
+  "status": "active"
 }
 ```
 
 ### Stop agent
 
 ```http
-POST /api/instance/:userId/stop
+POST /api/agents/:id/stop
 ```
 
 ```json
@@ -403,20 +408,29 @@ POST /api/instance/:userId/stop
 ### Restart agent
 
 ```http
-POST /api/instance/:userId/restart
+POST /api/agents/:id/restart
 ```
 
 ```json
 {
   "success": true,
-  "status": "running"
+  "status": "active",
+  "healedLegacyModel": false,
+  "healMessage": "",
+  "openclawVersion": "2026.03.14.002"
 }
 ```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `healedLegacyModel` | boolean | Whether a deprecated model was automatically migrated during restart |
+| `healMessage` | string | Description of the migration performed (empty if none) |
+| `openclawVersion` | string | Current OpenClaw runtime version |
 
 ### Update agent image
 
 ```http
-POST /api/instance/:userId/update
+POST /api/agents/:id/update
 ```
 
 Triggers an image update on the backend.
@@ -424,14 +438,25 @@ Triggers an image update on the backend.
 ```json
 {
   "success": true,
-  "status": "running"
+  "status": "active",
+  "image": "ghcr.io/openclaw/openclaw:latest",
+  "previousImage": "ghcr.io/openclaw/openclaw:2026.3.13",
+  "backupPath": "/backups/agent_123_2026-03-20",
+  "openclawVersion": "2026.03.14.002"
 }
 ```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `image` | string | New container image |
+| `previousImage` | string | Previous container image before the update |
+| `backupPath` | string | Path to the pre-update backup |
+| `openclawVersion` | string | Current OpenClaw runtime version |
 
 ### Repair agent
 
 ```http
-POST /api/instance/:userId/repair
+POST /api/agents/:id/repair
 ```
 
 Returns the backend response directly.
@@ -446,7 +471,7 @@ Returns the backend response directly.
 ### Reset agent memory
 
 ```http
-POST /api/instance/:userId/reset-memory
+POST /api/agents/:id/reset-memory
 ```
 
 Returns the backend response directly.
@@ -471,7 +496,7 @@ All lifecycle endpoints return the following shape on failure:
 
 | Code | Description |
 |------|-------------|
-| 401 | `AUTH_REQUIRED` or `TOKEN_INVALID` — missing or invalid JWT token |
+| 401 | Unauthorized — missing or invalid authentication |
 | 403 | Forbidden — authenticated user does not own this agent instance |
 | 502 | Backend service unavailable |
 | 500 | Internal server error |
@@ -522,7 +547,7 @@ Returns resource usage statistics for an agent instance.
 ## Get agent gateway token
 
 ```http
-GET /api/instance/:userId/token
+GET /api/agents/:id/token
 ```
 
 Returns the gateway token for the agent. If no token exists, a new cryptographically random token is generated using 32 bytes of entropy (returned as a 64-character hex string).
@@ -547,10 +572,10 @@ Agents can be verified using multiple verification types: `eas` (Ethereum Attest
 ### Get verification status
 
 ```http
-GET /api/agents/:id/verification
+GET /api/agents/:id/verify
 ```
 
-<Note>The GET endpoint uses `/verification` while POST and DELETE use `/verify`.</Note>
+<Note>On the backend, the GET endpoint uses `/api/agents/:id/verification` while POST and DELETE use `/api/agents/:id/verify`. The web API uses `/api/agents/:id/verify` for all three methods (GET, POST, DELETE).</Note>
 
 ```json
 {
@@ -576,10 +601,11 @@ POST /api/agents/:id/verify
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `verificationType` | string | Yes | One of: `eas`, `coinbase`, `ens`, `webauthn` |
-| `verified` | boolean | Yes | Whether the agent is verified |
 | `attestationUid` | string | No | Attestation UID from EAS |
-| `verifierAddress` | string | No | Address of the verifying wallet |
-| `metadata` | object | No | Additional verification metadata |
+| `walletAddress` | string | No | Address of the verifying wallet (web API) |
+| `signature` | string | No | Wallet signature for verification (web API) |
+
+<Note>The web API always sets `verified: true` on success. The backend accepts an additional `verified` boolean, `verifierAddress`, and `metadata` object directly.</Note>
 
 #### Response
 
@@ -632,7 +658,7 @@ The request is proxied to the backend provisioning service. When `MUX_TOKEN_ID` 
 | `discordBotToken` | string | Conditional | Discord bot token. At least one channel token is required. |
 | `aiProvider` | string | No | AI provider (default: `openrouter`). Options: `openrouter`, `gemini`, `groq`, `anthropic`, `openai`. Each provider maps to a default model — see [AI provider defaults](#ai-provider-defaults) below. |
 | `apiKey` | string | No | API key for the AI provider |
-| `plan` | string | No | Plan tier (default: `free`, which returns `402 Payment Required`). Options: `label`, `solo`, `collective`, `network`. A paid plan must be specified explicitly. |
+| `plan` | string | No | Plan tier. Options: `label`, `solo`, `collective`, `network`. Defaults to `free` when omitted, which is not a valid plan and returns `400 Invalid plan`. A paid plan must be specified explicitly. |
 | `email` | string | No | User email address. When omitted, the email is automatically populated from the authenticated session if one exists. The resolved email is forwarded to the backend in the `X-User-Email` header. |
 | `stripeSubscriptionId` | string | No | Stripe subscription ID from checkout |
 
@@ -712,7 +738,8 @@ When calling the backend provisioning service directly, the response includes ad
 | Code | Description |
 |------|-------------|
 | 400 | At least one channel token required (Telegram, WhatsApp, or Discord), or invalid `aiProvider` or `plan` value |
-| 402 | No free tier. A paid plan (`label`, `solo`, `collective`, or `network`) must be specified. Returned when the `plan` field is omitted or set to `free`. The response body includes a `code` field set to `PAYMENT_REQUIRED`. |
+| 400 | Invalid plan value. The `plan` field must be one of `label`, `solo`, `collective`, or `network`. The default value `free` is not a recognized plan. |
+| 402 | No free tier. A paid subscription is required. The response body includes a `code` field set to `PAYMENT_REQUIRED`. |
 | 500 | Internal server error |
 | 502 | Provisioning service unavailable or returned an error. All backend URLs failed or returned non-success responses. |
 | 503 | Provisioning is temporarily disabled (kill switch active) |

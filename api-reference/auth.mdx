@@ -9,35 +9,45 @@ Manage user authentication, password resets, wallet sign-in, Farcaster identity,
 
 ## Auth middleware
 
-Protected backend endpoints require a valid JWT in the `Authorization` header. The middleware verifies the token, attaches user context to the request, and sets the row-level security (RLS) context on the database connection before any query runs.
+The backend uses two authentication patterns depending on the endpoint.
 
-### Request format
+### API key authentication (backend core endpoints)
+
+Endpoints such as `/api/deployments`, `/api/openclaw/instances`, and per-agent lifecycle routes require a shared API key passed as a bearer token. The key is compared against the configured `INTERNAL_API_KEY` using a timing-safe comparison.
 
 ```bash
-curl -X GET https://agentbot.raveculture.xyz/api/instance/user_123 \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+curl -X GET https://backend.example.com/api/openclaw/instances \
+  -H "Authorization: Bearer YOUR_INTERNAL_API_KEY"
 ```
 
-### JWT payload
+| HTTP status | Error | Description |
+|-------------|-------|-------------|
+| 401 | `Unauthorized` | Missing or invalid API key |
+| 403 | `Forbidden` | API key does not match |
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `userId` | string | Unique user identifier |
-| `email` | string | User email address |
-| `role` | string | User role (for example, `user` or `admin`) |
+### Header-based authentication (AI routes)
 
-Tokens expire after 7 days.
+The AI chat endpoint (`/api/ai/chat`) reads user context from request headers rather than verifying a token. The following headers are used:
 
-### Error responses
+| Header | Type | Description |
+|--------|------|-------------|
+| `x-user-email` | string | User email address |
+| `x-user-id` | string | User ID (defaults to `anonymous` if missing) |
+| `x-user-role` | string | User role |
+
+<Warning>The AI route middleware does not reject unauthenticated requests. It reads the headers and always passes the request through. Access control is enforced by the plan middleware, which checks `x-user-plan` and `x-stripe-subscription-id`.</Warning>
+
+### Admin middleware
+
+Endpoints that require admin access check the `x-user-email` header against the `ADMIN_EMAILS` environment variable.
 
 | HTTP status | Error code | Description |
 |-------------|------------|-------------|
-| 401 | `AUTH_REQUIRED` | No `Authorization` header or missing `Bearer` prefix |
-| 401 | `TOKEN_INVALID` | JWT signature verification failed or token has expired |
 | 403 | `ADMIN_REQUIRED` | Endpoint requires admin privileges |
-| 500 | `AUTH_ERROR` | Unexpected error during authentication |
 
-<Note>After successful authentication, the middleware sets the database-level user context for RLS. All subsequent queries in that request are automatically scoped to the authenticated user's data. See [Security](/security#row-level-security) for details.</Note>
+### Session authentication (web API)
+
+Most web API endpoints use cookie-based session authentication via NextAuth. Sign in through the web application to obtain a session cookie. After successful authentication, the middleware sets the database-level user context for RLS. All subsequent queries in that request are automatically scoped to the authenticated user's data. See [Security](/security#row-level-security) for details.
 
 ## Sign up
 
