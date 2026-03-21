@@ -147,19 +147,31 @@ Requires session authentication. Resets heartbeat configuration to defaults.
 
 ## Container health checks
 
-Agent containers expose an internal health endpoint on port `18789`. The backend uses this to determine container readiness during provisioning and ongoing monitoring.
+Agent containers run the official OpenClaw image, which exposes built-in health endpoints on port `18789`. The backend uses these to determine container readiness during provisioning and ongoing monitoring.
+
+### Built-in health endpoints
+
+The OpenClaw image provides two health endpoints on each agent container:
+
+| Endpoint | Purpose | Description |
+|----------|---------|-------------|
+| `GET /healthz` | Liveness | Returns `200` when the gateway process is running. Used by Docker's `HEALTHCHECK` to detect crashed or hung containers. |
+| `GET /readyz` | Readiness | Returns `200` when the gateway is ready to accept requests. Use this to verify the container has completed startup before routing traffic. |
+
+Both endpoints are unauthenticated and bind to the container's internal port (`18789`).
+
+<Note>The backend also probes `/health` on port `18789` for application-level health checks. The `/healthz` and `/readyz` endpoints are provided by the OpenClaw image itself and are available on all agent containers.</Note>
 
 ### Container health statuses
 
 | Status | Condition |
 |--------|-----------|
-| `healthy` | Container is running and the internal `/health` endpoint responds successfully |
+| `healthy` | Container is running and the internal health endpoint responds successfully |
 | `starting` | Container is running but the health endpoint is not yet responding after all retries |
 | `stopped` | Container has exited |
 | `unhealthy` | Container is in an unexpected state or cannot be inspected |
 
 ### Health check behavior
 
-- Container health is determined by a process-level check (`pgrep`) that verifies the gateway process is running, rather than an HTTP endpoint probe.
-- Docker runs the health check every 30 seconds with a 5-second timeout and 3 retries before marking the container as unhealthy.
+- Docker runs a `HEALTHCHECK` against `http://127.0.0.1:18789/healthz` every 30 seconds with a 5-second timeout and 3 retries before marking the container as unhealthy.
 - The `waitForHealthy` function polls container health every 2 seconds, with a default overall timeout of 60 seconds.
