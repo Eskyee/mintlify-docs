@@ -122,6 +122,10 @@ The endpoint redirects the user to Stripe's hosted checkout page. On success, th
 Admin users (configured via `ADMIN_EMAILS`) skip the Stripe checkout flow entirely and are redirected straight to onboarding. No payment is required for admin accounts.
 </Note>
 
+<Note>
+The onboarding flow enforces payment before agent deployment. If the user has not completed payment, the deploy button is replaced with a checkout redirect. Attempting to deploy without a confirmed payment redirects the user to `GET /api/stripe/checkout?plan={plan}` to complete checkout first.
+</Note>
+
 **Example**
 
 ```bash
@@ -398,6 +402,22 @@ export async function POST(request) {
   return new Response('OK');
 }
 ```
+
+### Plan mapping
+
+When processing `checkout.session.completed` events, the webhook maps the `plan` value from the session metadata to a subscription tier. The following plans are recognized:
+
+| Metadata value | Mapped plan |
+|----------------|-------------|
+| `underground` | `underground` |
+| `solo` | `solo` |
+| `collective` | `collective` |
+| `label` | `label` |
+| `network` | `network` |
+
+Any unrecognized plan value falls back to `free`. This means the user's subscription is not activated for agent provisioning — they must complete checkout with a valid plan name.
+
+<Warning>If your Stripe product metadata uses a plan name that is not in the table above, the subscription will be recorded as `free` and the user will not be able to provision agents. Make sure your Stripe product metadata `plan` field matches one of the recognized values exactly.</Warning>
 
 ## Troubleshooting
 
