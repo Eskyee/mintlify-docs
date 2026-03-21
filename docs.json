@@ -74,6 +74,7 @@
           "api-reference/ai",
           "api-reference/render-mcp",
           "api-reference/streaming",
+          "api-reference/registration",
           "api-reference/health"
         ]
       },
