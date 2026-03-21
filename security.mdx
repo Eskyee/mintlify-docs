@@ -17,7 +17,7 @@ Agentbot is committed to keeping your data safe. Here's our security posture.
 | Bot Detection | ✅ | Automated request filtering on sensitive endpoints |
 | Input Validation | ✅ | Allowlist + sanitization |
 | Rate Limiting | ✅ | Per-IP limits (120/min general, 30/min AI, 5/min deploys) |
-| CORS | ✅ | Configurable allowed origins |
+| CORS | ✅ | Restricted to allowed origins (no wildcard) |
 | SSRF Protection | ✅ | Webhook URLs validated against private/internal IP ranges |
 | A2A Authentication | ✅ | Message verification enforced before delivery |
 | Audit Logging | ✅ | All actions logged |
@@ -182,7 +182,9 @@ All agent-to-agent (A2A) messages are verified before delivery. The `verifyMessa
 
 ## CORS
 
-The backend API enables CORS with configurable allowed origins. When the `ALLOWED_ORIGINS` environment variable is set (comma-separated list of domains), only those origins are permitted. When unset, all origins are allowed (`*`). Credentials are supported.
+The backend API restricts CORS to an explicit allowlist. The `ALLOWED_ORIGINS` environment variable accepts a comma-separated list of permitted origins. When unset, the API defaults to a built-in allowlist rather than accepting all origins. Wildcard (`*`) origins are not supported. Requests from unlisted origins receive a CORS error. Credentials are supported.
+
+The `X-Powered-By` header is disabled on both the API (Express) and the web frontend (Next.js) to reduce fingerprinting surface.
 
 ## Known limitations
 
