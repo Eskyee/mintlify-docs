@@ -201,6 +201,24 @@ The backend API restricts CORS to an explicit allowlist. The `ALLOWED_ORIGINS` e
 
 The `X-Powered-By` header is disabled on both the API (Express) and the web frontend (Next.js) to reduce fingerprinting surface.
 
+## HTTP security headers
+
+All web frontend responses include the following security headers:
+
+| Header | Value | Purpose |
+|--------|-------|---------|
+| `Content-Security-Policy` | Restrictive policy with `default-src 'self'` | Limits sources for scripts, styles, images, and connections |
+| `X-Frame-Options` | `DENY` | Prevents clickjacking by blocking iframe embedding |
+| `X-Content-Type-Options` | `nosniff` | Prevents MIME type sniffing |
+| `Referrer-Policy` | `strict-origin-when-cross-origin` | Limits referrer information sent to external sites |
+| `Permissions-Policy` | `camera=(), microphone=(), geolocation=()` | Disables access to sensitive browser APIs |
+| `Cross-Origin-Opener-Policy` | `same-origin-allow-popups` | Isolates browsing context from cross-origin windows |
+| `Strict-Transport-Security` | `max-age=63072000; includeSubDomains; preload` | Enforces HTTPS for two years, including all subdomains |
+
+### Cache control
+
+API responses include `no-cache, no-store, must-revalidate` to prevent caching of sensitive data. Static assets under `/public`, `/_next`, and `/assets` use `public, max-age=31536000, immutable` for long-term caching.
+
 ## Known limitations
 
 ### Demo mode
