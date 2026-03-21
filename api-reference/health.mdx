@@ -151,7 +151,7 @@ Agent containers run the official OpenClaw image, which exposes built-in health 
 
 ### Built-in health endpoints
 
-The OpenClaw image (`ghcr.io/openclaw/openclaw:2026.3.13-1`) provides two health endpoints on each agent container:
+The OpenClaw image (`ghcr.io/openclaw/openclaw:2026.3.13`) provides two health endpoints on each agent container:
 
 | Endpoint | Purpose | Description |
 |----------|---------|-------------|
@@ -203,5 +203,5 @@ Both endpoints are unauthenticated and bind to the container's internal port (`1
 
 ### Health check behavior
 
-- Docker runs a `HEALTHCHECK` against `http://127.0.0.1:18789/healthz` every 30 seconds with a 5-second timeout and 3 retries before marking the container as unhealthy.
+- Docker runs a `HEALTHCHECK` against `http://127.0.0.1:18789/healthz` every 30 seconds with a 5-second timeout, a 20-second start period, and 5 retries before marking the container as unhealthy. The health probe uses `node -e "fetch(...)"` instead of `curl` because the official OpenClaw image does not include `curl`.
 - The `waitForHealthy` function polls container health every 2 seconds, with a default overall timeout of 60 seconds.

@@ -82,14 +82,20 @@ services:
 
   agentbot-backend:
     image: ghcr.io/raveculture/agentbot-backend:latest
+    init: true
     ports:
       - "3001:3001"
+    environment:
+      - HOME=/home/node
+      - TERM=xterm-256color
     env_file:
       - .env
 
 volumes:
   postgres_data:
 ```
+
+<Note>The `init: true` flag enables proper signal forwarding and prevents zombie processes (PID 1 handling). The `HOME` and `TERM` environment variables are required by the official OpenClaw image which runs as the `node` user.</Note>
 
 ```bash
 docker-compose up -d
