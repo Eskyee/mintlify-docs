@@ -73,6 +73,7 @@
           "api-reference/memory",
           "api-reference/ai",
           "api-reference/render-mcp",
+          "api-reference/streaming",
           "api-reference/health"
         ]
       },

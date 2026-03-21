@@ -618,7 +618,7 @@ POST /api/provision
 
 Provisions a new agent with messaging channel tokens. Authentication is not required, but when a session is active the user's email is automatically resolved from it. At least one channel token is required.
 
-The request is proxied to the backend provisioning service. The backend may create a dedicated Mux live stream and enqueue the provisioning job for asynchronous processing.
+The request is proxied to the backend provisioning service. When `MUX_TOKEN_ID` and `MUX_TOKEN_SECRET` are configured, the backend creates a real Mux live stream via the Mux API with public playback policy. When Mux credentials are not configured, placeholder streaming credentials are returned instead.
 
 ### Request body
 
@@ -711,7 +711,7 @@ When calling the backend provisioning service directly, the response includes ad
 | Code | Description |
 |------|-------------|
 | 400 | At least one channel token required (Telegram, WhatsApp, or Discord), or invalid `aiProvider` or `plan` value |
-| 402 | No free tier. A paid plan (`label`, `solo`, `collective`, or `network`) must be specified. Returned when the `plan` field is omitted or set to `free`. |
+| 402 | No free tier. A paid plan (`label`, `solo`, `collective`, or `network`) must be specified. Returned when the `plan` field is omitted or set to `free`. The response body includes a `code` field set to `PAYMENT_REQUIRED`. |
 | 500 | Internal server error |
 | 502 | Provisioning service unavailable or returned an error. All backend URLs failed or returned non-success responses. |
 | 503 | Provisioning is temporarily disabled (kill switch active) |
@@ -727,6 +727,9 @@ Each `aiProvider` value maps to a default model and base URL:
 | `groq` | `mixtral-8x7b-32768` | `https://api.groq.com/openai/v1` |
 | `anthropic` | `claude-3-sonnet-20240229` | `https://api.anthropic.com/v1` |
 | `openai` | `gpt-4o` | `https://api.openai.com/v1` |
+| `minimax` | `MiniMax/MiniMax-Text-01` | `https://api.minimax.chat/v1` |
+
+<Note>`minimax` is available as a fallback in the provider configuration map but is not currently accepted as a value for the `aiProvider` request parameter. Passing `minimax` as `aiProvider` returns a `400` validation error. This provider may be enabled in a future release.</Note>
 
 ## Deploy agent (backend)
 
