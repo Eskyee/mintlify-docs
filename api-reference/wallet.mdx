@@ -234,3 +234,12 @@ Creates a viem wallet client on Base Sepolia.
   "network": "base-sepolia"
 }
 ```
+
+## USDC transfer validation
+
+When transferring USDC through the wallet service, the following validation rules apply:
+
+- The transfer amount must be a positive finite number. Values such as `NaN`, `Infinity`, negative numbers, and zero are rejected.
+- Amounts are rounded to 6 decimal places (USDC precision). If the rounded value equals zero, the transfer is rejected.
+
+These checks run before any on-chain transaction is initiated.
