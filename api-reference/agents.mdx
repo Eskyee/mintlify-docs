@@ -647,7 +647,9 @@ DELETE /api/agents/:id/verify
 POST /api/provision
 ```
 
-Provisions a new agent with messaging channel tokens. Authentication is not required, but when a session is active the user's email is automatically resolved from it. At least one channel token is required.
+Provisions a new agent with messaging channel tokens. Requires bearer token (API key) authentication. When a session is active, the user's email is automatically resolved from it. At least one channel token is required.
+
+<Warning>This endpoint is rate limited to 5 requests per minute per IP. Exceeding this limit returns `429` with the message `Deployment rate limit exceeded.`</Warning>
 
 The request is proxied to the backend provisioning service. When `MUX_TOKEN_ID` and `MUX_TOKEN_SECRET` are configured, the backend creates a real Mux live stream via the Mux API with public playback policy. When Mux credentials are not configured, placeholder streaming credentials are returned instead.
 

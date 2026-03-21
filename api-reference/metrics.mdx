@@ -19,7 +19,7 @@ https://agentbot.raveculture.xyz/api/metrics
 GET /api/metrics
 ```
 
-Returns platform-wide metrics including agent counts, message volumes, deployment stats, uptime, performance, and storage usage. No authentication required.
+Returns platform-wide metrics including agent counts, message volumes, deployment stats, uptime, performance, and storage usage. Requires bearer token (API key) authentication.
 
 <Warning>The `messages`, `performance`, and `storage.used` fields currently return randomized mock data. Agent and deployment counts are retrieved from the database. A future release will connect all fields to real telemetry.</Warning>
 
@@ -91,6 +91,7 @@ Returns platform-wide metrics including agent counts, message volumes, deploymen
 
 | Code | Description |
 |------|-------------|
+| 401 | Unauthorized — missing or invalid bearer token |
 | 500 | Failed to fetch metrics. The error response includes an empty `metrics` object alongside the `error` field: `{ "error": "Failed to fetch metrics", "metrics": {} }` |
 
 ## Historical metrics
