@@ -142,7 +142,7 @@ Each agent container receives a unique gateway auth token at provisioning time. 
 | Field | Description |
 |-------|-------------|
 | `gateway.auth.mode` | `token` |
-| `gateway.auth.token` | Unique 48-character hex string generated from 24 random bytes |
+| `gateway.auth.token` | Unique 32-character hex string auto-generated per container |
 | `gateway.port` | `18789` |
 
 ## Agent container configuration
@@ -153,7 +153,7 @@ When an agent is provisioned, the backend generates an OpenClaw configuration wi
 
 | Parameter | Value | Description |
 |-----------|-------|-------------|
-| `gateway.bind` | `lan` | Bind address for the gateway. Set to `lan` for Docker networking (loopback does not receive external traffic). |
+| `gateway.bind` | `loopback` | Bind address for the gateway. Set to `loopback` for container isolation — the container port is mapped to the host via Docker. |
 | `gateway.port` | `18789` | Internal gateway port |
 | `gateway.auth.mode` | `token` | Authentication mode |
 | `gateway.auth.rateLimit.maxAttempts` | `10` | Maximum authentication attempts before lockout |
@@ -161,7 +161,7 @@ When an agent is provisioned, the backend generates an OpenClaw configuration wi
 | `gateway.auth.rateLimit.lockoutMs` | `300000` | Lockout duration in milliseconds (5 minutes) |
 | `gateway.auth.rateLimit.exemptLoopback` | `true` | Exempt loopback addresses from rate limiting |
 | `gateway.auth.allowTailscale` | `true` | Allow Tailscale network connections |
-| `gateway.controlUi.enabled` | `true` | Enable the gateway control UI |
+| `gateway.controlUi.enabled` | `false` | Gateway control UI is disabled in containers. Use the Agentbot dashboard instead. |
 
 ### Tool settings
 
