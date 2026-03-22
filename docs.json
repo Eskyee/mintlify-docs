@@ -86,7 +86,8 @@
           "api-reference/swarms",
           "api-reference/underground",
           "api-reference/invite",
-          "api-reference/web-summarizer"
+          "api-reference/web-summarizer",
+          "api-reference/x402"
         ]
       },
       {

@@ -1,0 +1,221 @@
+---
+title: x402 gateway
+description: "Interact with the x402 payment gateway for colony membership, fitness scoring, dynamic pricing, and Tempo pathUSD payments."
+---
+
+# x402 gateway
+
+The x402 endpoint connects agents to the x402-Tempo payment gateway. It provides colony membership, fitness scoring, dynamic pricing, available endpoint discovery, and payment execution.
+
+## Health check
+
+```http
+GET /api/x402
+```
+
+No authentication required. Returns the current status of the x402 gateway.
+
+### Response (200)
+
+```json
+{
+  "gateway": "https://x402-gateway-production-005f.up.railway.app",
+  "status": "ok"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `gateway` | string | URL of the upstream x402 gateway |
+| `status` | string | Gateway health status |
+
+### Response (503)
+
+Returned when the upstream gateway is unreachable.
+
+```json
+{
+  "gateway": "https://x402-gateway-production-005f.up.railway.app",
+  "status": "unreachable",
+  "error": "Connection failed"
+}
+```
+
+## Execute action
+
+```http
+POST /api/x402
+```
+
+Requires an authenticated session. Dispatches an action to the x402 gateway.
+
+### Headers
+
+| Header | Type | Required | Description |
+|--------|------|----------|-------------|
+| `Content-Type` | string | Yes | Must be `application/json` |
+| `Cookie` | string | Yes | Valid NextAuth session cookie |
+
+### Body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `agentId` | string | Yes | Agent instance identifier |
+| `walletAddress` | string | No | Agent wallet address. Required for `join-colony`. |
+| `action` | string | Yes | Action to perform. One of `join-colony`, `fitness`, `pricing`, `endpoints`, or `pay`. |
+
+Additional fields are required depending on the action — see below.
+
+### Actions
+
+#### `join-colony`
+
+Register an agent with the x402 colony.
+
+```json
+{
+  "agentId": "inst_abc123",
+  "walletAddress": "0x1234...5678",
+  "action": "join-colony"
+}
+```
+
+#### `fitness`
+
+Retrieve the fitness score for an agent.
+
+```json
+{
+  "agentId": "inst_abc123",
+  "action": "fitness"
+}
+```
+
+#### `pricing`
+
+Retrieve dynamic pricing for an agent.
+
+```json
+{
+  "agentId": "inst_abc123",
+  "action": "pricing"
+}
+```
+
+#### `endpoints`
+
+List all available endpoints on the x402 gateway.
+
+```json
+{
+  "agentId": "inst_abc123",
+  "action": "endpoints"
+}
+```
+
+#### `pay`
+
+Execute a payment through the x402 gateway.
+
+```json
+{
+  "agentId": "inst_abc123",
+  "action": "pay",
+  "amount": "1.0",
+  "currency": "pathUSD",
+  "recipient": "0x5678...efgh",
+  "endpoint": "chat",
+  "method": "tempo"
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `amount` | string | Yes | Payment amount |
+| `currency` | string | Yes | Payment currency (e.g. `pathUSD`, `USDC`) |
+| `recipient` | string | Yes | Recipient wallet address |
+| `endpoint` | string | No | Target endpoint slug on the gateway |
+| `method` | string | No | Payment method identifier |
+
+## Error responses
+
+| Status | Error | Description |
+|--------|-------|-------------|
+| 400 | `agentId required` | The `agentId` field is missing from the request body |
+| 400 | `Invalid action` | The `action` field is missing or not one of the supported values |
+| 401 | `Authentication required` | No valid session. You must be signed in. |
+| 500 | `x402 gateway error` | An unexpected error occurred while communicating with the upstream gateway |
+
+## Examples
+
+### Check gateway health
+
+```bash
+curl https://agentbot.raveculture.xyz/api/x402
+```
+
+### Join colony
+
+```bash
+curl -X POST https://agentbot.raveculture.xyz/api/x402 \
+  -H "Content-Type: application/json" \
+  -H "Cookie: next-auth.session-token=YOUR_SESSION" \
+  -d '{
+    "agentId": "inst_abc123",
+    "walletAddress": "0x1234...5678",
+    "action": "join-colony"
+  }'
+```
+
+### Get fitness score
+
+```bash
+curl -X POST https://agentbot.raveculture.xyz/api/x402 \
+  -H "Content-Type: application/json" \
+  -H "Cookie: next-auth.session-token=YOUR_SESSION" \
+  -d '{
+    "agentId": "inst_abc123",
+    "action": "fitness"
+  }'
+```
+
+### Get pricing
+
+```bash
+curl -X POST https://agentbot.raveculture.xyz/api/x402 \
+  -H "Content-Type: application/json" \
+  -H "Cookie: next-auth.session-token=YOUR_SESSION" \
+  -d '{
+    "agentId": "inst_abc123",
+    "action": "pricing"
+  }'
+```
+
+### List endpoints
+
+```bash
+curl -X POST https://agentbot.raveculture.xyz/api/x402 \
+  -H "Content-Type: application/json" \
+  -H "Cookie: next-auth.session-token=YOUR_SESSION" \
+  -d '{
+    "agentId": "inst_abc123",
+    "action": "endpoints"
+  }'
+```
+
+### Make a payment
+
+```bash
+curl -X POST https://agentbot.raveculture.xyz/api/x402 \
+  -H "Content-Type: application/json" \
+  -H "Cookie: next-auth.session-token=YOUR_SESSION" \
+  -d '{
+    "agentId": "inst_abc123",
+    "action": "pay",
+    "amount": "1.0",
+    "currency": "pathUSD",
+    "recipient": "0x5678...efgh",
+    "endpoint": "chat",
+    "method": "tempo"
+  }'
+```
