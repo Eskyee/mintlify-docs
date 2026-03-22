@@ -62,6 +62,9 @@ Key services:
 - `POST /api/deployments` — Deploy agent containers (auth required)
 - `GET /api/agents` — List and manage agents
 - `POST /api/ai/*` — AI provider proxy (OpenRouter, Anthropic, etc.)
+- `GET /api/browse/*` — File explorer (tree, read, write, git sync)
+- `GET /api/logs/:agentId/stream` — Live log tail (SSE)
+- `GET /api/usage/*` — Usage tracking (tokens, costs, tool metrics)
 
 Protected endpoints use JWT auth middleware that verifies the token, attaches user context, and sets the RLS context on the database connection. See the [auth API](/api-reference/auth#auth-middleware) for details.
 
@@ -106,6 +109,45 @@ Used for:
 Two modes:
 - **Ollama (self-hosted):** Local inference for self-hosted deployments (Llama 3, Mistral)
 - **BYOK:** Users bring their own API keys for OpenRouter, Anthropic, OpenAI, Google, or Groq
+
+### Watchdog
+
+Monitors agent gateway processes for health and auto-recovers from failures:
+
+| Capability | Details |
+|------------|---------|
+| Health checks | Every 2 minutes (configurable via `WATCHDOG_CHECK_INTERVAL`) |
+| Crash detection | Listens for gateway exit events |
+| Crash-loop detection | 3 crashes in 5-minute window |
+| Auto-repair | Kill → wait 5s → restart → verify health (max 2 attempts) |
+| Notifications | Telegram + Discord alerts for crashes, repairs, and recovery |
+| Degraded state | 5-second retry interval when health check fails |
+
+See [Watchdog](/api-reference/watchdog) for the full API.
+
+### File Explorer + Git Sync
+
+Browser-based workspace management — no SSH needed:
+
+- **File tree:** Recursive directory listing with depth control
+- **Read/Write:** View and edit files inline (1MB limit)
+- **Git status:** See uncommitted changes
+- **Git diff:** Per-file or full workspace diffs
+- **Git sync:** One-click commit + push to GitHub
+- **Git log:** Browse recent commit history
+
+See [File Explorer API](/api-reference/browse) for the full API.
+
+### Usage Tracker
+
+SQLite-backed token and cost tracking per agent, model, and time period:
+
+- Per-event recording (session, agent, provider, model, tokens, cost)
+- Daily aggregation with upsert
+- Tool event monitoring (success rate, duration)
+- Query APIs: summary, by-agent, by-model, daily totals
+
+See [Usage Tracking API](/api-reference/usage-tracking) for the full API.
 
 ### A2A Bus (Agent-to-Agent)
 
