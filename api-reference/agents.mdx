@@ -110,7 +110,7 @@ Provisions a new agent. Requires an active subscription unless the caller is an 
 | `config` | object | No | Agent configuration |
 | `tier` | string | No | Subscription tier hint. Options: `starter`, `pro`, `enterprise`. This value is forwarded to the backend as the `plan` field (mapped to `solo`, `collective`, `label`, `network`). When omitted, the backend deployment defaults to `label`. |
 
-<Note>The web proxy enforces agent limits based on the subscription tier (`starter`: 1, `pro`: 3, `enterprise`: 100). The backend enforces separate plan-based limits (`solo`: 1, `collective`: 3, `label`: 10, `network`: unlimited). The limit cannot be overridden in the request body.</Note>
+<Note>The web proxy enforces agent limits based on the subscription tier (`starter`: 1, `pro`: 3, `enterprise`: 100). The backend enforces separate plan-based limits (`label`: 1, `solo`: 3, `collective`: 10, `network`: 100). The limit cannot be overridden in the request body.</Note>
 
 ### Admin bypass
 

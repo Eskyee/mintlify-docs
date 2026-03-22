@@ -5,9 +5,9 @@ description: "Generate and validate invite codes for platform access"
 
 # Invite API
 
-Generate and validate invite codes for gating access to the Agentbot platform. These endpoints are backend-only and do not require authentication.
+Generate and validate invite codes for gating access to the Agentbot platform. These endpoints are backend-only.
 
-<Note>Invite codes are stored in memory and are not persisted across server restarts. This is a demo implementation — production deployments should use database-backed storage.</Note>
+<Note>Invite codes are now persisted in the database and survive server restarts. Code generation requires internal API key authentication to prevent invite flooding. Code validation remains public.</Note>
 
 ## Generate invite code
 
@@ -15,7 +15,14 @@ Generate and validate invite codes for gating access to the Agentbot platform. T
 POST /api/invite/generate
 ```
 
-Generates a new invite code. No authentication required.
+Generates a new invite code. Requires internal API key authentication via the `Authorization: Bearer <INTERNAL_API_KEY>` header.
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | Missing or invalid internal API key |
+| 500 | Failed to generate invite code |
 
 ### Response
 
@@ -35,7 +42,7 @@ Generates a new invite code. No authentication required.
 POST /api/invite/validate
 ```
 
-Validates and consumes an invite code. Once validated, the code is marked as used and cannot be reused. No authentication required.
+Validates and consumes an invite code. The operation is atomic — only one concurrent request can successfully consume a given code. Once validated, the code is marked as used and cannot be reused. No authentication required.
 
 ### Request body
 
