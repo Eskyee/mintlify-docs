@@ -27,7 +27,7 @@ curl -X GET https://backend.example.com/api/openclaw/instances \
 
 ### Standalone auth middleware (`requireAuth`)
 
-Routes that are not mounted through the main API key middleware can use the standalone `requireAuth` middleware. This performs the same timing-safe Bearer token verification against `INTERNAL_API_KEY` and can be applied to individual route handlers.
+Routes that are not mounted through the main API key middleware can use the standalone `requireAuth` middleware. This performs the same timing-safe Bearer token verification against `INTERNAL_API_KEY` and can be applied to individual route handlers. See [Security — Auth middleware](/security#auth-middleware) for an overview of both middleware functions.
 
 | HTTP status | Error | Description |
 |-------------|-------|-------------|
