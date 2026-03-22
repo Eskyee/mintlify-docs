@@ -85,7 +85,8 @@
           "api-reference/colony",
           "api-reference/swarms",
           "api-reference/underground",
-          "api-reference/invite"
+          "api-reference/invite",
+          "api-reference/web-summarizer"
         ]
       },
       {
