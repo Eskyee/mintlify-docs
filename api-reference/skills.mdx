@@ -38,7 +38,6 @@ Returns all available skills in the marketplace. No authentication required.
       "name": "DJ Streaming",
       "description": "Stream DJ sets with Mux",
       "category": "streaming",
-      "icon": "🎧",
       "author": "Agentbot",
       "downloads": 150,
       "rating": 5.0,
@@ -81,6 +80,44 @@ Requires session authentication. Installs a skill on an agent.
 
 ```json
 {
+  "success": true,
+  "installed": {
+    "id": "inst_123",
+    "skillId": "dj-streaming",
+    "agentId": "agent_456",
+    "installedAt": "2026-03-20T00:00:00Z"
+  }
+}
+```
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | Missing `skillId` or `agentId` |
+| 401 | Unauthorized |
+| 404 | Agent not found or skill not found |
+| 500 | Internal error |
+
+## Uninstall skill
+
+```http
+DELETE /api/skills
+```
+
+Requires session authentication. Removes a skill from an agent.
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `skillId` | string | Yes | ID of the skill to uninstall |
+| `agentId` | string | Yes | ID of the agent to uninstall the skill from |
+
+### Response
+
+```json
+{
   "success": true
 }
 ```
@@ -89,7 +126,10 @@ Requires session authentication. Installs a skill on an agent.
 
 | Code | Description |
 |------|-------------|
+| 400 | Missing `skillId` or `agentId` |
 | 401 | Unauthorized |
+| 404 | Skill installation not found |
+| 500 | Internal error |
 
 ## Available skills
 
