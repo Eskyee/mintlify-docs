@@ -80,7 +80,9 @@
           "api-reference/mission-control",
           "api-reference/browse",
           "api-reference/usage-tracking",
-          "api-reference/swarms"
+          "api-reference/swarms",
+          "api-reference/underground",
+          "api-reference/invite"
         ]
       },
       {

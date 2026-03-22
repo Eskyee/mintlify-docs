@@ -258,6 +258,14 @@ curl -X POST https://agentbot.raveculture.xyz/api/ai/chat \
 | `/api/usage/tools` | GET | Get tool execution statistics (backend only, requires auth) |
 | `/api/swarms` | GET | List agent swarms |
 | `/api/swarms` | POST | Create an agent swarm |
+| `/api/underground/bus/send` | POST | Send an agent-to-agent message (signature-verified) |
+| `/api/underground/events` | GET | List underground events (backend only, requires auth) |
+| `/api/underground/events` | POST | Create an underground event (backend only, requires auth) |
+| `/api/underground/wallets` | POST | Create an agent wallet (backend only, requires auth) |
+| `/api/underground/wallets/:address/balance` | GET | Get agent wallet USDC balance (backend only, requires auth) |
+| `/api/underground/splits` | POST | Create and queue a royalty split (backend only, requires auth) |
+| `/api/invite/generate` | POST | Generate an invite code (backend only, no auth) |
+| `/api/invite/validate` | POST | Validate and consume an invite code (backend only, no auth) |
 
 ## SDK
 
