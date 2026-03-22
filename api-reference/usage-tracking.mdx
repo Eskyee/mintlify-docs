@@ -1,0 +1,272 @@
+---
+title: Usage tracking API
+description: "Track and query token usage, costs, and tool execution metrics per agent, model, and time period"
+---
+
+# Usage tracking API
+
+The usage tracking system records per-event token consumption and tool execution metrics backed by SQLite. You can query aggregated data by agent, model, or time period.
+
+All query endpoints require bearer token authentication and are served by the backend API.
+
+<Note>The usage tracker records events internally whenever an AI completion or tool call is made. The endpoints below are read-only query APIs for retrieving aggregated usage data.</Note>
+
+## Usage summary
+
+```http
+GET /api/usage/summary
+```
+
+Returns daily aggregated token usage and cost data across all agents and models.
+
+### Query parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `days` | integer | `30` | Number of days of history to return |
+
+### Response
+
+```json
+[
+  {
+    "date": "2026-03-22",
+    "agent_id": "agent_abc",
+    "model": "openrouter/anthropic/claude-sonnet-4",
+    "provider": "openrouter",
+    "input_tokens": 15200,
+    "output_tokens": 3400,
+    "total_tokens": 18600,
+    "cost_usd": 0.042,
+    "turn_count": 12
+  }
+]
+```
+
+### Response fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `date` | string | Date in `YYYY-MM-DD` format |
+| `agent_id` | string \| null | Agent that generated the usage, or `null` for unattributed events |
+| `model` | string | Model identifier |
+| `provider` | string | AI provider name |
+| `input_tokens` | number | Total input tokens for the day |
+| `output_tokens` | number | Total output tokens for the day |
+| `total_tokens` | number | Sum of all token types (input, output, cache read, cache write) |
+| `cost_usd` | number | Estimated cost in USD |
+| `turn_count` | number | Number of individual completion calls |
+
+## Usage by agent
+
+```http
+GET /api/usage/by-agent/:agentId
+```
+
+Returns token usage grouped by model for a specific agent.
+
+### Path parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `agentId` | string | ID of the agent to query |
+
+### Query parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `days` | integer | `30` | Number of days of history to include |
+
+### Response
+
+```json
+[
+  {
+    "model": "openrouter/anthropic/claude-sonnet-4",
+    "provider": "openrouter",
+    "input_tokens": 45000,
+    "output_tokens": 12000,
+    "total_tokens": 57000,
+    "cost_usd": 0.13,
+    "events": 48
+  }
+]
+```
+
+### Response fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `model` | string | Model identifier |
+| `provider` | string | AI provider name |
+| `input_tokens` | number | Total input tokens |
+| `output_tokens` | number | Total output tokens |
+| `total_tokens` | number | Total tokens across all types |
+| `cost_usd` | number | Estimated cost in USD |
+| `events` | number | Number of usage events |
+
+## Usage by model
+
+```http
+GET /api/usage/by-model
+```
+
+Returns token usage aggregated by model across all agents.
+
+### Query parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `days` | integer | `30` | Number of days of history to include |
+
+### Response
+
+```json
+[
+  {
+    "model": "openrouter/anthropic/claude-sonnet-4",
+    "provider": "openrouter",
+    "input_tokens": 120000,
+    "output_tokens": 35000,
+    "total_tokens": 155000,
+    "cost_usd": 0.35,
+    "turns": 200
+  }
+]
+```
+
+### Response fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `model` | string | Model identifier |
+| `provider` | string | AI provider name |
+| `input_tokens` | number | Total input tokens |
+| `output_tokens` | number | Total output tokens |
+| `total_tokens` | number | Total tokens across all types |
+| `cost_usd` | number | Estimated cost in USD |
+| `turns` | number | Total completion turns |
+
+## Daily totals
+
+```http
+GET /api/usage/daily
+```
+
+Returns total token usage and cost per day.
+
+### Query parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `days` | integer | `7` | Number of days of history to return |
+
+### Response
+
+```json
+[
+  {
+    "date": "2026-03-22",
+    "total_tokens": 85000,
+    "cost_usd": 0.19,
+    "turns": 72
+  },
+  {
+    "date": "2026-03-21",
+    "total_tokens": 62000,
+    "cost_usd": 0.14,
+    "turns": 55
+  }
+]
+```
+
+### Response fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `date` | string | Date in `YYYY-MM-DD` format |
+| `total_tokens` | number | Total tokens used that day |
+| `cost_usd` | number | Estimated cost in USD |
+| `turns` | number | Total completion turns |
+
+## Tool stats
+
+```http
+GET /api/usage/tools
+```
+
+Returns aggregated tool execution statistics, optionally filtered by agent.
+
+### Query parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `agentId` | string | — | Filter results to a specific agent. Omit for all agents. |
+| `days` | integer | `7` | Number of days of history to include |
+
+### Response
+
+```json
+[
+  {
+    "tool_name": "web_search",
+    "calls": 150,
+    "successes": 142,
+    "avg_ms": 1230.5
+  },
+  {
+    "tool_name": "code_edit",
+    "calls": 85,
+    "successes": 83,
+    "avg_ms": 450.2
+  }
+]
+```
+
+### Response fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `tool_name` | string | Name of the tool |
+| `calls` | number | Total number of invocations |
+| `successes` | number | Number of successful invocations |
+| `avg_ms` | number | Average execution duration in milliseconds |
+
+## Usage event schema
+
+Each usage event records the following fields internally:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `session_id` | string \| null | Session that generated the event |
+| `session_key` | string \| null | Session key for grouping related events |
+| `agent_id` | string \| null | Agent that triggered the completion |
+| `provider` | string | AI provider (for example `openrouter`, `anthropic`) |
+| `model` | string | Model identifier |
+| `input_tokens` | number | Number of input tokens |
+| `output_tokens` | number | Number of output tokens |
+| `cache_read_tokens` | number | Tokens served from cache |
+| `cache_write_tokens` | number | Tokens written to cache |
+| `total_tokens` | number | Sum of all token fields |
+| `cost_usd` | number | Estimated cost in USD |
+
+## Tool event schema
+
+Each tool event records:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `session_id` | string \| null | Session that triggered the tool call |
+| `agent_id` | string \| null | Agent that invoked the tool |
+| `tool_name` | string | Name of the tool |
+| `success` | boolean | Whether the tool call succeeded |
+| `duration_ms` | number \| null | Execution time in milliseconds |
+
+## Errors
+
+All usage tracking endpoints return the following error codes:
+
+| Code | Description |
+|------|-------------|
+| 401 | Unauthorized — missing or invalid bearer token |
+| 500 | Database query failed |
