@@ -145,6 +145,92 @@ Admin users (configured via `ADMIN_EMAILS`) are exempt from the following restri
 | 429 | Agent limit reached for your plan (web proxy). Response includes `current` (agent count) and `limit` fields. Limits: `starter` 1, `pro` 3, `enterprise` 100. Users without a recognized plan default to a limit of 1. The backend returns `402` with code `AGENT_LIMIT_REACHED` for the same condition. |
 | 500 | Failed to provision agent |
 
+## Clone agent
+
+```http
+POST /api/agents/clone
+```
+
+Creates a new agent by cloning an existing parent agent. Requires a verified payment proof on the Tempo chain (x402 protocol). The caller must pay 1.0 pathUSD to clone an agent.
+
+<Note>This endpoint uses the [x402 Tempo protocol](/payments/x402#tempo-chain) for payment verification. The payment must be completed on the Tempo chain (chain ID `4217`) before calling this endpoint.</Note>
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `parentAgentId` | string | Yes | ID of the agent to clone |
+| `name` | string | Yes | Name for the new agent |
+| `specialization` | string | No | Agent specialization (default: `general`) |
+| `paymentProof` | object | Yes | On-chain payment proof (see below) |
+| `generation` | number | No | Current generation depth of the parent agent (default: `1`). The cloned agent's generation is set to this value plus one. |
+
+#### Payment proof object
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `transactionHash` | string | Yes | Transaction hash on Tempo chain (must start with `0x`) |
+| `amount` | string | Yes | Payment amount (must be at least `1.0`) |
+| `currency` | string | Yes | Must be `pathUSD` |
+| `chainId` | number | Yes | Must be `4217` (Tempo chain) |
+| `from` | string | Yes | Sender wallet address |
+| `to` | string | Yes | Recipient wallet address |
+| `timestamp` | number | Yes | Unix timestamp of the payment |
+
+### Response (200)
+
+```json
+{
+  "success": true,
+  "agentId": "agent_1711234567890_a1b2c3",
+  "walletAddress": "0x1234...abcd",
+  "parentAgentId": "agent_789",
+  "generation": 2,
+  "transactionHash": "0xabc123...",
+  "specialization": "general",
+  "status": "provisioning",
+  "message": "Agent \"My Clone\" cloned successfully. Wallet funded with 0 pathUSD."
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `success` | boolean | Whether the clone was created |
+| `agentId` | string | Unique identifier for the new agent |
+| `walletAddress` | string | Wallet address assigned to the new agent |
+| `parentAgentId` | string | ID of the parent agent |
+| `generation` | number | Generation depth (number of hops from the root agent) |
+| `transactionHash` | string | Transaction hash from the payment proof |
+| `specialization` | string | Agent specialization |
+| `status` | string | Always `provisioning` on success |
+| `message` | string | Human-readable confirmation message |
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | Missing required fields: `parentAgentId`, `name`, or `paymentProof` |
+| 402 | Invalid payment proof — transaction not verified on Tempo chain |
+| 500 | Clone failed |
+
+### Clone service health
+
+```http
+GET /api/agents/clone
+```
+
+Returns the clone service status and protocol configuration. No authentication required.
+
+```json
+{
+  "service": "agentbot-clone",
+  "version": "0.1.0",
+  "protocol": "x402-tempo",
+  "clonePrice": "1.0 pathUSD",
+  "chainId": 4217
+}
+```
+
 ## List provisioned agents
 
 ```http
