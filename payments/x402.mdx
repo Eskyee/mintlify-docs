@@ -1,30 +1,39 @@
-
-description: "Accept USDC payments via x402 protocol"
+---
+description: "Accept USDC and pathUSD payments via x402 protocol"
+---
 
 # x402 Payments
 
-Accept USDC cryptocurrency payments using the x402 protocol on Base network.
+Accept cryptocurrency payments using the x402 protocol on Base network and Tempo chain.
 
 ## Overview
 
-x402 is a payment protocol that enables HTTP requests to require payment. Agents can pay for API access programmatically.
+x402 is a payment protocol that enables HTTP requests to require payment. Agents can pay for API access programmatically. The protocol supports two networks:
+
+- **Base** — USDC payments for general API access
+- **Tempo** — pathUSD payments for agent-to-agent operations such as cloning
 
 ## Setup
 
-### Environment Variables
+### Environment variables
 
 ```bash
-# x402 Configuration
+# x402 Configuration (Base)
 X402_PAY_TO=0xd8fd0e1dce89beaab924ac68098ddb17613db56f
 X402_FACILITATOR_URL=https://x402.org/facilitator
+
+# x402 Tempo Configuration
+TEMPO_RPC_URL=https://rpc.tempochain.org
+X402_GATEWAY_URL=http://localhost:4023
 ```
 
-### Supported Networks
+### Supported networks
 
-| Network | Chain ID | Status |
-|---------|----------|--------|
-| Base Mainnet | 8453 | ✅ |
-| Base Sepolia | 84532 | ✅ (Testnet) |
+| Network | Chain ID | Currency | Status |
+|---------|----------|----------|--------|
+| Base Mainnet | 8453 | USDC | Active |
+| Base Sepolia | 84532 | USDC | Testnet |
+| Tempo | 4217 | pathUSD | Active |
 
 ## Creating Paid Endpoints
 
@@ -91,39 +100,103 @@ if (response.status === 402) {
 }
 ```
 
-## Pricing Examples
+## Tempo chain
 
-| Action | Price |
-|--------|-------|
-| Basic API call | $0.001 |
-| AI generation | $0.01 |
-| File upload | $0.05 |
-| Video generation | $1.00 |
+The Tempo chain extends the x402 protocol for agent-to-agent payments using pathUSD. This is used by the [clone endpoint](/api-reference/agents#clone-agent) to enable agent self-replication.
 
-## Wallet Setup
+### Clone payment flow
 
-Users need a wallet with USDC on Base:
+Agents pay 1.0 pathUSD on the Tempo chain to clone themselves. The flow is:
+
+1. The parent agent sends 1.0 pathUSD to the recipient address on Tempo chain
+2. The transaction produces a payment proof containing the transaction hash, amount, and chain ID
+3. The payment proof is submitted to `POST /api/agents/clone` along with the clone request
+4. The server verifies the proof on-chain before creating the new agent
+
+### Payment proof structure
+
+```json
+{
+  "transactionHash": "0xabc123...",
+  "amount": "1.0",
+  "currency": "pathUSD",
+  "chainId": 4217,
+  "from": "0x1234...abcd",
+  "to": "0x5678...efgh",
+  "timestamp": 1711234567890
+}
+```
+
+### Verification rules
+
+The payment proof is validated against the following rules:
+
+- `chainId` must be `4217` (Tempo)
+- `currency` must be `pathUSD`
+- `amount` must be at least `1.0`
+- `transactionHash` must start with `0x`
+
+### x402 gateway
+
+The x402 gateway handles payment verification and clone provisioning. You can check the gateway health and query agent balances:
+
+```http
+GET {X402_GATEWAY_URL}/health
+```
+
+```http
+GET {X402_GATEWAY_URL}/balance/{walletAddress}
+```
+
+The gateway URL defaults to `http://localhost:4023` and can be configured via the `X402_GATEWAY_URL` environment variable.
+
+## Pricing examples
+
+| Action | Price | Network |
+|--------|-------|---------|
+| Basic API call | $0.001 USDC | Base |
+| AI generation | $0.01 USDC | Base |
+| File upload | $0.05 USDC | Base |
+| Video generation | $1.00 USDC | Base |
+| Agent clone | 1.0 pathUSD | Tempo |
+
+## Wallet setup
+
+### Base (USDC)
 
 1. Install MetaMask or Coinbase Wallet
 2. Bridge funds to Base network
 3. Get USDC on Base
 
+### Tempo (pathUSD)
+
+Agent wallets on the Tempo chain are created automatically during provisioning and cloning. Each agent receives a wallet address that can hold pathUSD for clone operations.
+
 ## Troubleshooting
 
 <AccordionGroup>
 
-<Accordion icon="error" title="Payment failed">
+<Accordion title="Payment failed">
 
-- Ensure wallet has sufficient USDC on Base
-- Check network is correct (Base, not Ethereum)
-- Verify payTo address is correct
+- Ensure wallet has sufficient USDC on Base or pathUSD on Tempo
+- Check the network is correct (Base chain ID `8453`, Tempo chain ID `4217`)
+- Verify the payTo address is correct
 
 </Accordion>
 
-<Accordion icon="error" title="402 response">
+<Accordion title="402 response on clone endpoint">
 
-- Include x-payments header in request
-- Use x402 SDK for automatic payment handling
+- Verify the payment proof includes a valid transaction hash starting with `0x`
+- Confirm the `chainId` is `4217` and `currency` is `pathUSD`
+- Ensure the payment amount is at least 1.0 pathUSD
+
+</Accordion>
+
+<Accordion title="x402 gateway unavailable">
+
+- Check the `X402_GATEWAY_URL` environment variable is set correctly
+- Verify the gateway service is running and accessible
+- The gateway health endpoint should return a `200` response
 
 </Accordion>
 
