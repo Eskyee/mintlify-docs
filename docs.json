@@ -39,7 +39,8 @@
         "pages": [
           "integrations/telegram",
           "integrations/discord",
-          "integrations/whatsapp"
+          "integrations/whatsapp",
+          "integrations/resend"
         ]
       },
       {
