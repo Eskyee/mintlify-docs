@@ -15,7 +15,7 @@ Mission control provides a real-time view of your agent fleet. Use these endpoin
 GET /api/mission-control/fleet/graph
 ```
 
-Returns a constellation graph of your agent fleet as a set of nodes and edges. Nodes are sourced from live soul instances and include fitness metrics, wallet addresses, and free energy data. When no soul instances are reachable, a fallback response is returned with a single offline coordinator node.
+Returns a constellation graph of your agent fleet as a set of nodes and edges. Each node represents an agent with a `role` and positional data for graph layout. Edges use `from`/`to` fields with a `strength` value indicating relationship weight.
 
 ### Authentication
 
@@ -27,57 +27,76 @@ Requires an authenticated session. No query parameters are needed — the fleet 
 {
   "nodes": [
     {
-      "id": "borg-0",
-      "name": "borg-0",
-      "type": "coordinator",
+      "id": "atlas",
+      "name": "Atlas",
+      "role": "orchestrator",
       "status": "active",
       "x": 400,
       "y": 300,
       "load": 72,
-      "memory": 58,
-      "fitness": 85,
-      "walletAddress": "0x1234...abcd",
-      "children": 2,
-      "endpoints": 5,
-      "cycles": 1042,
-      "regime": "explore",
-      "freeEnergy": 0.32,
-      "url": "https://borg-0-production.up.railway.app"
+      "memory": 58
     },
     {
-      "id": "borg-0-3",
-      "name": "borg-0-3",
-      "type": "specialist",
+      "id": "watchtower",
+      "name": "Watchtower",
+      "role": "monitor",
+      "status": "active",
+      "x": 200,
+      "y": 150,
+      "load": 18,
+      "memory": 22
+    },
+    {
+      "id": "djbot",
+      "name": "DJ Bot",
+      "role": "specialist",
       "status": "active",
       "x": 600,
       "y": 150,
       "load": 44,
-      "memory": 61,
-      "fitness": 72,
-      "walletAddress": "0x5678...efgh",
-      "children": 0,
-      "endpoints": 3,
-      "cycles": 580,
-      "regime": "exploit",
-      "freeEnergy": 0.18,
-      "url": "https://borg-0-3-production.up.railway.app"
+      "memory": 61
+    },
+    {
+      "id": "swarm1",
+      "name": "Swarm-1",
+      "role": "worker",
+      "status": "idle",
+      "x": 200,
+      "y": 450,
+      "load": 3,
+      "memory": 12
+    },
+    {
+      "id": "swarm2",
+      "name": "Swarm-2",
+      "role": "worker",
+      "status": "active",
+      "x": 600,
+      "y": 450,
+      "load": 55,
+      "memory": 38
     }
   ],
   "edges": [
     {
-      "id": "e-borg-0-borg-0-3",
-      "source": "borg-0",
-      "target": "borg-0-3",
-      "type": "delegates"
+      "id": "e1",
+      "from": "atlas",
+      "to": "watchtower",
+      "strength": 0.8
+    },
+    {
+      "id": "e2",
+      "from": "atlas",
+      "to": "djbot",
+      "strength": 0.7
     }
   ],
   "timestamp": "2026-03-22T12:00:00.000Z",
-  "source": "soul",
-  "nodeCount": 2
+  "source": "soul"
 }
 ```
 
-When no souls are reachable, the response uses the fallback shape:
+When no souls are reachable, the response uses the fallback shape with minimal node data:
 
 ```json
 {
@@ -85,7 +104,7 @@ When no souls are reachable, the response uses the fallback shape:
     {
       "id": "atlas",
       "name": "Atlas",
-      "type": "coordinator",
+      "role": "orchestrator",
       "status": "offline",
       "x": 400,
       "y": 300,
@@ -103,33 +122,27 @@ When no souls are reachable, the response uses the fallback shape:
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `id` | string | Unique agent identifier (soul designation) |
+| `id` | string | Unique agent identifier |
 | `name` | string | Agent display name |
-| `type` | string | Agent role. One of `coordinator`, `specialist`, or `worker` |
-| `status` | string | Current status. One of `active`, `idle`, `stale`, or `offline` (fallback only) |
+| `role` | string | Agent role. One of `orchestrator`, `monitor`, `specialist`, or `worker` |
+| `status` | string | Current status. One of `active`, `idle`, or `offline` (fallback only) |
 | `x` | number | Horizontal position for graph layout |
 | `y` | number | Vertical position for graph layout |
-| `load` | number | Current load percentage derived from active plan progress |
-| `memory` | number | Memory usage percentage derived from cortex experience count |
-| `fitness` | number | Overall fitness score (0–100) from the soul's fitness metrics |
-| `walletAddress` | string | On-chain wallet address of the soul instance |
-| `children` | number | Number of child instances spawned by this node |
-| `endpoints` | number | Number of registered endpoints on this node |
-| `cycles` | number | Total execution cycles completed |
-| `regime` | string | Current free energy regime (for example `"explore"` or `"exploit"`) |
-| `freeEnergy` | number | Current free energy value (F) |
-| `url` | string | Base URL of the soul instance |
+| `load` | number | Current load percentage (0–100) |
+| `memory` | number | Memory usage percentage (0–100) |
 
-<Note>The fields `fitness`, `walletAddress`, `children`, `endpoints`, `cycles`, `regime`, `freeEnergy`, and `url` are only present on nodes sourced from live soul instances. They are omitted in the fallback response.</Note>
+<Note>The `type` field was renamed to `role` and now uses the values `orchestrator`, `monitor`, `specialist`, and `worker`.</Note>
 
 ### Edge object
 
 | Field | Type | Description |
 |-------|------|-------------|
 | `id` | string | Unique edge identifier |
-| `source` | string | Source agent ID |
-| `target` | string | Target agent ID |
-| `type` | string | Relationship type. One of `delegates` or `spawns` |
+| `from` | string | Source agent ID |
+| `to` | string | Target agent ID |
+| `strength` | number | Relationship weight between 0 and 1 |
+
+<Note>The `source` and `target` fields were renamed to `from` and `to`. The `type` field on edges was replaced by `strength`.</Note>
 
 ### Response metadata
 
@@ -137,7 +150,6 @@ When no souls are reachable, the response uses the fallback shape:
 |-------|------|-------------|
 | `timestamp` | string | ISO 8601 timestamp of the response |
 | `source` | string | Data source. `"soul"` for live data, `"fallback"` when no souls are reachable |
-| `nodeCount` | number | Number of live soul nodes fetched. Only present when `source` is `"soul"` |
 
 ### Errors
 
