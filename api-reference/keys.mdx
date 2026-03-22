@@ -118,7 +118,7 @@ Requires ownership of the key.
 POST /api/keys/validate
 ```
 
-Verifies an API key against its bcrypt hash in the database and returns the associated user information. This endpoint is called by the backend API to validate keys provided during install and link scripts. No session authentication is required.
+Verifies an API key against its bcrypt hash in the database and returns the associated user information. This endpoint is called by the backend API's [`POST /api/validate-key`](/api-reference/registration#validate-api-key) endpoint to validate keys provided during install and link scripts. No session authentication is required.
 
 ### Request body
 
