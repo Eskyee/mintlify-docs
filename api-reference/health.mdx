@@ -205,3 +205,58 @@ Both endpoints are unauthenticated and bind to the container's internal port (`1
 
 - Docker runs a `HEALTHCHECK` against `http://127.0.0.1:18789/healthz` every 30 seconds with a 5-second timeout, a 20-second start period, and 5 retries before marking the container as unhealthy. The health probe uses `node -e "fetch(...)"` instead of `curl` because the official OpenClaw image does not include `curl`.
 - The `waitForHealthy` function polls container health every 2 seconds, with a default overall timeout of 60 seconds.
+
+## Watchdog monitoring
+
+The backend runs a per-agent watchdog service that continuously monitors agent health, detects crash loops, and performs automatic recovery. The watchdog operates internally and does not expose dedicated API endpoints. Status information is surfaced through the existing agent status and lifecycle endpoints.
+
+### Health check cycle
+
+The watchdog probes each agent's gateway at `GET /healthz` on the agent's internal port. Health checks run on a configurable interval (default: every 2 minutes). When the gateway reports unhealthy, the watchdog transitions the agent to a degraded state and increases the check frequency to every 5 seconds.
+
+| Parameter | Default | Environment variable |
+|-----------|---------|---------------------|
+| Health check interval | 120 seconds | `WATCHDOG_CHECK_INTERVAL` |
+| Degraded check interval | 5 seconds | `WATCHDOG_DEGRADED_CHECK_INTERVAL` |
+| Startup failure threshold | 3 consecutive failures | `WATCHDOG_STARTUP_FAILURE_THRESHOLD` |
+| Max repair attempts | 2 | `WATCHDOG_MAX_REPAIR_ATTEMPTS` |
+| Crash loop window | 5 minutes | `WATCHDOG_CRASH_LOOP_WINDOW` |
+| Crash loop threshold | 3 crashes in window | `WATCHDOG_CRASH_LOOP_THRESHOLD` |
+
+### Lifecycle states
+
+The watchdog tracks the following lifecycle states for each agent:
+
+| State | Description |
+|-------|-------------|
+| `stopped` | Agent is not running |
+| `starting` | Agent container has started; waiting for the first successful health check |
+| `running` | Agent is healthy and serving requests |
+| `degraded` | Health checks are failing after a previous healthy state |
+| `crash_loop` | Multiple crashes detected within the crash loop window |
+| `repairing` | Auto-repair is in progress |
+
+### Auto-repair
+
+When the watchdog detects an unhealthy agent, it can automatically attempt recovery. Auto-repair is enabled by default and can be disabled by setting the `WATCHDOG_AUTO_REPAIR` environment variable to `false`.
+
+The repair sequence is:
+
+1. Kill the agent gateway process
+2. Wait 5 seconds
+3. Restart the gateway
+4. Wait 30 seconds (startup grace period)
+5. Verify health
+
+If the repair fails, the watchdog retries up to the configured maximum (default: 2 attempts). After exhausting all repair attempts, the agent transitions to the `crash_loop` state.
+
+### Crash loop detection
+
+The watchdog tracks crash timestamps within a sliding window (default: 5 minutes). When the number of crashes in the window reaches the threshold (default: 3), the agent enters the `crash_loop` state. This prevents infinite restart loops for agents with persistent failures.
+
+### Notifications
+
+The watchdog sends notifications for critical events (degraded, crash loop, repair attempts) through configured channels:
+
+- **Telegram** — when `TELEGRAM_BOT_TOKEN` and `TELEGRAM_ADMIN_CHAT_ID` are set
+- **Discord** — when `DISCORD_WEBHOOK_URL` is set

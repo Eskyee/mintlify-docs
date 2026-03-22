@@ -238,7 +238,7 @@ GET /api/agents/:id/logs
 
 Returns logs for an agent. Requires authentication and ownership.
 
-<Warning>This endpoint currently returns mock data. Log entries are generated placeholders, not real agent logs. A future release will connect this endpoint to the backend logging service.</Warning>
+<Warning>This endpoint currently returns mock data. Log entries are generated placeholders, not real agent logs. For real-time logs, use the [live log stream](#stream-agent-logs) endpoint instead.</Warning>
 
 ### Query parameters
 
@@ -274,6 +274,177 @@ Returns logs for an agent. Requires authentication and ownership.
 | 401 | Unauthorized |
 | 404 | Agent not found |
 | 500 | Failed to fetch logs |
+
+## Stream agent logs
+
+```http
+GET /api/logs/:agentId/stream
+```
+
+Streams live logs from an agent's container via Server-Sent Events (SSE). Requires API key authentication (backend). The stream follows the Docker container logs in real time without requiring SSH access.
+
+When a client connects, existing buffered log lines are sent immediately, followed by new lines as they arrive. The server maintains a buffer of up to 500 lines per agent.
+
+### Path parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `agentId` | string | Agent identifier |
+
+### Response
+
+The response uses the `text/event-stream` content type. Each event is a JSON object sent as an SSE `data` field.
+
+#### Connection event
+
+Sent immediately on connection:
+
+```
+data: {"type": "connected", "agentId": "agent_123"}
+```
+
+#### Log line event
+
+Sent for each log line (stdout). Lines from stderr are prefixed with `[stderr]`:
+
+```
+data: {"type": "line", "text": "2026-03-22T00:00:00Z [gateway] Agent started"}
+```
+
+#### Exit event
+
+Sent when the container process exits:
+
+```
+data: {"type": "exit", "code": 0}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `type` | string | Event type: `connected`, `line`, or `exit` |
+| `agentId` | string | Agent identifier (present on `connected` events) |
+| `text` | string | Log line content (present on `line` events) |
+| `code` | number | Process exit code (present on `exit` events) |
+
+### Stream behavior
+
+- The server buffers the most recent 500 log lines per agent.
+- Multiple clients can connect to the same agent's stream simultaneously.
+- When all clients disconnect, the stream continues for a 30-second grace period before stopping. If a client reconnects within this window, the stream resumes without interruption.
+- Docker `--tail 100` is used when initially attaching to the container logs.
+
+### Headers
+
+| Header | Value |
+|--------|-------|
+| `Content-Type` | `text/event-stream` |
+| `Cache-Control` | `no-cache` |
+| `Connection` | `keep-alive` |
+| `X-Accel-Buffering` | `no` |
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | `agentId required` |
+
+### Example
+
+```bash
+curl -N https://backend.example.com/api/logs/agent_123/stream \
+  -H "Authorization: Bearer YOUR_INTERNAL_API_KEY"
+```
+
+## Get log history
+
+```http
+GET /api/logs/:agentId/history
+```
+
+Returns recent buffered log lines for an agent without streaming. Requires API key authentication (backend). Returns an empty array if no active stream exists for the agent.
+
+### Path parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `agentId` | string | Agent identifier |
+
+### Response
+
+```json
+{
+  "agentId": "agent_123",
+  "lines": [
+    "2026-03-22T00:00:00Z [gateway] Agent started",
+    "2026-03-22T00:00:01Z [gateway] Health check passed"
+  ],
+  "streaming": true,
+  "clients": 2
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `agentId` | string | Agent identifier |
+| `lines` | string[] | Buffered log lines (up to 500) |
+| `streaming` | boolean | Whether an active log stream exists for this agent |
+| `clients` | number | Number of SSE clients currently connected to this agent's stream |
+
+## Stop log stream
+
+```http
+POST /api/logs/:agentId/stop
+```
+
+Stops the live log stream for an agent and disconnects all SSE clients. Requires API key authentication (backend). Returns success even if no active stream exists.
+
+### Path parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `agentId` | string | Agent identifier |
+
+### Response
+
+```json
+{
+  "success": true
+}
+```
+
+## List active log streams
+
+```http
+GET /api/logs/active
+```
+
+Returns all currently active log streams across all agents. Requires API key authentication (backend).
+
+### Response
+
+```json
+{
+  "streams": [
+    {
+      "agentId": "agent_123",
+      "clients": 2,
+      "lines": 150
+    },
+    {
+      "agentId": "agent_456",
+      "clients": 1,
+      "lines": 42
+    }
+  ]
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `streams` | array | List of active log streams |
+| `streams[].agentId` | string | Agent identifier |
+| `streams[].clients` | number | Number of connected SSE clients |
+| `streams[].lines` | number | Number of buffered log lines |
 
 ## Get agent messages
 
