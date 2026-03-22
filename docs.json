@@ -82,6 +82,7 @@
           "api-reference/usage-tracking",
           "api-reference/watchdog",
           "api-reference/log-tail",
+          "api-reference/colony",
           "api-reference/swarms",
           "api-reference/underground",
           "api-reference/invite"
