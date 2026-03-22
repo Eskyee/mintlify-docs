@@ -180,6 +180,94 @@ Requires session authentication.
 | 401 | Unauthorized |
 | 500 | Failed to list agents |
 
+## Clone agent
+
+```http
+POST /api/agents/clone
+```
+
+Clones an existing agent into a new agent instance. Requires an [x402 payment proof](/payments/x402) to complete. The cloned agent receives a new wallet and is assigned a generation number one higher than its parent.
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `parentAgentId` | string | Yes | ID of the agent to clone |
+| `name` | string | Yes | Name for the new agent |
+| `specialization` | string | No | Agent specialization. Options: `general` (default), `ar`, `promo`, `booking`, `support`, `analytics` |
+| `generation` | number | No | Current generation of the parent agent (default: `1`). The cloned agent is assigned `generation + 1`. |
+| `paymentProof` | object | Yes | On-chain payment proof for the clone fee |
+| `paymentProof.transactionHash` | string | Yes | Transaction hash of the payment |
+| `paymentProof.amount` | string | Yes | Amount paid (for example, `"1.0"`) |
+| `paymentProof.currency` | string | Yes | Currency used (for example, `"pathUSD"`) |
+| `paymentProof.chainId` | number | Yes | Chain ID of the transaction (for example, `4217` for Tempo) |
+| `paymentProof.from` | string | Yes | Sender wallet address |
+| `paymentProof.to` | string | Yes | Recipient wallet address |
+| `paymentProof.timestamp` | number | Yes | Unix timestamp of the payment |
+
+### Response (200 OK)
+
+```json
+{
+  "success": true,
+  "agentId": "agent_1710806400000_a1b2c3",
+  "walletAddress": "0x1234...5678",
+  "parentAgentId": "agent_123",
+  "generation": 2,
+  "transactionHash": "0xabc...def",
+  "specialization": "general",
+  "status": "provisioning",
+  "message": "Agent \"My Clone\" cloned successfully. Wallet funded with 0 pathUSD."
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `agentId` | string | Unique identifier for the new agent |
+| `walletAddress` | string | Wallet address assigned to the cloned agent |
+| `parentAgentId` | string | ID of the parent agent |
+| `generation` | number | Generation number of the cloned agent (parent generation + 1) |
+| `transactionHash` | string | Transaction hash from the payment proof |
+| `specialization` | string | Specialization assigned to the clone |
+| `status` | string | Current status. Always `provisioning` on success. |
+| `message` | string | Human-readable confirmation message |
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | Missing required fields: `parentAgentId`, `name`, or `paymentProof` |
+| 402 | Invalid payment proof — transaction not verified on Tempo chain |
+| 500 | Clone failed |
+
+## Clone endpoint status
+
+```http
+GET /api/agents/clone
+```
+
+Returns the current status of the clone service, including pricing and protocol information. No authentication required.
+
+### Response
+
+```json
+{
+  "service": "agentbot-clone",
+  "version": "0.1.0",
+  "protocol": "x402-tempo",
+  "clonePrice": "1.0 pathUSD",
+  "chainId": 4217
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `service` | string | Service identifier |
+| `version` | string | Clone service version |
+| `protocol` | string | Payment protocol used |
+| `clonePrice` | string | Current price to clone an agent |
+| `chainId` | number | Blockchain chain ID for payments |
+
 ## Get agent configuration
 
 ```http
