@@ -7,7 +7,7 @@ description: "Monitor your agent fleet with real-time graphs, execution traces, 
 
 Mission control provides a real-time view of your agent fleet. Use these endpoints to visualize agent relationships, trace execution activity, attribute costs per agent, and track talent bookings.
 
-<Note>All mission control endpoints require authentication and are scoped to the authenticated user's data through [row-level security](/security#row-level-security).</Note>
+<Note>All mission control endpoints require authentication via session. The authenticated user's fleet is returned automatically.</Note>
 
 ## Fleet graph
 
@@ -15,15 +15,69 @@ Mission control provides a real-time view of your agent fleet. Use these endpoin
 GET /api/mission-control/fleet/graph
 ```
 
-Returns a constellation graph of your agent fleet as a set of nodes and edges. Each node represents an agent, and edges represent coordination relationships (delegation, monitoring) between agents.
+Returns a constellation graph of your agent fleet as a set of nodes and edges. Nodes are sourced from live soul instances and include fitness metrics, wallet addresses, and free energy data. When no soul instances are reachable, a fallback response is returned with a single offline coordinator node.
 
-### Query parameters
+### Authentication
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `userId` | number | Yes | The user ID to fetch the fleet graph for |
+Requires an authenticated session. No query parameters are needed — the fleet is resolved from your session.
 
 ### Response
+
+```json
+{
+  "nodes": [
+    {
+      "id": "borg-0",
+      "name": "borg-0",
+      "type": "coordinator",
+      "status": "active",
+      "x": 400,
+      "y": 300,
+      "load": 72,
+      "memory": 58,
+      "fitness": 85,
+      "walletAddress": "0x1234...abcd",
+      "children": 2,
+      "endpoints": 5,
+      "cycles": 1042,
+      "regime": "explore",
+      "freeEnergy": 0.32,
+      "url": "https://borg-0-production.up.railway.app"
+    },
+    {
+      "id": "borg-0-3",
+      "name": "borg-0-3",
+      "type": "specialist",
+      "status": "active",
+      "x": 600,
+      "y": 150,
+      "load": 44,
+      "memory": 61,
+      "fitness": 72,
+      "walletAddress": "0x5678...efgh",
+      "children": 0,
+      "endpoints": 3,
+      "cycles": 580,
+      "regime": "exploit",
+      "freeEnergy": 0.18,
+      "url": "https://borg-0-3-production.up.railway.app"
+    }
+  ],
+  "edges": [
+    {
+      "id": "e-borg-0-borg-0-3",
+      "source": "borg-0",
+      "target": "borg-0-3",
+      "type": "delegates"
+    }
+  ],
+  "timestamp": "2026-03-22T12:00:00.000Z",
+  "source": "soul",
+  "nodeCount": 2
+}
+```
+
+When no souls are reachable, the response uses the fallback shape:
 
 ```json
 {
@@ -32,32 +86,16 @@ Returns a constellation graph of your agent fleet as a set of nodes and edges. E
       "id": "atlas",
       "name": "Atlas",
       "type": "coordinator",
-      "status": "active",
+      "status": "offline",
       "x": 400,
       "y": 300,
-      "load": 72,
-      "memory": 58
-    },
-    {
-      "id": "djbot",
-      "name": "DJ Bot",
-      "type": "specialist",
-      "status": "active",
-      "x": 600,
-      "y": 150,
-      "load": 44,
-      "memory": 61
+      "load": 0,
+      "memory": 0
     }
   ],
-  "edges": [
-    {
-      "id": "e1",
-      "source": "atlas",
-      "target": "djbot",
-      "type": "delegates"
-    }
-  ],
-  "timestamp": "2026-03-21T12:00:00.000Z"
+  "edges": [],
+  "timestamp": "2026-03-22T12:00:00.000Z",
+  "source": "fallback"
 }
 ```
 
@@ -65,14 +103,24 @@ Returns a constellation graph of your agent fleet as a set of nodes and edges. E
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `id` | string | Unique agent identifier |
+| `id` | string | Unique agent identifier (soul designation) |
 | `name` | string | Agent display name |
-| `type` | string | Agent role. One of `coordinator`, `monitor`, `specialist`, or `worker` |
-| `status` | string | Current status. One of `active`, `idle`, or `error` |
+| `type` | string | Agent role. One of `coordinator`, `specialist`, or `worker` |
+| `status` | string | Current status. One of `active`, `idle`, `stale`, or `offline` (fallback only) |
 | `x` | number | Horizontal position for graph layout |
 | `y` | number | Vertical position for graph layout |
-| `load` | number | Current CPU load percentage |
-| `memory` | number | Current memory usage percentage |
+| `load` | number | Current load percentage derived from active plan progress |
+| `memory` | number | Memory usage percentage derived from cortex experience count |
+| `fitness` | number | Overall fitness score (0–100) from the soul's fitness metrics |
+| `walletAddress` | string | On-chain wallet address of the soul instance |
+| `children` | number | Number of child instances spawned by this node |
+| `endpoints` | number | Number of registered endpoints on this node |
+| `cycles` | number | Total execution cycles completed |
+| `regime` | string | Current free energy regime (for example `"explore"` or `"exploit"`) |
+| `freeEnergy` | number | Current free energy value (F) |
+| `url` | string | Base URL of the soul instance |
+
+<Note>The fields `fitness`, `walletAddress`, `children`, `endpoints`, `cycles`, `regime`, `freeEnergy`, and `url` are only present on nodes sourced from live soul instances. They are omitted in the fallback response.</Note>
 
 ### Edge object
 
@@ -81,14 +129,21 @@ Returns a constellation graph of your agent fleet as a set of nodes and edges. E
 | `id` | string | Unique edge identifier |
 | `source` | string | Source agent ID |
 | `target` | string | Target agent ID |
-| `type` | string | Relationship type, such as `delegates` or `monitors` |
+| `type` | string | Relationship type. One of `delegates` or `spawns` |
+
+### Response metadata
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `timestamp` | string | ISO 8601 timestamp of the response |
+| `source` | string | Data source. `"soul"` for live data, `"fallback"` when no souls are reachable |
+| `nodeCount` | number | Number of live soul nodes fetched. Only present when `source` is `"soul"` |
 
 ### Errors
 
 | Code | Description |
 |------|-------------|
-| 401 | Unauthorized |
-| 500 | Failed to fetch fleet graph |
+| 401 | Unauthorized — no valid session |
 
 ## Execution traces
 
@@ -96,37 +151,55 @@ Returns a constellation graph of your agent fleet as a set of nodes and edges. E
 GET /api/mission-control/fleet/traces
 ```
 
-Returns real-time execution traces for your agent fleet. Each trace represents a single task execution, including tool calls, inference steps, and monitoring events.
+Returns up to 20 of the most recent execution traces for your agent fleet, sorted by recency. Traces include active plan steps, recent thoughts, free energy component readings, and cycle status from live soul instances. Returns an empty array when no soul instances are reachable.
 
-### Query parameters
+### Authentication
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `userId` | number | Yes | The user ID to fetch traces for |
+Requires an authenticated session. No query parameters are needed — traces are resolved from your session.
 
 ### Response
 
 ```json
 [
   {
-    "id": "trace-1711022400000-0",
-    "type": "tool_call",
-    "label": "fetch_calendar_events",
-    "agent": "Atlas",
-    "status": "success",
-    "duration": "142ms",
-    "startedAt": "2026-03-21T12:00:00.000Z",
+    "id": "trace-plan-0",
+    "type": "plan",
+    "label": "plan: reflect (2/5)",
+    "agent": "borg-0",
+    "status": "running",
+    "duration": "—",
+    "startedAt": "2026-03-22T12:00:00.000Z",
     "tokens": null
   },
   {
-    "id": "trace-1711022400000-1",
+    "id": "trace-thought-0-0",
     "type": "inference",
-    "label": "summarise_messages",
-    "agent": "Atlas",
+    "label": "plan: next step is to consolidate memory entries",
+    "agent": "borg-0",
     "status": "success",
     "duration": "285ms",
-    "startedAt": "2026-03-21T11:59:56.000Z",
+    "startedAt": "2026-03-22T11:59:56.000Z",
     "tokens": 542
+  },
+  {
+    "id": "trace-fe-0-0",
+    "type": "monitor",
+    "label": "cortex: surprise=0.12, contribution=0.04",
+    "agent": "borg-0",
+    "status": "success",
+    "duration": "1ms",
+    "startedAt": "2026-03-22T11:59:50.000Z",
+    "tokens": null
+  },
+  {
+    "id": "trace-cycles-0",
+    "type": "monitor",
+    "label": "cycle 1042 complete — mode: active, regime: explore",
+    "agent": "borg-0",
+    "status": "success",
+    "duration": "—",
+    "startedAt": "2026-03-22T11:59:45.000Z",
+    "tokens": null
   }
 ]
 ```
@@ -136,20 +209,21 @@ Returns real-time execution traces for your agent fleet. Each trace represents a
 | Field | Type | Description |
 |-------|------|-------------|
 | `id` | string | Unique trace identifier |
-| `type` | string | Task type. One of `tool_call`, `inference`, or `monitor` |
+| `type` | string | Task type. One of `plan`, `tool_call`, `inference`, or `monitor` |
 | `label` | string | Description of the task executed |
-| `agent` | string | Name of the agent that executed the task |
-| `status` | string | Execution result. One of `success` or `running` |
-| `duration` | string | Execution time in milliseconds (for example `"142ms"`) |
+| `agent` | string | Soul designation that produced the trace (for example `"borg-0"`) |
+| `status` | string | Execution result. One of `success`, `running`, or `idle` |
+| `duration` | string | Execution time in milliseconds (for example `"285ms"`), or `"—"` for ongoing or non-timed traces |
 | `startedAt` | string | ISO 8601 timestamp when the task started |
-| `tokens` | number \| null | Token count for inference tasks. `null` for non-inference tasks |
+| `tokens` | number \| null | Token count for inference-type traces. `null` for other trace types |
+
+<Note>The response is capped at 20 traces, sorted from most recent to oldest.</Note>
 
 ### Errors
 
 | Code | Description |
 |------|-------------|
-| 401 | Unauthorized |
-| 500 | Failed to fetch traces |
+| 401 | Unauthorized — no valid session |
 
 ## Cost attribution
 
