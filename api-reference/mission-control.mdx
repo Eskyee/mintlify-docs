@@ -27,72 +27,71 @@ Requires an authenticated session. No query parameters are needed — the fleet 
 {
   "nodes": [
     {
-      "id": "atlas",
-      "name": "Atlas",
+      "id": "borg-0",
+      "name": "borg-0",
       "role": "orchestrator",
       "status": "active",
       "x": 400,
       "y": 300,
       "load": 72,
-      "memory": 58
+      "memory": 58,
+      "fitness": 85,
+      "walletAddress": "0x1234...abcd",
+      "children": 2,
+      "endpoints": 3,
+      "cycles": 1042,
+      "regime": "explore",
+      "freeEnergy": 0.34,
+      "url": "https://borg-0-production.up.railway.app"
     },
     {
-      "id": "watchtower",
-      "name": "Watchtower",
-      "role": "monitor",
-      "status": "active",
-      "x": 200,
-      "y": 150,
-      "load": 18,
-      "memory": 22
-    },
-    {
-      "id": "djbot",
-      "name": "DJ Bot",
+      "id": "borg-0-3",
+      "name": "borg-0-3",
       "role": "specialist",
       "status": "active",
-      "x": 600,
-      "y": 150,
+      "x": 400,
+      "y": 250,
       "load": 44,
-      "memory": 61
+      "memory": 61,
+      "fitness": 70,
+      "walletAddress": "0x5678...ef01",
+      "children": 0,
+      "endpoints": 1,
+      "cycles": 530,
+      "regime": "exploit",
+      "freeEnergy": 0.18,
+      "url": "https://borg-0-3-production.up.railway.app"
     },
     {
-      "id": "swarm1",
-      "name": "Swarm-1",
-      "role": "worker",
-      "status": "idle",
-      "x": 200,
-      "y": 450,
-      "load": 3,
-      "memory": 12
-    },
-    {
-      "id": "swarm2",
-      "name": "Swarm-2",
+      "id": "a1b2c3d4",
+      "name": "Clone-a1b2c3d4",
       "role": "worker",
       "status": "active",
-      "x": 600,
+      "x": 200,
       "y": 450,
-      "load": 55,
-      "memory": 38
+      "load": 30,
+      "memory": 20,
+      "fitness": 40,
+      "walletAddress": "0xabcd...1234"
     }
   ],
   "edges": [
     {
-      "id": "e1",
-      "from": "atlas",
-      "to": "watchtower",
-      "strength": 0.8
+      "id": "e-borg-0-a1b2c3d4",
+      "from": "borg-0",
+      "to": "a1b2c3d4",
+      "strength": 0.6
     },
     {
-      "id": "e2",
-      "from": "atlas",
-      "to": "djbot",
+      "id": "e-borg-0-borg-0-3",
+      "from": "borg-0",
+      "to": "borg-0-3",
       "strength": 0.7
     }
   ],
   "timestamp": "2026-03-22T12:00:00.000Z",
-  "source": "soul"
+  "source": "soul",
+  "nodeCount": 2
 }
 ```
 
@@ -122,16 +121,24 @@ When no souls are reachable, the response uses the fallback shape with minimal n
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `id` | string | Unique agent identifier |
+| `id` | string | Unique agent identifier (designation or truncated instance ID for clones) |
 | `name` | string | Agent display name |
-| `role` | string | Agent role. One of `orchestrator`, `monitor`, `specialist`, or `worker` |
-| `status` | string | Current status. One of `active`, `idle`, or `offline` (fallback only) |
+| `role` | string | Agent role. One of `orchestrator`, `specialist`, or `worker` |
+| `status` | string | Current status. One of `active`, `idle`, `stale`, or `offline` (fallback only) |
 | `x` | number | Horizontal position for graph layout |
 | `y` | number | Vertical position for graph layout |
-| `load` | number | Current load percentage (0–100) |
-| `memory` | number | Memory usage percentage (0–100) |
+| `load` | number | Current load percentage (0–100). Derived from active plan progress |
+| `memory` | number | Memory usage percentage (0–100). Derived from cortex experience count |
+| `fitness` | number | Fitness score (0–100). Only present on live nodes |
+| `walletAddress` | string | On-chain wallet address of the agent. Present when available |
+| `children` | number | Number of child (clone) instances. Only present on parent nodes |
+| `endpoints` | number | Number of registered endpoints. Only present on parent nodes |
+| `cycles` | number | Total cognitive cycles completed. Only present on parent nodes |
+| `regime` | string | Current free energy regime (for example `"explore"` or `"exploit"`). Only present on parent nodes |
+| `freeEnergy` | number | Current free energy value. Only present on parent nodes |
+| `url` | string | Soul instance URL. Only present on parent nodes |
 
-<Note>The `type` field was renamed to `role` and now uses the values `orchestrator`, `monitor`, `specialist`, and `worker`.</Note>
+<Note>The `type` field was renamed to `role` and now uses the values `orchestrator`, `specialist`, and `worker`. The `monitor` role is no longer returned by this endpoint.</Note>
 
 ### Edge object
 
@@ -150,6 +157,7 @@ When no souls are reachable, the response uses the fallback shape with minimal n
 |-------|------|-------------|
 | `timestamp` | string | ISO 8601 timestamp of the response |
 | `source` | string | Data source. `"soul"` for live data, `"fallback"` when no souls are reachable |
+| `nodeCount` | number | Number of live soul nodes fetched. Only present when `source` is `"soul"` |
 
 ### Errors
 
