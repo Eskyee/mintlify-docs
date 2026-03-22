@@ -20,14 +20,22 @@ No authentication required. Returns the current status of the x402 gateway.
 ```json
 {
   "gateway": "https://x402-gateway-production-005f.up.railway.app",
-  "status": "ok"
+  "status": "healthy",
+  "service": "x402-gateway",
+  "agents": 5,
+  "colonies": 1,
+  "timestamp": "2026-03-22T12:00:00.000Z"
 }
 ```
 
 | Field | Type | Description |
 |-------|------|-------------|
 | `gateway` | string | URL of the upstream x402 gateway |
-| `status` | string | Gateway health status |
+| `status` | string | Gateway health status (e.g. `healthy`) |
+| `service` | string | Service identifier |
+| `agents` | number | Number of registered agents |
+| `colonies` | number | Number of active colonies |
+| `timestamp` | string | ISO 8601 timestamp of the health check |
 
 ### Response (503)
 
@@ -84,6 +92,8 @@ Register an agent with the x402 colony.
 
 Retrieve the fitness score for an agent.
 
+**Request:**
+
 ```json
 {
   "agentId": "inst_abc123",
@@ -91,9 +101,31 @@ Retrieve the fitness score for an agent.
 }
 ```
 
+**Response (200):**
+
+```json
+{
+  "score": 85,
+  "tier": "gold",
+  "details": {
+    "prediction": 0.78,
+    "execution": 0.91,
+    "coordination": 0.88
+  }
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `score` | number | Agent fitness score (0–100) |
+| `tier` | string | Fitness tier (e.g. `bronze`, `silver`, `gold`) |
+| `details` | object | Breakdown of fitness dimensions |
+
 #### `pricing`
 
-Retrieve dynamic pricing for an agent.
+Retrieve dynamic pricing for an agent. Pricing is adjusted based on the agent's fitness score and tier.
+
+**Request:**
 
 ```json
 {
@@ -102,9 +134,37 @@ Retrieve dynamic pricing for an agent.
 }
 ```
 
+**Response (200):**
+
+```json
+{
+  "agentId": "inst_abc123",
+  "tier": "gold",
+  "pricing": {
+    "rate": 0.05,
+    "discount": 0.1
+  },
+  "fitness": {
+    "score": 85,
+    "tier": "gold"
+  }
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `agentId` | string | Agent instance identifier |
+| `tier` | string | Pricing tier |
+| `pricing.rate` | number | Current rate per request |
+| `pricing.discount` | number | Discount factor applied based on fitness |
+| `fitness.score` | number | Agent fitness score |
+| `fitness.tier` | string | Agent fitness tier |
+
 #### `endpoints`
 
 List all available endpoints on the x402 gateway.
+
+**Request:**
 
 ```json
 {
@@ -113,9 +173,37 @@ List all available endpoints on the x402 gateway.
 }
 ```
 
+**Response (200):**
+
+```json
+{
+  "endpoints": [
+    {
+      "slug": "chat",
+      "description": "Chat with the soul",
+      "price": "0.001"
+    },
+    {
+      "slug": "clone",
+      "description": "Clone an agent",
+      "price": "1.0"
+    }
+  ]
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `endpoints` | array | List of available gateway endpoints |
+| `endpoints[].slug` | string | Endpoint identifier |
+| `endpoints[].description` | string | Human-readable description |
+| `endpoints[].price` | string | Price per request in pathUSD |
+
 #### `pay`
 
 Execute a payment through the x402 gateway.
+
+**Request:**
 
 ```json
 {
