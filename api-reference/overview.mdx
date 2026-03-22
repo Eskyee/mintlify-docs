@@ -240,6 +240,10 @@ curl -X POST https://agentbot.raveculture.xyz/api/ai/chat \
 | `/api/mission-control/fleet/traces` | GET | Get real-time execution traces |
 | `/api/mission-control/fleet/costs` | GET | Get per-agent cost attribution |
 | `/api/mission-control/fleet/bookings` | GET | Get talent bookings |
+| `/api/logs/:agentId/stream` | GET | Stream live agent logs via SSE (backend only) |
+| `/api/logs/:agentId/history` | GET | Get buffered log lines (backend only) |
+| `/api/logs/:agentId/stop` | POST | Stop a live log stream (backend only) |
+| `/api/logs/active` | GET | List active log streams (backend only) |
 | `/api/swarms` | GET | List agent swarms |
 | `/api/swarms` | POST | Create an agent swarm |
 
