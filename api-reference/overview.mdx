@@ -244,6 +244,18 @@ curl -X POST https://agentbot.raveculture.xyz/api/ai/chat \
 | `/api/logs/:agentId/history` | GET | Get buffered log lines (backend only) |
 | `/api/logs/:agentId/stop` | POST | Stop a live log stream (backend only) |
 | `/api/logs/active` | GET | List active log streams (backend only) |
+| `/api/browse/tree` | GET | Get workspace file tree (backend only, requires auth) |
+| `/api/browse/read` | GET | Read a workspace file (backend only, requires auth) |
+| `/api/browse/write` | POST | Write a workspace file (backend only, requires auth) |
+| `/api/browse/git-status` | GET | Get workspace git status (backend only, requires auth) |
+| `/api/browse/git-diff` | GET | Get workspace git diff (backend only, requires auth) |
+| `/api/browse/git-sync` | POST | Commit and push workspace changes (backend only, requires auth) |
+| `/api/browse/git-log` | GET | Get workspace commit history (backend only, requires auth) |
+| `/api/usage/summary` | GET | Get aggregated token usage summary (backend only, requires auth) |
+| `/api/usage/by-agent/:agentId` | GET | Get token usage for a specific agent (backend only, requires auth) |
+| `/api/usage/by-model` | GET | Get token usage grouped by model (backend only, requires auth) |
+| `/api/usage/daily` | GET | Get daily token usage totals (backend only, requires auth) |
+| `/api/usage/tools` | GET | Get tool execution statistics (backend only, requires auth) |
 | `/api/swarms` | GET | List agent swarms |
 | `/api/swarms` | POST | Create an agent swarm |
 

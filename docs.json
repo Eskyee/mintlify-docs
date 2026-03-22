@@ -78,6 +78,8 @@
           "api-reference/registration",
           "api-reference/health",
           "api-reference/mission-control",
+          "api-reference/browse",
+          "api-reference/usage-tracking",
           "api-reference/swarms"
         ]
       },
