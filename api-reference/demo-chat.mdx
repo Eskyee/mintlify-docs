@@ -20,11 +20,11 @@ No authentication required. Returns the list of models available in demo mode.
 ```json
 {
   "models": [
+    { "id": "xiaomi/mimo-v2-pro", "name": "MiMo-V2-Pro", "provider": "Xiaomi" },
     { "id": "anthropic/claude-sonnet-4.5", "name": "Claude Sonnet 4.5", "provider": "Anthropic" },
     { "id": "openai/gpt-4o", "name": "GPT-4o", "provider": "OpenAI" },
-    { "id": "google/gemini-2.0-flash-exp", "name": "Gemini 2.0 Flash", "provider": "Google" },
-    { "id": "moonshot/kimi-k2.5-thinking", "name": "Kimi K2.5 Thinking", "provider": "Moonshot" },
-    { "id": "meta-llama/llama-3.3-70b-instruct", "name": "Llama 3.3 70B", "provider": "Meta" },
+    { "id": "google/gemini-2.5-flash", "name": "Gemini 2.5 Flash", "provider": "Google" },
+    { "id": "deepseek/deepseek-r1", "name": "DeepSeek R1", "provider": "DeepSeek" },
     { "id": "minimax/minimax-chat", "name": "MiniMax M2.7", "provider": "MiniMax" }
   ],
   "mode": "demo",
@@ -54,7 +54,7 @@ No authentication required. Rate-limited by IP address.
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `message` | string | Yes | Message to send |
-| `model` | string | No | Model ID from the models list. Defaults to `anthropic/claude-sonnet-4.5`. |
+| `model` | string | No | Model ID from the models list. Defaults to `xiaomi/mimo-v2-pro`. |
 | `mode` | string | No | Chat mode identifier |
 | `conversation` | array | No | Previous conversation messages for context. Only `user`-role messages are retained (max 4000 characters each). |
 
@@ -125,7 +125,7 @@ curl -X POST https://agentbot.raveculture.xyz/api/demo/chat \
   -H "Content-Type: application/json" \
   -d '{
     "message": "What skills are available?",
-    "model": "anthropic/claude-sonnet-4.5"
+    "model": "xiaomi/mimo-v2-pro"
   }'
 ```
 
