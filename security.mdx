@@ -248,8 +248,8 @@ RISC enables real-time security event sharing between Google and Agentbot. When 
 | Event | Action |
 |-------|--------|
 | `https://schemas.openid.net/secevent/risc/event-type/account-compromised` | Revoke all sessions for the affected user |
-| `https://schemas.openid.net/secevent/risc/event-type/account-disabled` | Disable user account and revoke all sessions |
-| `https://schemas.openid.net/secevent/risc/event-type/account-enabled` | Re-enable user account |
+| `https://schemas.openid.net/secevent/risc/event-type/account-disabled` | Revoke all sessions for the affected user |
+| `https://schemas.openid.net/secevent/risc/event-type/account-enabled` | No action taken — sessions are recreated on next login |
 | `https://schemas.openid.net/secevent/risc/event-type/identifier-changed` | Revoke all sessions to force re-authentication |
 | `https://schemas.openid.net/secevent/risc/event-type/sessions-revoked` | Revoke all active sessions |
 
@@ -267,14 +267,14 @@ The endpoint:
 1. Decodes the SET (Security Event Token) JWT
 2. Parses the security event type from the JWT payload
 3. Looks up the affected user by email address
-4. Takes appropriate action (session revocation, account status change, etc.)
+4. Takes appropriate action (session revocation)
 5. Returns `200 OK` to acknowledge receipt
 
 ### Security Response
 
 When a RISC event is received:
 
-1. **Immediate**: Revoke affected sessions and update account status if applicable
+1. **Immediate**: Revoke affected sessions
 2. **Audit**: Log event for security review
 3. **Recovery**: User must re-authenticate on next visit
 
