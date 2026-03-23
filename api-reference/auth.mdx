@@ -69,6 +69,8 @@ POST /api/register
 
 Protected by bot detection. Automated or non-browser requests may be rejected.
 
+<Note>Registration does not create a session. After a successful sign-up, the client must call [`POST /api/auth/login`](#sign-in) to authenticate.</Note>
+
 ### Request body
 
 | Field | Type | Required | Description |
@@ -100,10 +102,17 @@ Protected by bot detection. Automated or non-browser requests may be rejected.
 ## Sign in
 
 ```http
-POST /api/auth/callback/credentials
+POST /api/auth/login
 ```
 
+Authenticates a user with email and password. On success, creates a database-backed session and sets the `agentbot-session` cookie.
+
 ### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `email` | string | Yes | User email address (case-insensitive) |
+| `password` | string | Yes | User password |
 
 ```json
 {
@@ -111,6 +120,30 @@ POST /api/auth/callback/credentials
   "password": "securepassword"
 }
 ```
+
+### Response
+
+```json
+{
+  "ok": true,
+  "user": {
+    "id": "user_123",
+    "name": "John Doe"
+  }
+}
+```
+
+A `Set-Cookie` header is included with the `agentbot-session` token. The cookie is `HttpOnly`, `SameSite=Lax`, scoped to `/`, and expires after 30 days.
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | Missing email or password |
+| 401 | Invalid email or password |
+| 500 | Login failed |
+
+<Note>This endpoint replaced the previous NextAuth credentials callback (`/api/auth/callback/credentials`). If you are migrating from an older integration, update your sign-in requests to use `/api/auth/login`.</Note>
 
 ## Get session
 
@@ -162,7 +195,7 @@ Ends the current session by deleting the session record from the database and cl
 
 ## OAuth sign in
 
-OAuth providers support automatic account linking. If a user with the same email address already exists, the OAuth account is linked to the existing user on first sign-in. This lets users who originally signed up with email and password add GitHub or Google login without creating a duplicate account.
+OAuth providers support automatic account linking. If a user with the same email address already exists, the OAuth account is linked to the existing user on first sign-in. This lets users who originally signed up with email and password add an OAuth login without creating a duplicate account.
 
 ### GitHub
 
@@ -172,52 +205,86 @@ GET /api/auth/github
 
 Redirects to GitHub OAuth flow. Requires `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` to be configured.
 
-### Google
+### Google (deprecated)
 
 ```http
 GET /api/auth/google
 ```
 
-Redirects to Google OAuth flow. Requires `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` to be configured.
+<Warning>Google OAuth sign-in has been deprecated and is no longer available. Use email/password authentication via [`POST /api/auth/login`](#sign-in) or wallet sign-in instead.</Warning>
 
 ## Wallet sign in (SIWE)
 
 ```http
-POST /api/auth/callback/wallet
+POST /api/wallet-auth
 ```
 
 Sign in using an Ethereum wallet via [Sign-In with Ethereum (SIWE)](https://eips.ethereum.org/EIPS/eip-4361). This flow is designed for Base smart wallets and supports ERC-6492 signature verification for pre-deployed wallets.
 
+<Note>This endpoint replaced the previous NextAuth wallet callback (`/api/auth/callback/wallet`). If you are migrating from an older integration, update your wallet sign-in requests to use `/api/wallet-auth`.</Note>
+
 ### How it works
 
-1. The client opens the Base Account SDK popup and requests a SIWE signature on Base Mainnet (chain ID `0x2105`).
-2. The signed SIWE message and signature are sent to the `wallet` NextAuth credentials provider.
-3. The server parses the SIWE message, validates the domain, and verifies the signature.
-4. If no account exists for the wallet address, a new user is created automatically.
-5. If an account with the same email already exists (from a previous OAuth or email sign-up), the wallet is linked to the existing account.
+1. The client requests a nonce from [`GET /api/auth/nonce`](#get-nonce).
+2. The client opens the Base Account SDK popup and requests a SIWE signature on Base Mainnet.
+3. The wallet address, SIWE message, and signature are sent to `POST /api/wallet-auth`.
+4. The server verifies the signature using viem (which handles ERC-6492 for smart wallets).
+5. If no account exists for the wallet address, a new user is created automatically.
+6. If an account with the same wallet-derived email already exists, the wallet is linked to the existing account.
 
 ### Request body
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
+| `address` | string | Yes | Ethereum wallet address (0x-prefixed) |
 | `message` | string | Yes | The full SIWE message string |
 | `signature` | string | Yes | The wallet signature of the SIWE message (0x-prefixed) |
 
 ### Response
 
-On success, a session cookie is set and the user is redirected to the callback URL. The response follows the standard NextAuth credentials callback flow.
+```json
+{
+  "ok": true,
+  "user": {
+    "id": "user_123",
+    "name": "Wallet:0xaBcD...eF12"
+  }
+}
+```
+
+A `Set-Cookie` header is included with the `agentbot-session` token. The cookie is `HttpOnly`, `SameSite=Lax`, scoped to `/`, and expires after 30 days.
 
 ### Account linking
 
-When a wallet signs in, the system checks for an existing user by the wallet-derived email address. If a matching user is found (for example, one who previously signed up with email and password or OAuth), the wallet provider is linked to that existing account. This prevents duplicate accounts and lets users access the same data regardless of which sign-in method they use.
+When a wallet signs in, the system checks for an existing user by the wallet-derived email address (`<address>@wallet.agentbot`). If a matching user is found, the wallet is linked to that existing account. This prevents duplicate accounts and lets users access the same data regardless of which sign-in method they use.
 
 ### Errors
 
 | Code | Description |
 |------|-------------|
-| 401 | Missing message or signature, SIWE domain mismatch, or signature verification failed |
+| 400 | Missing address, message, or signature |
+| 401 | Invalid signature |
+| 500 | Auth failed |
 
-<Note>The SIWE domain is validated against the configured application URL to prevent replay attacks from other sites.</Note>
+## Get nonce
+
+```http
+GET /api/auth/nonce
+```
+
+```http
+POST /api/auth/nonce
+```
+
+Generates a random nonce for use in SIWE message construction. Both `GET` and `POST` methods return the same response.
+
+### Response
+
+```json
+{
+  "nonce": "a1b2c3d4e5f6..."
+}
+```
 
 ## Get current user
 
