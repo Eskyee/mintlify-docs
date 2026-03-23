@@ -583,6 +583,8 @@ Lifecycle operations are available at two endpoint patterns depending on which s
 
 Both patterns support the same actions. The examples below use the backend pattern.
 
+<Note>All lifecycle operations require Docker to be available on the backend server. When Docker is unavailable, these endpoints return `500` with an error message describing the failure. You can check Docker availability using the [backend health endpoint](/api-reference/health#backend-health-check) — when the `docker` field is `unavailable`, lifecycle operations will fail. The API itself continues to serve non-Docker endpoints normally.</Note>
+
 ### Start agent
 
 ```http
@@ -945,7 +947,7 @@ When calling the backend provisioning service directly, the response includes ad
 }
 ```
 
-<Note>The `container` object is included when the backend successfully creates a Docker container for the agent. If container creation fails, provisioning still succeeds and the `container` field is omitted. The agent can operate using API-side processing until a container becomes available.</Note>
+<Note>The `container` object is included when the backend successfully creates a Docker container for the agent. If container creation fails (for example, when Docker is unavailable), provisioning still succeeds and the `container` field is omitted. The agent can operate using API-side processing until a container becomes available. You can check Docker availability using the [backend health endpoint](/api-reference/health#backend-health-check).</Note>
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -1098,7 +1100,7 @@ If the agent container is already running, returns the existing deployment detai
 |------|-------------|
 | 400 | `agentId is required`, `Invalid agentId`, or `telegramToken is required` |
 | 401 | Unauthorized |
-| 500 | Deployment failed |
+| 500 | Deployment failed. When Docker is not available on the server, the error message indicates that container provisioning requires Docker. Check the [backend health endpoint](/api-reference/health#backend-health-check) to verify Docker availability before deploying. |
 
 ## OpenClaw version (backend)
 
