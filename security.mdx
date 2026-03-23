@@ -247,14 +247,13 @@ RISC enables real-time security event sharing between Google and Agentbot. When 
 
 | Event | Action |
 |-------|--------|
-| `https://schemas.openid.net/secevent/risc/event-type/account-compromised` | Revoke all sessions, force re-authentication |
-| `https://schemas.openid.net/secevent/risc/event-type/account-disabled` | Disable user access, notify via email |
-| `https://schemas.openid.net/secevent/risc/event-type/account-enabled` | Re-enable user access |
-| `https://schemas.openid.net/secevent/risc/event-type/identifier-changed` | Update email, invalidate old sessions |
-| `https://schemas.openid.net/secevent/risc/event-type/identifier-recycled` | Treat as new account, clear old data |
-| `https://schemas.openid.net/secevent/risc/event-type/recovery-activated` | Log recovery attempt, notify user |
-| `https://schemas.openid.net/secevent/risc/event-type/recovery-information-changed` | Audit recovery method changes |
+| `https://schemas.openid.net/secevent/risc/event-type/account-compromised` | Revoke all sessions for the affected user |
+| `https://schemas.openid.net/secevent/risc/event-type/account-disabled` | Disable user account and revoke all sessions |
+| `https://schemas.openid.net/secevent/risc/event-type/account-enabled` | Re-enable user account |
+| `https://schemas.openid.net/secevent/risc/event-type/identifier-changed` | Revoke all sessions to force re-authentication |
 | `https://schemas.openid.net/secevent/risc/event-type/sessions-revoked` | Revoke all active sessions |
+
+<Note>The following RISC event types are defined in the specification but are not yet handled: `identifier-recycled`, `recovery-activated`, `recovery-information-changed`. These events are acknowledged with a `200` response but no action is taken.</Note>
 
 ### Implementation
 
@@ -265,19 +264,19 @@ POST /api/auth/google/risc
 ```
 
 The endpoint:
-1. Validates the JWT signature from Google
-2. Parses the security event
-3. Takes appropriate action (session revocation, user notification, etc.)
-4. Returns `200 OK` to acknowledge receipt
+1. Decodes the SET (Security Event Token) JWT
+2. Parses the security event type from the JWT payload
+3. Looks up the affected user by email address
+4. Takes appropriate action (session revocation, account status change, etc.)
+5. Returns `200 OK` to acknowledge receipt
 
 ### Security Response
 
 When a RISC event is received:
 
-1. **Immediate**: Revoke affected sessions
-2. **Short-term**: Notify user via email
-3. **Audit**: Log event for security review
-4. **Recovery**: Guide user through re-authentication
+1. **Immediate**: Revoke affected sessions and update account status if applicable
+2. **Audit**: Log event for security review
+3. **Recovery**: User must re-authenticate on next visit
 
 ### Configuration
 

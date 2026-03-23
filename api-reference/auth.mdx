@@ -268,7 +268,7 @@ The request body is a raw [SET (Security Event Token)](https://datatracker.ietf.
 | Field | Type | Description |
 |-------|------|-------------|
 | `iss` | string | Issuer (Google) |
-| `sub` | string | Subject identifier — the user's Google ID or email |
+| `sub` | string | Subject identifier — the user's email address |
 | `events` | object | Map of event URIs to event data |
 
 ### Supported event types
@@ -281,7 +281,7 @@ The request body is a raw [SET (Security Event Token)](https://datatracker.ietf.
 | `https://schemas.openid.net/secevent/risc/event-type/sessions-revoked` | Revokes all active sessions for the user |
 | `https://schemas.openid.net/secevent/risc/event-type/identifier-changed` | Revokes all sessions to force re-authentication |
 
-Users are matched by Google ID or email address.
+Users are matched by email address.
 
 ### Response
 
