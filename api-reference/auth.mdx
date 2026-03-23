@@ -276,8 +276,8 @@ The request body is a raw [SET (Security Event Token)](https://datatracker.ietf.
 | Event URI | Action taken |
 |-----------|-------------|
 | `https://schemas.openid.net/secevent/risc/event-type/account-compromised` | Revokes all sessions for the affected user |
-| `https://schemas.openid.net/secevent/risc/event-type/account-disabled` | Disables the user account and revokes all sessions |
-| `https://schemas.openid.net/secevent/risc/event-type/account-enabled` | Re-enables the user account |
+| `https://schemas.openid.net/secevent/risc/event-type/account-disabled` | Revokes all sessions for the affected user |
+| `https://schemas.openid.net/secevent/risc/event-type/account-enabled` | No action taken — sessions are recreated on next login |
 | `https://schemas.openid.net/secevent/risc/event-type/sessions-revoked` | Revokes all active sessions for the user |
 | `https://schemas.openid.net/secevent/risc/event-type/identifier-changed` | Revokes all sessions to force re-authentication |
 
@@ -687,7 +687,7 @@ The following inbound events are processed by the [`POST /api/auth/google/risc`]
 | Event | Description |
 |-------|-------------|
 | `account-compromised` | Google detected the account may be compromised. All sessions are revoked. |
-| `account-disabled` | The Google account was disabled. The user is disabled and all sessions are revoked. |
-| `account-enabled` | The Google account was re-enabled. The user account is reactivated. |
+| `account-disabled` | The Google account was disabled. All sessions are revoked. |
+| `account-enabled` | The Google account was re-enabled. No action taken — sessions are recreated on next login. |
 | `sessions-revoked` | Google revoked the user's sessions. All local sessions are revoked. |
 | `identifier-changed` | The user's email or identifier changed on Google. All sessions are revoked to force re-authentication. |
