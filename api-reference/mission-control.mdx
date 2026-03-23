@@ -19,7 +19,13 @@ Returns a constellation graph of your agent fleet as a set of nodes and edges. E
 
 ### Authentication
 
-Requires an authenticated session. No query parameters are needed — the fleet is resolved from your session.
+Requires bearer token authentication.
+
+### Query parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `userId` | number | Yes | The user ID to fetch the fleet graph for |
 
 ### Response
 
@@ -175,7 +181,13 @@ Returns up to 20 of the most recent execution traces for your agent fleet, sorte
 
 ### Authentication
 
-Requires an authenticated session. No query parameters are needed — traces are resolved from your session.
+Requires bearer token authentication.
+
+### Query parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `userId` | number | Yes | The user ID to fetch execution traces for |
 
 ### Response
 

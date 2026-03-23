@@ -56,7 +56,7 @@ Validates a bearer token by computing a SHA-256 hash of the raw key and looking 
 POST /api/register-home
 ```
 
-Registers a Home mode installation. Requires bearer token authentication.
+Registers a Home mode installation. Requires the `x-user-email`, `x-user-id`, and `x-user-role` headers to identify the caller. These headers are set by the web proxy when a session is active.
 
 ### Request body
 
@@ -81,7 +81,7 @@ Registers a Home mode installation. Requires bearer token authentication.
 | Code | Description |
 |------|-------------|
 | 400 | `userId` is required |
-| 401 | Unauthorized — missing or invalid bearer token |
+| 401 | Unauthorized — missing required identity headers |
 
 ## Register Link installation
 
@@ -89,7 +89,7 @@ Registers a Home mode installation. Requires bearer token authentication.
 POST /api/register-link
 ```
 
-Registers a Link mode installation that connects an existing OpenClaw instance. Requires bearer token authentication.
+Registers a Link mode installation that connects an existing OpenClaw instance. Requires the `x-user-email`, `x-user-id`, and `x-user-role` headers to identify the caller.
 
 ### Request body
 
@@ -114,7 +114,7 @@ Registers a Link mode installation that connects an existing OpenClaw instance. 
 | Code | Description |
 |------|-------------|
 | 400 | `userId` is required |
-| 401 | Unauthorized — missing or invalid bearer token |
+| 401 | Unauthorized — missing required identity headers |
 
 ## List installations
 
@@ -122,7 +122,7 @@ Registers a Link mode installation that connects an existing OpenClaw instance. 
 GET /api/installations
 ```
 
-Returns all registered installations across all deployment modes. Requires bearer token authentication.
+Returns all registered installations across all deployment modes. Requires the `x-user-email`, `x-user-id`, and `x-user-role` headers to identify the caller.
 
 ### Response
 
@@ -161,7 +161,7 @@ Returns all registered installations across all deployment modes. Requires beare
 
 | Code | Description |
 |------|-------------|
-| 401 | Unauthorized — missing or invalid bearer token |
+| 401 | Unauthorized — missing required identity headers |
 
 ## Registration heartbeat
 
