@@ -213,13 +213,43 @@ GET /api/auth/github
 
 Redirects to GitHub OAuth flow. Requires `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` to be configured.
 
-### Google (deprecated)
+### Google
 
 ```http
 GET /api/auth/google
 ```
 
-<Warning>Google OAuth sign-in has been deprecated and is no longer available. Use email/password authentication via [`POST /api/auth/login`](#sign-in) or wallet sign-in instead.</Warning>
+Redirects to Google OAuth consent screen. Requires `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` to be configured.
+
+The flow requests the `openid`, `email`, and `profile` scopes with offline access. After the user grants consent, Google redirects back to the callback endpoint below.
+
+If `GOOGLE_CLIENT_ID` is not set, the endpoint redirects to `/login?error=GoogleNotConfigured`.
+
+#### Callback
+
+```http
+GET /api/auth/google/callback
+```
+
+Handles the OAuth authorization code exchange. This endpoint is called by Google after the user grants consent — you do not call it directly.
+
+On success the endpoint:
+1. Exchanges the authorization code for an access token.
+2. Fetches the user's email and name from the Google userinfo API.
+3. Creates a new user if no account with that email exists (automatic account linking applies when a matching email is found).
+4. Creates a session and sets the `agentbot-session` cookie.
+5. Redirects to `/dashboard`.
+
+#### Errors
+
+The callback redirects to `/login` with an `error` query parameter instead of returning JSON:
+
+| Error value | Description |
+|-------------|-------------|
+| `GoogleAuthFailed` | No authorization code received from Google |
+| `GoogleTokenFailed` | Code-to-token exchange failed |
+| `GoogleNoEmail` | Google account has no email address |
+| `GoogleAuthError` | Unexpected server error during authentication |
 
 ## Wallet sign in (SIWE)
 
