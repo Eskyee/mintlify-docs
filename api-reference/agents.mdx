@@ -52,7 +52,44 @@ Returns all agents owned by the authenticated user. When no session is present, 
 
 ## Create agent
 
-<Warning>The `POST /api/agents` endpoint is deprecated. Use [`POST /api/agents/provision`](#provision-agent) to create agents.</Warning>
+```http
+POST /api/agents
+```
+
+Creates a new agent with an auto-generated ID and stores its metadata on disk. Requires bearer token authentication (backend).
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | string | Yes | Agent name |
+| `config` | object | No | Agent configuration |
+| `config.plan` | string | No | Plan tier (for example, `solo`, `collective`, `label`, `network`) |
+| `config.aiProvider` | string | No | AI provider (for example, `openrouter`, `anthropic`) |
+
+### Response (201 Created)
+
+```json
+{
+  "id": "agent_123",
+  "name": "My Agent",
+  "agentId": "agent_123",
+  "status": "created",
+  "subdomain": "agent_123.agents.localhost",
+  "url": "https://agent_123.agents.localhost",
+  "createdAt": "2026-03-19T00:00:00Z"
+}
+```
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | Agent name is required |
+| 401 | Unauthorized |
+| 500 | Failed to create agent |
+
+<Note>For provisioning an agent with messaging channel tokens and a live container deployment, use [`POST /api/agents/provision`](#provision-agent) or [`POST /api/provision`](#provision-with-channel-tokens) instead.</Note>
 
 ## Get agent
 
@@ -93,11 +130,67 @@ Requires authentication and ownership of the agent.
 
 ## Update agent
 
-<Warning>`PUT /api/agents/:id` is deprecated. Use [`PUT /api/agents/:id/config`](#update-agent-configuration) to update agent configuration.</Warning>
+```http
+PUT /api/agents/:id
+```
+
+Updates an agent's metadata including plan, AI provider, and configuration. Requires bearer token authentication (backend).
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `plan` | string | No | Plan tier |
+| `aiProvider` | string | No | AI provider |
+| `config` | object | No | Additional configuration |
+
+### Response
+
+```json
+{
+  "id": "agent_123",
+  "plan": "collective",
+  "aiProvider": "anthropic",
+  "subdomain": "agent_123.agents.localhost",
+  "status": "updated",
+  "message": "Agent updated successfully"
+}
+```
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | Unauthorized |
+| 404 | Agent not found |
+| 500 | Failed to update agent |
+
+<Note>To update agent configuration through the web proxy with session authentication, use [`PUT /api/agents/:id/config`](#update-agent-configuration) instead.</Note>
 
 ## Delete agent
 
-<Warning>`DELETE /api/agents/:id` is deprecated. Use the lifecycle endpoints to manage agent state (for example, [`POST /api/agents/:id/stop`](#stop-agent)).</Warning>
+```http
+DELETE /api/agents/:id
+```
+
+Stops the agent's container, releases its port, and removes its metadata. Requires bearer token authentication (backend).
+
+### Response
+
+```json
+{
+  "id": "agent_123",
+  "deleted": true
+}
+```
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | Unauthorized |
+| 404 | Agent not found |
+| 500 | Failed to delete agent |
 
 ## Provision agent
 
@@ -381,174 +474,7 @@ Returns logs for an agent. Requires authentication and ownership.
 
 ## Stream agent logs
 
-```http
-GET /api/logs/:agentId/stream
-```
-
-Streams live logs from an agent's container via Server-Sent Events (SSE). Requires API key authentication (backend). The stream follows the Docker container logs in real time without requiring SSH access.
-
-When a client connects, existing buffered log lines are sent immediately, followed by new lines as they arrive. The server maintains a buffer of up to 500 lines per agent.
-
-### Path parameters
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `agentId` | string | Agent identifier |
-
-### Response
-
-The response uses the `text/event-stream` content type. Each event is a JSON object sent as an SSE `data` field.
-
-#### Connection event
-
-Sent immediately on connection:
-
-```
-data: {"type": "connected", "agentId": "agent_123"}
-```
-
-#### Log line event
-
-Sent for each log line (stdout). Lines from stderr are prefixed with `[stderr]`:
-
-```
-data: {"type": "line", "text": "2026-03-22T00:00:00Z [gateway] Agent started"}
-```
-
-#### Exit event
-
-Sent when the container process exits:
-
-```
-data: {"type": "exit", "code": 0}
-```
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `type` | string | Event type: `connected`, `line`, or `exit` |
-| `agentId` | string | Agent identifier (present on `connected` events) |
-| `text` | string | Log line content (present on `line` events) |
-| `code` | number | Process exit code (present on `exit` events) |
-
-### Stream behavior
-
-- The server buffers the most recent 500 log lines per agent.
-- Multiple clients can connect to the same agent's stream simultaneously.
-- When all clients disconnect, the stream continues for a 30-second grace period before stopping. If a client reconnects within this window, the stream resumes without interruption.
-- Docker `--tail 100` is used when initially attaching to the container logs.
-
-### Headers
-
-| Header | Value |
-|--------|-------|
-| `Content-Type` | `text/event-stream` |
-| `Cache-Control` | `no-cache` |
-| `Connection` | `keep-alive` |
-| `X-Accel-Buffering` | `no` |
-
-### Errors
-
-| Code | Description |
-|------|-------------|
-| 400 | `agentId required` |
-
-### Example
-
-```bash
-curl -N https://backend.example.com/api/logs/agent_123/stream \
-  -H "Authorization: Bearer YOUR_INTERNAL_API_KEY"
-```
-
-## Get log history
-
-```http
-GET /api/logs/:agentId/history
-```
-
-Returns recent buffered log lines for an agent without streaming. Requires API key authentication (backend). Returns an empty array if no active stream exists for the agent.
-
-### Path parameters
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `agentId` | string | Agent identifier |
-
-### Response
-
-```json
-{
-  "agentId": "agent_123",
-  "lines": [
-    "2026-03-22T00:00:00Z [gateway] Agent started",
-    "2026-03-22T00:00:01Z [gateway] Health check passed"
-  ],
-  "streaming": true,
-  "clients": 2
-}
-```
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `agentId` | string | Agent identifier |
-| `lines` | string[] | Buffered log lines (up to 500) |
-| `streaming` | boolean | Whether an active log stream exists for this agent |
-| `clients` | number | Number of SSE clients currently connected to this agent's stream |
-
-## Stop log stream
-
-```http
-POST /api/logs/:agentId/stop
-```
-
-Stops the live log stream for an agent and disconnects all SSE clients. Requires API key authentication (backend). Returns success even if no active stream exists.
-
-### Path parameters
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `agentId` | string | Agent identifier |
-
-### Response
-
-```json
-{
-  "success": true
-}
-```
-
-## List active log streams
-
-```http
-GET /api/logs/active
-```
-
-Returns all currently active log streams across all agents. Requires API key authentication (backend).
-
-### Response
-
-```json
-{
-  "streams": [
-    {
-      "agentId": "agent_123",
-      "clients": 2,
-      "lines": 150
-    },
-    {
-      "agentId": "agent_456",
-      "clients": 1,
-      "lines": 42
-    }
-  ]
-}
-```
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `streams` | array | List of active log streams |
-| `streams[].agentId` | string | Agent identifier |
-| `streams[].clients` | number | Number of connected SSE clients |
-| `streams[].lines` | number | Number of buffered log lines |
+<Info>The live log streaming endpoints (`/api/logs/:agentId/stream`, `/api/logs/:agentId/history`, `POST /api/logs/:agentId/stop`, and `GET /api/logs/active`) are planned for a future release. See the [live log tail](/api-reference/log-tail) page for the intended specification.</Info>
 
 ## Get agent messages
 
