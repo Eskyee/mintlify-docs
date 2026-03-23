@@ -1475,6 +1475,255 @@ POST /api/agent
 | 404 | Session not found |
 | 500 | Internal error |
 
+## Agent MPP wallets
+
+```http
+GET /api/agent/mpp
+POST /api/agent/mpp
+```
+
+Manages agent crypto wallets for the Machine-Payable Protocol (MPP). Agents use these wallets to make and receive on-chain payments autonomously. All requests require session authentication.
+
+### GET actions
+
+Pass the `action` query parameter to select the operation.
+
+#### List wallets
+
+```http
+GET /api/agent/mpp
+```
+
+Returns available endpoints and version information when no action is specified.
+
+#### List all wallets
+
+```http
+GET /api/agent/mpp?action=list-wallets
+```
+
+```json
+{
+  "wallets": [
+    { "agentId": "agent_123", "companyId": "company_456", "address": "0x1234...abcd" }
+  ]
+}
+```
+
+#### Get wallet
+
+```http
+GET /api/agent/mpp?action=get-wallet&agentId=agent_123
+```
+
+Returns the wallet for a specific agent, or `404` if no wallet exists.
+
+```json
+{
+  "agentId": "agent_123",
+  "address": "0x1234...abcd"
+}
+```
+
+#### Get balance
+
+```http
+GET /api/agent/mpp?action=get-balance&agentId=agent_123
+```
+
+Returns the USDC balance for an agent's wallet.
+
+```json
+{
+  "agentId": "agent_123",
+  "balance": "10.50"
+}
+```
+
+### POST actions
+
+Pass the `action` field in the request body.
+
+#### Create wallet
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `action` | string | Yes | `create-wallet` |
+| `agentId` | string | Yes | Agent identifier |
+| `companyId` | string | Yes | Company identifier |
+
+```json
+{
+  "success": true,
+  "agentId": "agent_123",
+  "companyId": "company_456",
+  "address": "0x1234...abcd",
+  "privateKey": "0xabc...",
+  "message": "Store this private key securely..."
+}
+```
+
+<Warning>The `create-wallet` action returns the private key in the response body. Store it securely — it cannot be retrieved again.</Warning>
+
+#### Register wallet
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `action` | string | Yes | `register-wallet` |
+| `agentId` | string | Yes | Agent identifier |
+| `companyId` | string | Yes | Company identifier |
+| `privateKey` | string | Yes | Existing private key to register |
+
+```json
+{
+  "success": true,
+  "agentId": "agent_123",
+  "companyId": "company_456",
+  "address": "0x1234...abcd"
+}
+```
+
+#### Make payment
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `action` | string | Yes | `make-payment` |
+| `agentId` | string | Yes | Agent identifier |
+| `url` | string | Yes | Payment endpoint URL |
+| `method` | string | No | HTTP method (default: `POST`) |
+| `headers` | object | No | Additional request headers |
+| `body` | object | No | Request body |
+
+```json
+{
+  "success": true,
+  "result": {}
+}
+```
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | Invalid action or missing required fields |
+| 401 | Unauthorized |
+| 402 | Payment failed |
+| 404 | Wallet not found |
+| 500 | Internal error |
+
+## Agent files
+
+```http
+GET /api/files
+POST /api/files
+DELETE /api/files
+```
+
+Upload, list, and delete files associated with agents. Files are stored on disk and tracked in the database. All requests require session authentication.
+
+### List files
+
+```http
+GET /api/files?agentId=agent_123
+```
+
+#### Query parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `agentId` | string | No | Filter files by agent |
+
+#### Response
+
+```json
+{
+  "files": [
+    {
+      "id": "file_123",
+      "filename": "data.csv",
+      "url": "/api/files/download?id=file_123",
+      "size": 1234,
+      "mimeType": "text/csv",
+      "agentId": "agent_123",
+      "createdAt": "2026-03-19T00:00:00Z"
+    }
+  ],
+  "totalSize": 1234,
+  "count": 1
+}
+```
+
+### Upload file
+
+```http
+POST /api/files
+```
+
+Uploads a file using `multipart/form-data`.
+
+#### Form fields
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `file` | File | Yes | The file to upload |
+| `agentId` | string | Yes | Agent to associate the file with. Must belong to the authenticated user. |
+
+#### Response (201 Created)
+
+```json
+{
+  "success": true,
+  "file": {
+    "id": "file_123",
+    "name": "data.csv",
+    "size": 1234,
+    "type": "text/csv",
+    "url": "/api/files/download?id=file_123",
+    "uploaded": "2026-03-19T00:00:00Z"
+  }
+}
+```
+
+#### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | No file uploaded, or `agentId` is required |
+| 401 | Unauthorized |
+| 404 | Agent not found |
+| 413 | Storage limit exceeded. The default per-user storage limit is 10 MB. |
+| 500 | Failed to upload file |
+
+### Delete file
+
+```http
+DELETE /api/files
+```
+
+#### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `fileId` | string | Yes | File identifier |
+
+#### Response
+
+```json
+{
+  "success": true,
+  "fileId": "file_123"
+}
+```
+
+#### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | `fileId` is required |
+| 401 | Unauthorized |
+| 404 | File not found |
+| 500 | Failed to delete file |
+
 ## Send message
 
 ```http

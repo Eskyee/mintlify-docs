@@ -198,6 +198,11 @@ curl -X POST https://agentbot.raveculture.xyz/api/ai/chat \
 | `/api/installations` | GET | List registered installations (backend only, requires identity headers) |
 | `/api/agent` | GET | Agent interaction (health, sessions, memory, skills, credentials) |
 | `/api/agent` | POST | Agent interaction (chat, create-session, update-skill, set-credential) |
+| `/api/agent/mpp` | GET | MPP wallet actions (list-wallets, get-wallet, get-balance) |
+| `/api/agent/mpp` | POST | MPP wallet actions (create-wallet, register-wallet, make-payment) |
+| `/api/files` | GET | List agent files |
+| `/api/files` | POST | Upload a file to an agent (multipart/form-data) |
+| `/api/files` | DELETE | Delete an agent file |
 | `/api/settings` | GET | Get current user profile |
 | `/api/settings` | POST, PATCH | Update user profile |
 | `/api/settings/password` | POST | Change password |

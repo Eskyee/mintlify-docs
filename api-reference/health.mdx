@@ -124,10 +124,52 @@ When `provisioning` is `disabled`, any request to a container-dependent endpoint
 ## Get heartbeat settings
 
 ```http
-GET /api/heartbeat
+GET /api/heartbeat?agentId=agent_123
 ```
 
-Requires session authentication.
+Requires session authentication. Returns the heartbeat schedule for a specific agent. Heartbeat settings control how frequently the agent wakes up to perform autonomous actions.
+
+### Query parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `agentId` | string | Yes | Agent identifier |
+
+### Response
+
+```json
+{
+  "heartbeat": {
+    "frequency": "3h",
+    "enabled": true,
+    "lastHeartbeat": null,
+    "nextHeartbeat": null
+  }
+}
+```
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | `agentId` is required |
+| 401 | Unauthorized |
+
+## Update heartbeat settings
+
+```http
+POST /api/heartbeat
+```
+
+Requires session authentication. Configures the heartbeat schedule for an agent. The `nextHeartbeat` is calculated automatically from the current time plus the parsed frequency.
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `agentId` | string | Yes | Agent identifier. Must belong to the authenticated user. |
+| `frequency` | string | No | Heartbeat interval using the format `{number}{unit}` where unit is `m` (minutes), `h` (hours), or `d` (days). Examples: `30m`, `3h`, `1d`. Defaults to `3h`. |
+| `enabled` | boolean | No | Enable or disable heartbeats. Defaults to `true`. |
 
 ### Response
 
@@ -137,39 +179,19 @@ Requires session authentication.
     "frequency": "3h",
     "enabled": true,
     "lastHeartbeat": "2026-03-19T00:00:00Z",
-    "nextHeartbeat": "2026-03-19T03:00:00Z"
-  },
-  "message": "Heartbeat scheduling database integration pending"
+    "nextHeartbeat": "2026-03-19T03:00:00Z",
+    "lastUpdated": "2026-03-19T00:00:00Z"
+  }
 }
 ```
 
-## Update heartbeat settings
+### Errors
 
-```http
-POST /api/heartbeat
-```
-
-Requires session authentication.
-
-### Request body
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `frequency` | string | No | Heartbeat interval (for example, `3h`) |
-| `enabled` | boolean | No | Enable or disable heartbeats |
-
-### Response
-
-```json
-{
-  "frequency": "3h",
-  "enabled": true,
-  "lastUpdated": "2026-03-19T00:00:00Z",
-  "lastHeartbeat": "2026-03-19T00:00:00Z",
-  "nextHeartbeat": "2026-03-19T03:00:00Z",
-  "message": "Heartbeat settings will persist to database once integration is complete"
-}
-```
+| Code | Description |
+|------|-------------|
+| 400 | `agentId` is required |
+| 401 | Unauthorized |
+| 500 | Failed to update heartbeat settings |
 
 ## Delete heartbeat settings
 
@@ -177,16 +199,27 @@ Requires session authentication.
 DELETE /api/heartbeat
 ```
 
-Requires session authentication. Resets heartbeat configuration to defaults.
+Requires session authentication. Removes the heartbeat settings for an agent.
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `agentId` | string | Yes | Agent identifier |
 
 ### Response
 
 ```json
 {
-  "success": true,
-  "message": "Heartbeat settings reset - database cleanup will occur once integration is complete"
+  "success": true
 }
 ```
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | Unauthorized |
 
 ## Container health checks
 
