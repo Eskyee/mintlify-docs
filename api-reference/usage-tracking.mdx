@@ -330,6 +330,30 @@ Each usage event is stored as a row in the `usage_logs` table (Prisma model name
 
 <Note>The `usage_logs` table is created via a dedicated SQL migration (`20260323000000_add_usage_logs`) rather than through Prisma's schema push. This ensures the table is created reliably across deployments without requiring Prisma to manage the migration state.</Note>
 
+### Server-side logging
+
+Every usage event emits a structured log line to the server console when it is recorded. This makes it possible to verify that the usage tracking pipeline is working without querying the database.
+
+**Success log format:**
+
+```
+[UsageLogger] Logging: <agentId> | <model> | <inputTokens>+<outputTokens> tokens | $<cost>
+```
+
+For example:
+
+```
+[UsageLogger] Logging: demo-chat | gpt-4o | 450+120 tokens | $0.004050
+```
+
+If the database write fails, an error is logged instead:
+
+```
+[UsageLogger] Failed to log usage: <error message>
+```
+
+<Info>Because usage recording is fire-and-forget (it never blocks the API response), these log lines are the primary way to diagnose write failures. Monitor your server logs for `[UsageLogger] Failed to log usage` entries if usage data appears to be missing from the cost dashboard.</Info>
+
 | Field | Type | Description |
 |-------|------|-------------|
 | `id` | integer | Auto-incrementing primary key |
