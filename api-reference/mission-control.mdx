@@ -7,7 +7,7 @@ description: "Monitor your agent fleet with real-time graphs, execution traces, 
 
 Mission control provides a real-time view of your agent fleet. Use these endpoints to visualize agent relationships, trace execution activity, attribute costs per agent, and track talent bookings.
 
-<Note>All mission control endpoints require authentication via session. The authenticated user's fleet is returned automatically.</Note>
+<Note>All mission control endpoints require bearer token (API key) authentication. The fleet graph and traces endpoints also require a `userId` query parameter. The web proxy uses session authentication and resolves the user ID from the session before forwarding to these endpoints.</Note>
 
 ## Fleet graph
 
@@ -169,7 +169,7 @@ When no souls are reachable, the response uses the fallback shape with minimal n
 
 | Code | Description |
 |------|-------------|
-| 401 | Unauthorized — no valid session |
+| 401 | Unauthorized — missing or invalid bearer token |
 
 ## Execution traces
 
@@ -255,7 +255,7 @@ Requires bearer token authentication.
 
 | Code | Description |
 |------|-------------|
-| 401 | Unauthorized — no valid session |
+| 401 | Unauthorized — missing or invalid bearer token |
 
 ## Cost attribution
 
