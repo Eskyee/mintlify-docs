@@ -114,11 +114,15 @@ Requires ownership of the key.
 
 ## Validate key
 
+<Info>The `POST /api/keys/validate` endpoint is planned for a future release. API key validation is currently available through the backend endpoint [`POST /api/validate-key`](/api-reference/registration#validate-api-key), which uses SHA-256 hash comparison.</Info>
+
+The following specification describes the intended web-side validation endpoint:
+
 ```http
 POST /api/keys/validate
 ```
 
-Verifies an API key against its bcrypt hash in the database and returns the associated user information. This endpoint is called by the backend API's [`POST /api/validate-key`](/api-reference/registration#validate-api-key) endpoint to validate keys provided during install and link scripts. No session authentication is required.
+Verifies an API key against its bcrypt hash in the database and returns the associated user information. No session authentication is required.
 
 ### Request body
 
@@ -145,10 +149,8 @@ Verifies an API key against its bcrypt hash in the database and returns the asso
 | `userId` | string | User identifier |
 | `email` | string | User email address |
 | `plan` | string | Current subscription plan (`solo`, `collective`, `label`, or `network`) |
-| `subscriptionStatus` | string | Stripe subscription status (e.g. `active`, `past_due`, `canceled`) |
+| `subscriptionStatus` | string | Stripe subscription status (for example, `active`, `past_due`, `canceled`) |
 | `features` | string[] | List of features available to the user |
-
-<Note>On a successful match, the `lastUsed` timestamp on the API key record is automatically updated.</Note>
 
 ### How it works
 
