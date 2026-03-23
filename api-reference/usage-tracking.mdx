@@ -354,6 +354,34 @@ If the database write fails, an error is logged instead:
 
 <Info>Because usage recording is fire-and-forget (it never blocks the API response), these log lines are the primary way to diagnose write failures. Monitor your server logs for `[UsageLogger] Failed to log usage` entries if usage data appears to be missing from the cost dashboard.</Info>
 
+### Cost dashboard logging
+
+The cost dashboard endpoint emits its own diagnostic log lines prefixed with `[Cost API]`. These help you verify that the aggregation query is running and returning data.
+
+**Query result log:**
+
+```
+[Cost API] Found <count> usage logs
+```
+
+For example:
+
+```
+[Cost API] Found 42 usage logs
+```
+
+If the Prisma query fails, the endpoint logs the error and falls back to sample data:
+
+```
+[Cost API] Prisma error: <error message>
+```
+
+If the entire handler fails, a general error is logged and a `500` response is returned:
+
+```
+[Cost API] Error: <error message>
+```
+
 | Field | Type | Description |
 |-------|------|-------------|
 | `id` | integer | Auto-incrementing primary key |
