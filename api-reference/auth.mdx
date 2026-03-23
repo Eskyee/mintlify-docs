@@ -251,13 +251,99 @@ The callback redirects to `/login` with an `error` query parameter instead of re
 | `GoogleNoEmail` | Google account has no email address |
 | `GoogleAuthError` | Unexpected server error during authentication |
 
-## Google RISC webhook
+## Cross-Account Protection receiver
+
+```http
+POST /api/security/risc
+```
+
+Receives security event tokens from Google via the [Cross-Account Protection (RISC)](https://developers.google.com/identity/protocols/risc) protocol. This is the primary receiver for Google security events. It validates the SET JWT, deduplicates events, and takes targeted action depending on the event type.
+
+<Warning>This endpoint is intended to be called by Google's RISC infrastructure, not by application clients. You do not need to call it directly.</Warning>
+
+### Request body
+
+The request body is a raw [SET (Security Event Token)](https://datatracker.ietf.org/doc/html/rfc8417) JWT string. The JWT payload contains:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `iss` | string | Issuer — must be `https://accounts.google.com/` |
+| `aud` | string | Audience — must match a configured `GOOGLE_CLIENT_ID` |
+| `jti` | string | Unique event identifier used for deduplication |
+| `events` | object | Map of event URIs to event data. Each event may include `subject.sub` (Google subject ID), `subject.email`, and `reason`. |
+
+### Token validation
+
+The endpoint validates the incoming JWT before processing:
+
+1. Checks the issuer is `https://accounts.google.com/`
+2. Checks the audience matches one of the configured Google client IDs
+3. Fetches Google's signing keys from the RISC well-known configuration endpoint (keys are cached for 24 hours)
+4. Matches the signing key by the `kid` header claim
+
+If validation fails, the endpoint returns `400`.
+
+### Event deduplication
+
+Events are deduplicated using the `jti` claim. Each processed event is stored in the `risc_events` table. If an event with the same `jti` has already been processed, it is acknowledged but not acted on again.
+
+### Supported event types
+
+| Event URI | Action taken |
+|-----------|-------------|
+| `https://schemas.openid.net/secevent/risc/event-type/account-disabled` | When `reason` is `hijacking`: disables Google Sign-in for the user and invalidates all sessions. Otherwise: invalidates all sessions. |
+| `https://schemas.openid.net/secevent/risc/event-type/account-enabled` | Re-enables Google Sign-in for the user |
+| `https://schemas.openid.net/secevent/risc/event-type/sessions-revoked` | Invalidates all active sessions for the user |
+| `https://schemas.openid.net/secevent/oauth/event-type/tokens-revoked` | Revokes stored OAuth refresh tokens and invalidates all sessions |
+| `https://schemas.openid.net/secevent/risc/event-type/account-credential-change-required` | Logged for security monitoring (no automated action) |
+| `https://schemas.openid.net/secevent/risc/event-type/verification` | Acknowledged — used during RISC setup to verify the endpoint |
+
+Users are matched by Google subject ID (`sub`) or email address.
+
+### Response
+
+Returns `202 Accepted` with an empty body on success. Event processing continues asynchronously after the response is sent.
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | Empty request body or invalid/unverifiable JWT (bad format, wrong issuer, wrong audience, or unknown signing key) |
+| 500 | Internal error |
+
+### Health check
+
+```http
+GET /api/security/risc
+```
+
+Returns the endpoint status and list of supported event types.
+
+```json
+{
+  "status": "ok",
+  "endpoint": "/api/security/risc",
+  "description": "Google RISC (Cross-Account Protection) receiver",
+  "events_supported": [
+    "account-disabled",
+    "account-enabled",
+    "sessions-revoked",
+    "tokens-revoked",
+    "account-credential-change-required",
+    "verification"
+  ]
+}
+```
+
+<Note>For details on how RISC fits into the platform security model and how to configure it in Google Cloud Console, see [Security — Google RISC Protocol](/security#google-risc-protocol).</Note>
+
+## Google RISC webhook (legacy)
 
 ```http
 POST /api/auth/google/risc
 ```
 
-Receives security event notifications from Google via the [RISC (Risk Incident Sharing and Collaboration)](https://developers.google.com/identity/protocols/risc) protocol. Google calls this endpoint when it detects a security incident involving a user who signed in with Google OAuth.
+Receives security event notifications from Google via the [RISC (Risk Incident Sharing and Collaboration)](https://developers.google.com/identity/protocols/risc) protocol. This is the legacy endpoint — new integrations should use [`POST /api/security/risc`](#cross-account-protection-receiver) instead, which adds token validation, event deduplication, and more granular event handling.
 
 <Warning>This endpoint is intended to be called by Google's RISC infrastructure, not by application clients. You do not need to call it directly.</Warning>
 
@@ -680,9 +766,22 @@ GET /api/auth/token-gating/verify?address=0x...
 | `user.updated` | Profile updated |
 | `user.deleted` | Account deleted |
 
-### Google RISC events
+### Google RISC events (Cross-Account Protection)
 
-The following inbound events are processed by the [`POST /api/auth/google/risc`](#google-risc-webhook) endpoint when received from Google:
+The following inbound events are processed by the [`POST /api/security/risc`](#cross-account-protection-receiver) endpoint when received from Google:
+
+| Event | Description |
+|-------|-------------|
+| `account-disabled` | The Google account was disabled. If the reason is `hijacking`, Google Sign-in is disabled for the user and all sessions are invalidated. Otherwise, sessions are invalidated. |
+| `account-enabled` | The Google account was re-enabled. Google Sign-in is re-enabled for the user. |
+| `sessions-revoked` | Google revoked the user's sessions. All local sessions are invalidated. |
+| `tokens-revoked` | Google revoked the user's OAuth tokens. Stored refresh tokens are deleted and all sessions are invalidated. |
+| `account-credential-change-required` | Google flagged the account for a credential change. Logged for monitoring. |
+| `verification` | Sent by Google during RISC setup to verify the endpoint is reachable. |
+
+### Google RISC events (legacy)
+
+The following inbound events are processed by the [`POST /api/auth/google/risc`](#google-risc-webhook-legacy) endpoint when received from Google:
 
 | Event | Description |
 |-------|-------------|

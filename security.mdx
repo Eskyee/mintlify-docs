@@ -237,45 +237,56 @@ Found a security issue? Email security@raveculture.xyz or open a GitHub issue.
 
 ## Google RISC Protocol
 
-Agentbot implements Google's [RISC (Risk Incident Sharing and Collaboration)](https://developers.google.com/identity/protocols/risc) protocol for enhanced OAuth security.
+Agentbot implements Google's [RISC (Risk Incident Sharing and Collaboration)](https://developers.google.com/identity/protocols/risc) protocol for enhanced OAuth security. Two endpoints handle RISC events, each serving a different role.
 
 ### What is RISC?
 
 RISC enables real-time security event sharing between Google and Agentbot. When Google detects a security incident (compromised account, suspicious activity, etc.), it sends a webhook to Agentbot to take immediate action.
 
-### Supported Events
+### Endpoints
 
-| Event | Action |
-|-------|--------|
-| `https://schemas.openid.net/secevent/risc/event-type/account-compromised` | Revoke all sessions for the affected user |
-| `https://schemas.openid.net/secevent/risc/event-type/account-disabled` | Revoke all sessions for the affected user |
-| `https://schemas.openid.net/secevent/risc/event-type/account-enabled` | No action taken — sessions are recreated on next login |
-| `https://schemas.openid.net/secevent/risc/event-type/identifier-changed` | Revoke all sessions to force re-authentication |
-| `https://schemas.openid.net/secevent/risc/event-type/sessions-revoked` | Revoke all active sessions |
+| Endpoint | Purpose |
+|----------|---------|
+| `POST /api/security/risc` | Cross-Account Protection receiver with token validation, event deduplication, and hijacking-specific responses |
+| `POST /api/auth/google/risc` | Legacy RISC webhook that revokes sessions on security events |
 
-<Note>The following RISC event types are defined in the specification but are not yet handled: `identifier-recycled`, `recovery-activated`, `recovery-information-changed`. These events are acknowledged with a `200` response but no action is taken.</Note>
+The `/api/security/risc` endpoint is the primary receiver for Google Cross-Account Protection. It validates the SET (Security Event Token) JWT against Google's signing keys, checks the issuer and audience claims, deduplicates events using the `jti` claim, and takes targeted action depending on the event type. See the [API reference](/api-reference/auth#cross-account-protection-receiver) for full details.
 
-### Implementation
+### Supported events
 
-Agentbot's RISC webhook endpoint:
+| Event | `/api/security/risc` action | `/api/auth/google/risc` action |
+|-------|----------------------------|-------------------------------|
+| `account-disabled` (hijacking) | Disables Google Sign-in and invalidates all sessions | Revokes all sessions |
+| `account-disabled` (other) | Invalidates all sessions | Revokes all sessions |
+| `account-enabled` | Re-enables Google Sign-in | No action taken |
+| `sessions-revoked` | Invalidates all sessions | Revokes all sessions |
+| `tokens-revoked` | Revokes stored OAuth tokens and invalidates sessions | Not handled |
+| `account-credential-change-required` | Logged for monitoring | Not handled |
+| `verification` | Acknowledged (used during setup) | Not handled |
+| `account-compromised` | Not handled | Revokes all sessions |
+| `identifier-changed` | Not handled | Revokes all sessions |
 
-```
-POST /api/auth/google/risc
-```
+<Note>The `/api/security/risc` endpoint matches users by Google subject ID (`sub`) or email address. The `/api/auth/google/risc` endpoint matches by email only.</Note>
 
-The endpoint:
-1. Decodes the SET (Security Event Token) JWT
-2. Parses the security event type from the JWT payload
-3. Looks up the affected user by email address
-4. Takes appropriate action (session revocation)
-5. Returns `200 OK` to acknowledge receipt
+### Event deduplication
 
-### Security Response
+The `/api/security/risc` endpoint deduplicates events using the `jti` (JWT ID) claim. Each event is stored in the `risc_events` table with a unique constraint on the `jti` column. Duplicate events are acknowledged but not processed again.
+
+### Token validation
+
+The `/api/security/risc` endpoint validates incoming SET JWTs by:
+
+1. Verifying the issuer is `https://accounts.google.com/`
+2. Checking the audience matches a configured `GOOGLE_CLIENT_ID`
+3. Fetching Google's RISC signing keys from the well-known configuration endpoint (cached for 24 hours)
+4. Matching the signing key by `kid` header claim
+
+### Security response
 
 When a RISC event is received:
 
-1. **Immediate**: Revoke affected sessions
-2. **Audit**: Log event for security review
+1. **Immediate**: Disable Google Sign-in (for hijacking events) or invalidate sessions
+2. **Audit**: Log event type and affected user for security review
 3. **Recovery**: User must re-authenticate on next visit
 
 ### Configuration
@@ -283,9 +294,11 @@ When a RISC event is received:
 RISC events are configured in Google Cloud Console:
 
 1. Go to **APIs & Services** → **Google RISC API**
-2. Add the webhook URL: `https://agentbot.raveculture.xyz/api/auth/google/risc`
+2. Add the webhook URL: `https://agentbot.raveculture.xyz/api/security/risc`
 3. Configure event types to receive
 4. Set delivery method (push or poll)
+
+The endpoint requires the `GOOGLE_CLIENT_ID` environment variable. Multiple client IDs can be provided as a comma-separated list.
 
 ### Reference
 
