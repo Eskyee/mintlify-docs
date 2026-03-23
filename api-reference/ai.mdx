@@ -7,7 +7,7 @@ description: "AI provider endpoints for model selection, chat completion, and co
 
 Endpoints for interacting with AI models through a unified provider layer. These endpoints are served by the backend API service, not the web application. They are available at the backend base URL, which may differ from the web API base URL depending on your deployment.
 
-<Note>These endpoints are internal backend endpoints and are not exposed through the web application's `/api` routes. All endpoints in this group require bearer token (API key) authentication. The chat endpoint additionally requires a valid subscription plan. All POST requests must include the `Content-Type: application/json` header.</Note>
+<Note>These endpoints are internal backend endpoints and are not exposed through the web application's `/api` routes. All endpoints in this group require bearer token (API key) authentication, including the health check and model listing endpoints. The chat endpoint additionally requires a valid subscription plan. All POST requests must include the `Content-Type: application/json` header.</Note>
 
 <Warning>All `/api/ai/*` endpoints share a rate limit of 30 requests per minute per IP, not just the chat endpoint.</Warning>
 

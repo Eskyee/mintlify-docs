@@ -17,7 +17,33 @@ GET /api/agents
 
 Returns all agents owned by the authenticated user. When no session is present, returns an empty list instead of a `401` error.
 
-### Response
+### Response (backend)
+
+The backend returns a flat array of agent objects:
+
+```json
+[
+  {
+    "id": "agent_123",
+    "status": "active",
+    "created": "2026-03-01T00:00:00Z",
+    "subdomain": "agent_123.agents.localhost",
+    "url": "https://agent_123.agents.localhost"
+  }
+]
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `[].id` | string | Agent identifier |
+| `[].status` | string | Current agent status |
+| `[].created` | string | ISO 8601 creation timestamp |
+| `[].subdomain` | string | Agent subdomain |
+| `[].url` | string | Agent URL |
+
+### Response (web proxy)
+
+The web proxy wraps the response in an object:
 
 ```json
 {
@@ -49,6 +75,8 @@ Returns all agents owned by the authenticated user. When no session is present, 
 | `agents[].updatedAt` | string | ISO 8601 last update timestamp |
 | `count` | number | Total number of agents returned |
 | `status` | string | Response status (`ok`) |
+
+<Note>The backend and web proxy return different response shapes. The backend returns a flat array with `created`, `subdomain`, and `url` fields. The web proxy wraps the data in an `agents` key and includes `name`, `model`, `websocketUrl`, `createdAt`, and `updatedAt` fields.</Note>
 
 ## Create agent
 
@@ -99,7 +127,29 @@ GET /api/agents/:id
 
 Requires authentication and ownership of the agent.
 
-### Response
+### Response (backend)
+
+The backend returns the agent object directly without a wrapper:
+
+```json
+{
+  "id": "agent_123",
+  "status": "active",
+  "startedAt": "2026-03-01T00:00:00Z",
+  "plan": "solo",
+  "subdomain": "agent_123.agents.localhost",
+  "url": "https://agent_123.agents.localhost",
+  "openclawVersion": "2026.3.13",
+  "verified": false,
+  "verificationType": null,
+  "attestationUid": null,
+  "verifiedAt": null
+}
+```
+
+### Response (web proxy)
+
+The web proxy wraps the agent in an object:
 
 ```json
 {
@@ -119,6 +169,8 @@ Requires authentication and ownership of the agent.
   "status": "ok"
 }
 ```
+
+<Note>The backend returns the agent object directly. The web proxy wraps it in an `agent` key and adds a top-level `status` field.</Note>
 
 ### Errors
 
@@ -189,8 +241,9 @@ Stops the agent's container, releases its port, and removes its metadata. Requir
 | Code | Description |
 |------|-------------|
 | 401 | Unauthorized |
-| 404 | Agent not found |
 | 500 | Failed to delete agent |
+
+<Note>The backend uses best-effort cleanup (container stop, port release, metadata removal). If the agent does not exist, the operation succeeds silently and returns `deleted: true`.</Note>
 
 ## Provision agent
 
@@ -667,6 +720,13 @@ Triggers an image update on the backend.
 | `backupPath` | string | Path to the pre-update backup |
 | `openclawVersion` | string | Current OpenClaw runtime version |
 
+#### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | Invalid Docker image name |
+| 500 | Update failed |
+
 ### Repair agent
 
 ```http
@@ -699,7 +759,15 @@ Returns the backend response directly.
 
 ### Lifecycle error responses
 
-All lifecycle endpoints return the following shape on failure:
+Backend lifecycle endpoints return the following shape on failure:
+
+```json
+{
+  "error": "Error message describing the failure"
+}
+```
+
+Web proxy lifecycle endpoints return a different error shape:
 
 ```json
 {
@@ -708,12 +776,12 @@ All lifecycle endpoints return the following shape on failure:
 }
 ```
 
-| Code | Description |
-|------|-------------|
-| 401 | Unauthorized — missing or invalid authentication |
-| 403 | Forbidden — authenticated user does not own this agent instance |
-| 502 | Backend service unavailable |
-| 500 | Internal server error |
+| Code | Source | Description |
+|------|--------|-------------|
+| 401 | Both | Unauthorized — missing or invalid authentication |
+| 403 | Web proxy | Forbidden — authenticated user does not own this agent instance |
+| 500 | Backend | Internal server error (for example, Docker unavailable or container operation failed) |
+| 502 | Web proxy | Backend service unavailable |
 
 ## Get instance details
 
@@ -768,7 +836,7 @@ Returns the gateway token for the agent. If no token exists, a new cryptographic
 
 ```json
 {
-  "token": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d"
+  "token": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2"
 }
 ```
 
@@ -776,7 +844,7 @@ Returns the gateway token for the agent. If no token exists, a new cryptographic
 
 | Code | Description |
 |------|-------------|
-| 502 | Backend service unavailable |
+| 404 | Agent not found |
 | 500 | Failed to get token |
 
 ## Agent verification
@@ -837,8 +905,9 @@ POST /api/agents/:id/verify
 
 | Code | Description |
 |------|-------------|
-| 400 | Invalid verification type or missing required fields |
-| 401 | Unauthorized |
+| 401 | Unauthorized (handled by authentication middleware) |
+| 404 | Agent not found |
+| 500 | Failed to update verification |
 
 ### Remove verification
 
@@ -1006,7 +1075,7 @@ The `aiProviderConfig` object returned in the provision response uses different 
 | `groq` | `mixtral-8x7b-32768` | `https://api.groq.com/openai/v1` |
 | `anthropic` | `claude-3-sonnet-20240229` | `https://api.anthropic.com/v1` |
 | `openai` | `openai/gpt-4o` | `https://api.openai.com/v1` |
-| `minimax` | `MiniMax-Text-01` | `https://api.minimax.chat/v1` |
+| `minimax` | `MiniMax/MiniMax-Text-01` | `https://api.minimax.chat/v1` |
 
 Each provider includes a fallback model in the container config that is used automatically when the primary model is unavailable or returns an error.
 

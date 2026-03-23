@@ -56,7 +56,9 @@ Validates a bearer token by computing a SHA-256 hash of the raw key and looking 
 POST /api/register-home
 ```
 
-Registers a Home mode installation. Requires the `x-user-email`, `x-user-id`, and `x-user-role` headers to identify the caller. These headers are set by the web proxy when a session is active.
+Registers a Home mode installation. Requires bearer token (API key) authentication.
+
+<Note>The web proxy forwards identity headers (`x-user-email`, `x-user-id`, `x-user-role`) from the active session, but the backend authenticates the request using the bearer token, not these headers.</Note>
 
 ### Request body
 
@@ -81,7 +83,8 @@ Registers a Home mode installation. Requires the `x-user-email`, `x-user-id`, an
 | Code | Description |
 |------|-------------|
 | 400 | `userId` is required |
-| 401 | Unauthorized — missing required identity headers |
+| 401 | Unauthorized — missing or invalid bearer token |
+| 500 | Internal server error |
 
 ## Register Link installation
 
@@ -89,7 +92,9 @@ Registers a Home mode installation. Requires the `x-user-email`, `x-user-id`, an
 POST /api/register-link
 ```
 
-Registers a Link mode installation that connects an existing OpenClaw instance. Requires the `x-user-email`, `x-user-id`, and `x-user-role` headers to identify the caller.
+Registers a Link mode installation that connects an existing OpenClaw instance. Requires bearer token (API key) authentication.
+
+<Note>The web proxy forwards identity headers (`x-user-email`, `x-user-id`, `x-user-role`) from the active session, but the backend authenticates the request using the bearer token, not these headers.</Note>
 
 ### Request body
 
@@ -114,7 +119,8 @@ Registers a Link mode installation that connects an existing OpenClaw instance. 
 | Code | Description |
 |------|-------------|
 | 400 | `userId` is required |
-| 401 | Unauthorized — missing required identity headers |
+| 401 | Unauthorized — missing or invalid bearer token |
+| 500 | Internal server error |
 
 ## List installations
 
@@ -122,7 +128,7 @@ Registers a Link mode installation that connects an existing OpenClaw instance. 
 GET /api/installations
 ```
 
-Returns all registered installations across all deployment modes. Requires the `x-user-email`, `x-user-id`, and `x-user-role` headers to identify the caller.
+Returns all registered installations across all deployment modes. Requires bearer token (API key) authentication.
 
 ### Response
 
@@ -161,7 +167,8 @@ Returns all registered installations across all deployment modes. Requires the `
 
 | Code | Description |
 |------|-------------|
-| 401 | Unauthorized — missing required identity headers |
+| 401 | Unauthorized — missing or invalid bearer token |
+| 500 | Internal server error |
 
 ## Registration heartbeat
 
