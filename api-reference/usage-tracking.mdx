@@ -326,27 +326,31 @@ Returns aggregated tool execution statistics, optionally filtered by agent.
 
 ## Usage event schema
 
-Each usage event is stored as a row in the `UsageLog` table. Events are recorded automatically whenever an AI completion is made (for example, from the [demo chat endpoint](/api-reference/demo-chat) or agent chat). Cost is calculated at write time using per-model pricing rates.
+Each usage event is stored as a row in the `usage_logs` table (Prisma model name: `UsageLog`). Events are recorded automatically whenever an AI completion is made (for example, from the [demo chat endpoint](/api-reference/demo-chat) or agent chat). Cost is calculated at write time using per-model pricing rates.
+
+<Note>The `usage_logs` table is created via a dedicated SQL migration (`20260323000000_add_usage_logs`) rather than through Prisma's schema push. This ensures the table is created reliably across deployments without requiring Prisma to manage the migration state.</Note>
 
 | Field | Type | Description |
 |-------|------|-------------|
 | `id` | integer | Auto-incrementing primary key |
-| `userId` | string | User who triggered the event |
-| `agentId` | string | Agent that triggered the completion |
-| `model` | string | Model identifier (for example `anthropic/claude-sonnet-4.5`) |
-| `inputTokens` | integer | Number of input (prompt) tokens |
-| `outputTokens` | integer | Number of output (completion) tokens |
-| `costUsd` | decimal | Computed cost in USD (six decimal places) |
-| `endpoint` | string \| null | API route that generated the event (for example `/api/demo/chat`) |
-| `latencyMs` | integer \| null | Response latency in milliseconds |
-| `success` | boolean | Whether the completion succeeded. Defaults to `true` |
-| `errorMessage` | string \| null | Error description when `success` is `false` |
-| `createdAt` | datetime | Timestamp when the event was recorded |
+| `user_id` | varchar(255) | User who triggered the event |
+| `agent_id` | varchar(255) | Agent that triggered the completion |
+| `model` | varchar(100) | Model identifier (for example `anthropic/claude-sonnet-4.5`) |
+| `input_tokens` | integer | Number of input (prompt) tokens. Defaults to `0`. |
+| `output_tokens` | integer | Number of output (completion) tokens. Defaults to `0`. |
+| `cost_usd` | decimal(10,6) | Computed cost in USD (six decimal places). Defaults to `0`. |
+| `endpoint` | varchar(255) \| null | API route that generated the event (for example `/api/demo/chat`) |
+| `latency_ms` | integer \| null | Response latency in milliseconds |
+| `success` | boolean | Whether the completion succeeded. Defaults to `true`. |
+| `error_message` | text \| null | Error description when `success` is `false` |
+| `created_at` | timestamp | Timestamp when the event was recorded. Defaults to `NOW()`. |
 
-The table is indexed on `userId`, `agentId`, `createdAt`, and the composite pairs `(userId, createdAt)` and `(agentId, createdAt)` for efficient time-range queries.
+<Note>When accessing the table through the Prisma ORM, use the camelCase field names (`userId`, `agentId`, `inputTokens`, etc.). When writing raw SQL queries, use the snake_case column names shown above (`user_id`, `agent_id`, `input_tokens`, etc.).</Note>
+
+The table is indexed on `user_id`, `agent_id`, `created_at`, and the composite pairs `(user_id, created_at)` and `(agent_id, created_at)` for efficient time-range queries.
 
 <Warning>
-The usage event schema was updated in the March 2026 release. The previous fields `session_id`, `session_key`, `cache_read_tokens`, `cache_write_tokens`, and `total_tokens` are no longer recorded. Use `inputTokens + outputTokens` to calculate total tokens.
+The usage event schema was updated in the March 2026 release. The previous fields `session_id`, `session_key`, `cache_read_tokens`, `cache_write_tokens`, and `total_tokens` are no longer recorded. Use `input_tokens + output_tokens` to calculate total tokens.
 </Warning>
 
 ## Tool event schema
