@@ -108,6 +108,8 @@ No authentication required. Rate-limited by IP address.
 
 <Note>The demo endpoint uses a fixed max token limit of 1024 and does not support streaming. For full chat capabilities, use the [AI chat endpoint](/api-reference/ai#chat-completion) with a subscription plan.</Note>
 
+<Info>Every successful demo chat request automatically logs token usage and cost to the [usage tracking](/api-reference/usage-tracking) system. Demo requests are recorded with `userId: "demo"` and `agentId: "demo-chat"`, and are visible in the cost dashboard.</Info>
+
 ## Examples
 
 ### List models
