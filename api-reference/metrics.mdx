@@ -102,7 +102,7 @@ Returns platform-wide metrics including agent counts, message volumes, deploymen
 GET /api/metrics/:userId/historical
 ```
 
-Requires bearer token authentication. Returns time-series metrics for an agent over a specified time range.
+Requires bearer token authentication. Returns time-series metrics for an agent over a specified time range. Data is sourced from the `container_metrics` database table, aggregated by hour. If no database history exists for the requested range, the endpoint falls back to a single live container sample.
 
 ### Path parameters
 
@@ -186,7 +186,7 @@ Requires bearer token authentication. Returns current real-time performance data
   "cpu": 15.3,
   "memory": 42.1,
   "errorRate": 1.2,
-  "responseTime": 180
+  "responseTime": 0
 }
 ```
 
