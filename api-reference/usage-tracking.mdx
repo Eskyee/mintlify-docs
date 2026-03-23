@@ -5,13 +5,103 @@ description: "Track and query token usage, costs, and tool execution metrics per
 
 # Usage tracking API
 
-<Info>The usage tracking query endpoints are planned for a future release. The endpoints described on this page are not yet available. Usage events are recorded internally but the query APIs have not been deployed. This page documents the intended specification for reference.</Info>
-
-The usage tracking system records per-event token consumption and tool execution metrics backed by SQLite. You can query aggregated data by agent, model, or time period.
-
-All query endpoints require bearer token authentication and are served by the backend API.
+The usage tracking system records per-event token consumption and tool execution metrics. You can query aggregated data by agent, model, or time period.
 
 <Note>The usage tracker records events internally whenever an AI completion or tool call is made. The endpoints below are read-only query APIs for retrieving aggregated usage data.</Note>
+
+## Cost dashboard
+
+```http
+GET /api/dashboard/cost
+```
+
+Returns aggregated cost, token, and call data for the cost dashboard. Breaks down spending by agent, model, and day. Requires session authentication.
+
+When no usage data is available, the endpoint returns realistic sample data with `isMockData` set to `true` and a `message` field explaining that usage tracking is not yet configured.
+
+### Query parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `period` | string | `7d` | Time window for the aggregation. Accepted values: `7d` (last 7 days), `30d` (last 30 days), `mtd` (month to date). |
+
+### Response
+
+```json
+{
+  "period": "7d",
+  "summary": {
+    "totalCost": 13.68,
+    "totalTokens": 4560000,
+    "totalCalls": 1946,
+    "avgCostPerCall": 0.007
+  },
+  "agents": [
+    {
+      "name": "Atlas",
+      "tokens": 2840000,
+      "cost": 8.52,
+      "calls": 1247,
+      "avgCostPerCall": 0.0068,
+      "model": "claude-3-7-sonnet"
+    }
+  ],
+  "daily": [
+    {
+      "date": "Mar 17",
+      "cost": 1.42,
+      "tokens": 380000
+    }
+  ],
+  "modelBreakdown": [
+    {
+      "model": "claude-3-7-sonnet",
+      "percent": 68,
+      "cost": 9.30
+    }
+  ],
+  "isMockData": false
+}
+```
+
+### Response fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `period` | string | The requested period echoed back (`7d`, `30d`, or `mtd`) |
+| `summary.totalCost` | number | Total cost in USD for the period |
+| `summary.totalTokens` | number | Total tokens (input + output) consumed |
+| `summary.totalCalls` | number | Total API calls made |
+| `summary.avgCostPerCall` | number | Blended average cost per call in USD |
+| `agents` | array | Per-agent cost breakdown, sorted by cost descending |
+| `agents[].name` | string | Agent name or identifier |
+| `agents[].tokens` | number | Total tokens consumed by the agent |
+| `agents[].cost` | number | Total cost in USD attributed to the agent |
+| `agents[].calls` | number | Number of API calls made by the agent |
+| `agents[].avgCostPerCall` | number | Average cost per call for the agent |
+| `agents[].model` | string | Primary model used by the agent |
+| `daily` | array | Daily cost and token totals |
+| `daily[].date` | string | Formatted date label (e.g. `"Mar 17"`) |
+| `daily[].cost` | number | Cost in USD for that day |
+| `daily[].tokens` | number | Total tokens consumed that day |
+| `modelBreakdown` | array | Cost breakdown by model, sorted by cost descending |
+| `modelBreakdown[].model` | string | Model identifier |
+| `modelBreakdown[].percent` | number | Percentage of total cost attributed to this model |
+| `modelBreakdown[].cost` | number | Cost in USD for this model |
+| `isMockData` | boolean | `true` when the response contains sample data because no real usage data is available |
+| `message` | string \| undefined | Present only when `isMockData` is `true`. Explains that sample data is being returned. |
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 500 | Failed to fetch cost data |
+
+---
+
+<Info>The remaining endpoints on this page are planned for a future release. They are not yet available. Usage events are recorded internally but these query APIs have not been deployed. This section documents the intended specification for reference.</Info>
+
+All query endpoints below require bearer token authentication and are served by the backend API.
 
 ## Usage summary
 
