@@ -507,7 +507,7 @@ Returns logs for an agent. Requires authentication and ownership.
       "timestamp": "2026-03-19T00:00:00Z",
       "level": "info",
       "message": "Agent activity log entry 1",
-      "source": "system",
+      "source": "agent",
       "agentId": "agent_123"
     }
   ],
@@ -943,7 +943,7 @@ The request is proxied to the backend provisioning service. When `MUX_TOKEN_ID` 
 | `discordBotToken` | string | Conditional | Discord bot token. At least one channel token is required. |
 | `aiProvider` | string | No | AI provider (default: `openrouter`). Options: `openrouter`, `gemini`, `groq`, `anthropic`, `openai`. Each provider maps to a default model — see [AI provider defaults](#ai-provider-defaults) below. |
 | `apiKey` | string | No | API key for the AI provider |
-| `plan` | string | No | Plan tier. Options: `solo`, `collective`, `label`, `network`. Defaults to `free` when omitted, which is not a valid plan and returns `402` with the message `No free tier`. A paid plan must be specified explicitly. |
+| `plan` | string | No | Plan tier. Options: `solo`, `collective`, `label`, `network`. Defaults to `free` when omitted, which is not a valid plan and returns `400` with the message `Invalid plan`. A paid plan must be specified explicitly. |
 | `email` | string | No | User email address. When omitted, the email is automatically populated from the authenticated session if one exists. The resolved email is forwarded to the backend in the `X-User-Email` header. |
 | `stripeSubscriptionId` | string | No | Stripe subscription ID from checkout |
 
@@ -1039,9 +1039,9 @@ When calling the backend provisioning service directly, the response includes ad
 
 | Code | Description |
 |------|-------------|
-| 400 | At least one channel token required (Telegram, WhatsApp, or Discord), or invalid `aiProvider` or `plan` value |
-| 400 | Invalid plan value. The `plan` field must be one of `solo`, `collective`, `label`, or `network`. |
-| 402 | No free tier. A paid subscription is required. Returned when the plan is `free` (the default when omitted) or unrecognized. The response body includes a `code` field set to `PAYMENT_REQUIRED`. |
+| 400 | At least one channel token required (Telegram, WhatsApp, or Discord), or invalid `aiProvider` value |
+| 400 | Invalid plan value. The `plan` field must be one of `solo`, `collective`, `label`, or `network`. Unrecognized values (including the default `free`) return this error. |
+| 402 | Active subscription required. Returned when a valid plan is specified but no Stripe subscription ID is provided and the caller is not an admin or tester. The response body includes a `code` field set to `PAYMENT_REQUIRED`. |
 | 402 | Agent limit reached for your plan. The response body includes a `code` field set to `AGENT_LIMIT_REACHED`, along with `current` (current agent count) and `limit` (maximum allowed) fields. Limits: `solo` 1, `collective` 3, `label` 10, `network` unlimited. |
 | 500 | Internal server error |
 | 502 | Provisioning service unavailable or returned an error. All backend URLs failed or returned non-success responses. |
