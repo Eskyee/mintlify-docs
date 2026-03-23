@@ -213,7 +213,7 @@ Provisions a new agent. Requires an active subscription unless the caller is an 
 | `config` | object | No | Agent configuration |
 | `tier` | string | No | Subscription tier hint. Options: `starter`, `pro`, `enterprise`. This value is forwarded to the backend as the `plan` field (mapped to `solo`, `collective`, `label`, `network`). When omitted, the backend deployment defaults to `label`. |
 
-<Note>The web proxy enforces agent limits based on the subscription tier (`starter`: 1, `pro`: 3, `enterprise`: 100). The backend enforces separate plan-based limits (`label`: 1, `solo`: 3, `collective`: 10, `network`: 100). The limit cannot be overridden in the request body.</Note>
+<Note>The web proxy enforces agent limits based on the subscription tier (`starter`: 1, `pro`: 3, `enterprise`: 100). The backend plan middleware enforces separate limits (`label`: 1, `solo`: 3, `collective`: 10, `network`: 100). The backend provisioning route (`POST /api/provision`) enforces its own limits (`solo`: 1, `collective`: 3, `label`: 10, `network`: unlimited). The limit cannot be overridden in the request body.</Note>
 
 ### Admin bypass
 
@@ -874,7 +874,7 @@ The request is proxied to the backend provisioning service. When `MUX_TOKEN_ID` 
 | `discordBotToken` | string | Conditional | Discord bot token. At least one channel token is required. |
 | `aiProvider` | string | No | AI provider (default: `openrouter`). Options: `openrouter`, `gemini`, `groq`, `anthropic`, `openai`. Each provider maps to a default model — see [AI provider defaults](#ai-provider-defaults) below. |
 | `apiKey` | string | No | API key for the AI provider |
-| `plan` | string | No | Plan tier. Options: `label`, `solo`, `collective`, `network`. Defaults to `free` when omitted, which is not a valid plan and returns `402` with the message `No free tier`. A paid plan must be specified explicitly. |
+| `plan` | string | No | Plan tier. Options: `solo`, `collective`, `label`, `network`. Defaults to `free` when omitted, which is not a valid plan and returns `402` with the message `No free tier`. A paid plan must be specified explicitly. |
 | `email` | string | No | User email address. When omitted, the email is automatically populated from the authenticated session if one exists. The resolved email is forwarded to the backend in the `X-User-Email` header. |
 | `stripeSubscriptionId` | string | No | Stripe subscription ID from checkout |
 
@@ -971,9 +971,9 @@ When calling the backend provisioning service directly, the response includes ad
 | Code | Description |
 |------|-------------|
 | 400 | At least one channel token required (Telegram, WhatsApp, or Discord), or invalid `aiProvider` or `plan` value |
-| 400 | Invalid plan value. The `plan` field must be one of `label`, `solo`, `collective`, or `network`. |
+| 400 | Invalid plan value. The `plan` field must be one of `solo`, `collective`, `label`, or `network`. |
 | 402 | No free tier. A paid subscription is required. Returned when the plan is `free` (the default when omitted) or unrecognized. The response body includes a `code` field set to `PAYMENT_REQUIRED`. |
-| 402 | Agent limit reached for your plan. The response body includes a `code` field set to `AGENT_LIMIT_REACHED`, along with `current` (current agent count) and `limit` (maximum allowed) fields. |
+| 402 | Agent limit reached for your plan. The response body includes a `code` field set to `AGENT_LIMIT_REACHED`, along with `current` (current agent count) and `limit` (maximum allowed) fields. Limits: `solo` 1, `collective` 3, `label` 10, `network` unlimited. |
 | 500 | Internal server error |
 | 502 | Provisioning service unavailable or returned an error. All backend URLs failed or returned non-success responses. |
 | 503 | Provisioning is temporarily disabled (kill switch active) |
