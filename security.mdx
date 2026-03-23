@@ -234,3 +234,62 @@ Groupie Manager uses in-memory Map storage. Data is:
 ## Reporting Issues
 
 Found a security issue? Email security@raveculture.xyz or open a GitHub issue.
+
+## Google RISC Protocol
+
+Agentbot implements Google's [RISC (Risk Incident Sharing and Collaboration)](https://developers.google.com/identity/protocols/risc) protocol for enhanced OAuth security.
+
+### What is RISC?
+
+RISC enables real-time security event sharing between Google and Agentbot. When Google detects a security incident (compromised account, suspicious activity, etc.), it sends a webhook to Agentbot to take immediate action.
+
+### Supported Events
+
+| Event | Action |
+|-------|--------|
+| `https://schemas.openid.net/secevent/risc/event-type/account-compromised` | Revoke all sessions, force re-authentication |
+| `https://schemas.openid.net/secevent/risc/event-type/account-disabled` | Disable user access, notify via email |
+| `https://schemas.openid.net/secevent/risc/event-type/account-enabled` | Re-enable user access |
+| `https://schemas.openid.net/secevent/risc/event-type/identifier-changed` | Update email, invalidate old sessions |
+| `https://schemas.openid.net/secevent/risc/event-type/identifier-recycled` | Treat as new account, clear old data |
+| `https://schemas.openid.net/secevent/risc/event-type/recovery-activated` | Log recovery attempt, notify user |
+| `https://schemas.openid.net/secevent/risc/event-type/recovery-information-changed` | Audit recovery method changes |
+| `https://schemas.openid.net/secevent/risc/event-type/sessions-revoked` | Revoke all active sessions |
+
+### Implementation
+
+Agentbot's RISC webhook endpoint:
+
+```
+POST /api/auth/google/risc
+```
+
+The endpoint:
+1. Validates the JWT signature from Google
+2. Parses the security event
+3. Takes appropriate action (session revocation, user notification, etc.)
+4. Returns `200 OK` to acknowledge receipt
+
+### Security Response
+
+When a RISC event is received:
+
+1. **Immediate**: Revoke affected sessions
+2. **Short-term**: Notify user via email
+3. **Audit**: Log event for security review
+4. **Recovery**: Guide user through re-authentication
+
+### Configuration
+
+RISC events are configured in Google Cloud Console:
+
+1. Go to **APIs & Services** → **Google RISC API**
+2. Add the webhook URL: `https://agentbot.raveculture.xyz/api/auth/google/risc`
+3. Configure event types to receive
+4. Set delivery method (push or poll)
+
+### Reference
+
+- [Google RISC Documentation](https://developers.google.com/identity/protocols/risc)
+- [Shared Signals Framework (SSF)](https://openid.net/specs/openid-sharedsignals-framework-1_0.html)
+- [CAEP (Continuous Access Evaluation Protocol)](https://openid.net/specs/openid-caep-specification-1_0.html)
