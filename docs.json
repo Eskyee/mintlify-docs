@@ -88,7 +88,9 @@
           "api-reference/invite",
           "api-reference/web-summarizer",
           "api-reference/x402",
-          "api-reference/demo-chat"
+          "api-reference/demo-chat",
+          "api-reference/scheduled-tasks",
+          "api-reference/billing"
         ]
       },
       {
