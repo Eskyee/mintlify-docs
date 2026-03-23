@@ -155,12 +155,20 @@ Returns the current authenticated user based on the `agentbot-session` cookie. N
 
 ### Response (authenticated)
 
+| Field | Type | Description |
+|-------|------|-------------|
+| `user.id` | string | User ID |
+| `user.name` | string | Display name |
+| `user.email` | string | Email address |
+| `user.isAdmin` | boolean | Whether the user has admin privileges. Defaults to `false` when not set. |
+
 ```json
 {
   "user": {
     "id": "user_123",
     "name": "John Doe",
-    "email": "user@example.com"
+    "email": "user@example.com",
+    "isAdmin": false
   }
 }
 ```
