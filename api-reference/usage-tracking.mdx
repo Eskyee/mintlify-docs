@@ -7,7 +7,7 @@ description: "Track and query token usage, costs, and tool execution metrics per
 
 The usage tracking system records per-event token consumption and tool execution metrics. You can query aggregated data by agent, model, or time period.
 
-<Note>The usage tracker records events internally whenever an AI completion or tool call is made. The endpoints below are read-only query APIs for retrieving aggregated usage data.</Note>
+<Note>The usage tracker records events to a PostgreSQL database whenever an AI completion or tool call is made. The endpoints below are read-only query APIs for retrieving aggregated usage data. When no real usage data exists yet, the cost dashboard returns sample data with a `isMockData: true` flag.</Note>
 
 ## Cost dashboard
 
@@ -326,21 +326,28 @@ Returns aggregated tool execution statistics, optionally filtered by agent.
 
 ## Usage event schema
 
-Each usage event records the following fields internally:
+Each usage event is stored as a row in the `UsageLog` table. Events are recorded automatically whenever an AI completion is made (for example, from the [demo chat endpoint](/api-reference/demo-chat) or agent chat). Cost is calculated at write time using per-model pricing rates.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `session_id` | string \| null | Session that generated the event |
-| `session_key` | string \| null | Session key for grouping related events |
-| `agent_id` | string \| null | Agent that triggered the completion |
-| `provider` | string | AI provider (for example `openrouter`, `anthropic`) |
-| `model` | string | Model identifier |
-| `input_tokens` | number | Number of input tokens |
-| `output_tokens` | number | Number of output tokens |
-| `cache_read_tokens` | number | Tokens served from cache |
-| `cache_write_tokens` | number | Tokens written to cache |
-| `total_tokens` | number | Sum of all token fields |
-| `cost_usd` | number | Estimated cost in USD |
+| `id` | integer | Auto-incrementing primary key |
+| `userId` | string | User who triggered the event |
+| `agentId` | string | Agent that triggered the completion |
+| `model` | string | Model identifier (for example `anthropic/claude-sonnet-4.5`) |
+| `inputTokens` | integer | Number of input (prompt) tokens |
+| `outputTokens` | integer | Number of output (completion) tokens |
+| `costUsd` | decimal | Computed cost in USD (six decimal places) |
+| `endpoint` | string \| null | API route that generated the event (for example `/api/demo/chat`) |
+| `latencyMs` | integer \| null | Response latency in milliseconds |
+| `success` | boolean | Whether the completion succeeded. Defaults to `true` |
+| `errorMessage` | string \| null | Error description when `success` is `false` |
+| `createdAt` | datetime | Timestamp when the event was recorded |
+
+The table is indexed on `userId`, `agentId`, `createdAt`, and the composite pairs `(userId, createdAt)` and `(agentId, createdAt)` for efficient time-range queries.
+
+<Warning>
+The usage event schema was updated in the March 2026 release. The previous fields `session_id`, `session_key`, `cache_read_tokens`, `cache_write_tokens`, and `total_tokens` are no longer recorded. Use `inputTokens + outputTokens` to calculate total tokens.
+</Warning>
 
 ## Tool event schema
 
