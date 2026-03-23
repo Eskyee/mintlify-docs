@@ -217,6 +217,7 @@ Returns a structured response with the following shape:
 | 402 | Valid subscription required. Returned when the plan header is missing or unrecognized (`PLAN_REQUIRED`), or when there is no active Stripe subscription (`SUBSCRIPTION_REQUIRED`). |
 | 403 | Model not available on your plan (`MODEL_RESTRICTED`). The response includes an `allowedModels` array listing the models your plan supports. |
 | 404 | No models available |
+| 429 | Monthly token quota exceeded (`QUOTA_EXCEEDED`). See [token quotas](#token-quotas) below. |
 | 500 | AI provider error |
 
 #### 402 error example
@@ -238,6 +239,28 @@ Returns a structured response with the following shape:
   "allowedModels": ["openai/gpt-4o-mini", "google/gemini-2.0-flash"]
 }
 ```
+
+#### 429 error example
+
+```json
+{
+  "error": "Monthly token quota exceeded for plan \"solo\". Used 2,000,000 of 2,000,000 tokens. Quota resets at the start of next month.",
+  "code": "QUOTA_EXCEEDED"
+}
+```
+
+## Token quotas
+
+Each plan enforces a monthly token budget across all AI chat requests. Token usage (input + output) is tracked per user and checked before each request. When your usage reaches the plan limit, subsequent requests are rejected with a `429` status and a `QUOTA_EXCEEDED` error code. Quotas reset at the start of each calendar month.
+
+| Plan | Monthly token limit |
+|------|-------------------|
+| `solo` | 2,000,000 |
+| `collective` | 6,000,000 |
+| `label` | 20,000,000 |
+| `network` | Unlimited |
+
+<Note>The `free` plan has a token limit of zero. All agent usage requires a paid subscription.</Note>
 
 ## Plan-based model access
 
@@ -267,6 +290,19 @@ Each AI provider is configured with a primary model and a fallback model. When t
 <Note>`minimax` (`MiniMax/MiniMax-Text-01`) is available in the provider configuration map but is not currently supported in the model fallback chain. It may be enabled in a future release.</Note>
 
 Fallback routing is handled transparently. The response always indicates which model ultimately served the request via the `model` field.
+
+## Task-based model tiers
+
+In addition to provider-level fallbacks, the backend AI service uses a tier-based routing system that selects models based on the type of work being performed. Each tier defines a primary model and two fallback models. If the primary model fails or times out, the system tries each fallback in order.
+
+| Tier | Primary model | Fallback models |
+|------|--------------|----------------|
+| `reasoning` | `deepseek/deepseek-r1` | `meta-llama/llama-3.3-70b-instruct`, `moonshotai/kimi-k2.5` |
+| `coding` | `qwen/qwen-2.5-coder-32b-instruct` | `deepseek/deepseek-r1`, `google/gemini-2.0-flash-001` |
+| `fast` | `meta-llama/llama-3.3-70b-instruct` | `mistralai/mistral-7b-instruct`, `google/gemini-2.0-flash-001` |
+| `creative` | `moonshotai/kimi-k2.5` | `deepseek/deepseek-r1`, `meta-llama/llama-3.3-70b-instruct` |
+
+Each model attempt has a timeout of 30 seconds by default. You can override this with the `AI_MODEL_TIMEOUT_MS` environment variable. All tier-based requests are routed through OpenRouter.
 
 ## Estimate cost
 

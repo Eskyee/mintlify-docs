@@ -210,6 +210,11 @@ curl -X POST https://agentbot.raveculture.xyz/api/ai/chat \
 | `/api/auth/token-gating/verify` | GET, POST | Verify token gating access |
 | `/api/billing` | GET | Get billing info |
 | `/api/billing` | POST | Billing actions (`create-checkout`, `enable-byok`, `disable-byok`, `get-usage`, `buy-credits`) |
+| `/api/subscriptions/deploy` | POST | Activate a subscription tier for deployment (backend only, requires auth) |
+| `/api/scheduled-tasks` | GET | List scheduled tasks (filtered by optional `agentId`) |
+| `/api/scheduled-tasks` | POST | Create a scheduled task |
+| `/api/scheduled-tasks` | PUT | Update a scheduled task |
+| `/api/scheduled-tasks` | DELETE | Delete a scheduled task |
 | `/api/stripe/checkout` | GET | Redirect to Stripe checkout (accepts `plan` query param: `solo`, `collective`, `label`, `network`). Prices are in GBP. |
 | `/api/stripe/credits` | GET | Redirect to Stripe credit purchase (accepts `price` query param) |
 | `/api/stripe/storage-upgrade` | POST | Upgrade storage plan |
