@@ -57,7 +57,9 @@ Endpoints that require admin access check the `x-user-email` header against the 
 
 ### Session authentication (web API)
 
-Most web API endpoints use cookie-based session authentication via NextAuth. Sign in through the web application to obtain a session cookie. After successful authentication, the middleware sets the database-level user context for RLS. All subsequent queries in that request are automatically scoped to the authenticated user's data. See [Security](/security#row-level-security) for details.
+Most web API endpoints use cookie-based session authentication. The platform issues an `agentbot-session` cookie upon sign-in that persists for 30 days. After successful authentication, the middleware sets the database-level user context for RLS. All subsequent queries in that request are automatically scoped to the authenticated user's data. See [Security](/security#row-level-security) for details.
+
+You can retrieve the current session at any time using the [Get session](#get-session) endpoint and end it using the [Sign out](#sign-out) endpoint.
 
 ## Sign up
 
@@ -109,6 +111,54 @@ POST /api/auth/callback/credentials
   "password": "securepassword"
 }
 ```
+
+## Get session
+
+```http
+GET /api/auth/session
+```
+
+Returns the current authenticated user based on the `agentbot-session` cookie. No request body is required — the session token is read from the cookie automatically.
+
+### Response (authenticated)
+
+```json
+{
+  "user": {
+    "id": "user_123",
+    "name": "John Doe",
+    "email": "user@example.com"
+  }
+}
+```
+
+### Response (unauthenticated or expired)
+
+```json
+{
+  "user": null
+}
+```
+
+<Note>This endpoint always returns `200`. Check whether `user` is `null` to determine authentication status.</Note>
+
+## Sign out
+
+```http
+POST /api/auth/signout
+```
+
+Ends the current session by deleting the session record from the database and clearing the `agentbot-session` cookie. No request body is required.
+
+### Response
+
+```json
+{
+  "ok": true
+}
+```
+
+<Note>This endpoint always returns `200` even if no active session exists.</Note>
 
 ## OAuth sign in
 
