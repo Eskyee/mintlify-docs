@@ -13,41 +13,251 @@ x402 is a payment protocol that enables HTTP requests to require payment. Agents
 - **Base** — USDC payments for general API access
 - **Tempo** — pathUSD payments for agent-to-agent operations such as cloning
 
-## Setup
+## x402 Gateway (v4.0.1-mppx)
 
-### Environment variables
+The Agentbot x402 Gateway is deployed on Railway and provides:
+
+- **MPP (Machine Payment Protocol)** — Standard 402 payment flow via `mppx/express`
+- **Agent Marketplace** — Discovery, A2A payments, fitness scoring
+- **Session-based billing** — Pay-per-use without per-transaction signing
+- **Anti-scam guard** — Rate limits, payment caps, cooldowns, blacklist
+
+### Gateway URL
+
+```
+https://x402-gw-v2-production.up.railway.app
+```
+
+### Health Check
 
 ```bash
-# x402 Configuration (Base)
-X402_PAY_TO=0xd8fd0e1dce89beaab924ac68098ddb17613db56f
-X402_FACILITATOR_URL=https://x402.org/facilitator
-
-# x402 Tempo Configuration
-TEMPO_RPC_URL=https://rpc.tempochain.org
-X402_GATEWAY_URL=http://localhost:4023
+curl https://x402-gw-v2-production.up.railway.app/health
 ```
 
-### Supported networks
-
-| Network | Chain ID | Currency | Status |
-|---------|----------|----------|--------|
-| Base Mainnet | 8453 | USDC | Active |
-| Base Sepolia | 84532 | USDC | Testnet |
-| Tempo | 4217 | pathUSD | Active |
-
-## Creating Paid Endpoints
-
-### Step 1: Import x402
-
-```typescript
-import { getX402Server, x402Config } from "@/lib/x402";
+Response:
+```json
+{
+  "status": "healthy",
+  "service": "x402-gateway",
+  "version": "4.0.1-mppx",
+  "mpp": true,
+  "testnet": true,
+  "operator": {
+    "address": "0x23c3b2Eff9633793DFDc70Ae2b9e4A669b146a62",
+    "configured": true
+  }
+}
 ```
 
-### Step 2: Define Payment Requirements
+## Session-Based Endpoints (MPP)
 
-```typescript
-const paymentRequirements = {
-  accepts: {
+Session endpoints use the MPP protocol for pay-per-use billing. Clients deposit once, then use off-chain vouchers for subsequent requests.
+
+### Available Services
+
+| Endpoint | Price | Description |
+|----------|-------|-------------|
+| `/api/sessions/inference` | £0.05/call | AI inference calls |
+| `/api/sessions/blockdb` | £0.001/query | Blockchain data queries |
+| `/api/sessions/premium` | £0.01/request | Premium API access |
+| `/api/sessions/visual-synth` | £0.02/render | Visual content generation |
+| `/api/sessions/setlist` | £0.03/set | Music setlist generation |
+| `/api/sessions/stream` | £0.001/token | SSE streaming |
+
+### Example: AI Inference
+
+```bash
+# First request — returns 402 Payment Required
+curl -v https://x402-gw-v2-production.up.railway.app/api/sessions/inference
+
+# Response includes MPP challenge:
+# HTTP/1.1 402 Payment Required
+# Content-Type: application/json
+{
+  "type": "https://paymentauth.org/problems/payment-required",
+  "title": "Payment Required",
+  "status": 402,
+  "detail": "Payment is required.",
+  "challengeId": "pyksVi15Phh-HG0zNW5IlajnpZ_bFo_7wRUTZFvwGHo"
+}
+```
+
+## Agent Marketplace
+
+### List All Agents
+
+```bash
+curl https://x402-gw-v2-production.up.railway.app/gateway/marketplace
+```
+
+Response:
+```json
+{
+  "agents": [
+    {
+      "id": "atlas",
+      "walletAddress": "0xd8fd0e1dce89beaab924ac68098ddb17613db56f",
+      "totalTransactions": 5,
+      "successfulTransactions": 5,
+      "totalAmount": 0.009,
+      "successRate": 100,
+      "tier": "premium",
+      "colonyId": "borg-0",
+      "createdAt": "2026-03-23T00:05:39.093Z"
+    }
+  ],
+  "total": 1,
+  "colonies": 1
+}
+```
+
+### Discover Agent
+
+```bash
+curl https://x402-gw-v2-production.up.railway.app/gateway/marketplace/atlas
+```
+
+### Agent Fitness Score
+
+```bash
+curl https://x402-gw-v2-production.up.railway.app/gateway/fitness/atlas
+```
+
+Response:
+```json
+{
+  "score": 75,
+  "tier": "standard",
+  "details": {
+    "successRate": 100,
+    "recencyBonus": 14.64,
+    "volumeBonus": 0.00009,
+    "totalTransactions": 5,
+    "totalAmount": 0.009
+  }
+}
+```
+
+### Dynamic Pricing
+
+```bash
+curl https://x402-gw-v2-production.up.railway.app/gateway/pricing/atlas
+```
+
+Premium agents (>80 fitness) get 20% discount. Standard agents (>60) get 10%.
+
+### Join Colony
+
+```bash
+curl -X POST https://x402-gw-v2-production.up.railway.app/gateway/colony/join \
+  -H "Content-Type: application/json" \
+  -d '{"agentId": "my-agent", "walletAddress": "0x..."}'
+```
+
+### Agent-to-Agent Payment
+
+```bash
+curl -X POST https://x402-gw-v2-production.up.railway.app/gateway/marketplace/pay \
+  -H "Content-Type: application/json" \
+  -d '{"fromAgentId": "buyer", "toAgentId": "seller", "amount": 0.01}'
+```
+
+## Auto-Settlement
+
+The operator wallet sponsors gas and handles auto-settlement:
+
+```bash
+curl -X POST https://x402-gw-v2-production.up.railway.app/gateway/settle/auto \
+  -H "Content-Type: application/json" \
+  -d '{
+    "agentId": "atlas",
+    "amount": 0.01,
+    "recipient": "0xd8fd0e1dce89beaab924ac68098ddb17613db56f"
+  }'
+```
+
+Response:
+```json
+{
+  "status": "settled",
+  "hash": "0x...",
+  "amount": 0.01,
+  "recipient": "0xd8fd0e1dce89beaab924ac68098ddb17613db56f",
+  "agentId": "atlas",
+  "gasSponsored": true
+}
+```
+
+## 402 Index Listing
+
+Our gateway is registered on the [402 Index](https://402index.io) — a protocol-agnostic directory of paid APIs:
+
+| Service | Protocol | Status |
+|---------|----------|--------|
+| Agentbot AI Inference | MPP | healthy |
+| Agentbot BlockDB | MPP | healthy |
+| Agentbot Premium API | MPP | healthy |
+| Agentbot Visual Synth | MPP | healthy |
+| Agentbot Setlist Oracle | MPP | healthy |
+| Agentbot Stream | MPP | healthy |
+
+Domain verified: `x402-gw-v2-production.up.railway.app`
+
+## Anti-Scam Guard
+
+The gateway includes built-in protection:
+
+- **Rate limiting** — Per-IP request limits
+- **Payment caps** — Maximum single payment amount
+- **Cooldowns** — Minimum time between payments
+- **Blacklist** — Blocked addresses/IPs
+- **Whitelist** — Trusted agents bypass checks
+
+```bash
+curl https://x402-gw-v2-production.up.railway.app/gateway/guard
+```
+
+## x402-Node Bridge
+
+The gateway can proxy requests to borg-0 x402-node for on-chain settlement:
+
+```bash
+curl -X POST https://x402-gw-v2-production.up.railway.app/gateway/x402-node/settle \
+  -H "Content-Type: application/json" \
+  -d '{
+    "endpoint": "/instance/info",
+    "method": "GET",
+    "agentId": "atlas"
+  }'
+```
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                   Agentbot Gateway                       │
+│  (Vercel — agentbot.raveculture.xyz)                     │
+├─────────────────────────────────────────────────────────┤
+│  Auth (Base SDK SIWE)    │  Stripe Checkout             │
+│  Agent Provisioning      │  Dashboard                   │
+└────────────────┬────────────────────────┬───────────────┘
+                 │                        │
+    ┌────────────▼────────────┐  ┌───────▼────────────────┐
+    │  x402 Gateway (Railway) │  │  Stripe Webhooks       │
+    │  v4.0.1-mppx            │  │  (Render)              │
+    ├─────────────────────────┤  └────────────────────────┘
+    │  MPP Session Billing    │
+    │  Agent Marketplace      │
+    │  Anti-Scam Guard        │
+    │  Auto-Settlement        │
+    └────────────┬────────────┘
+                 │
+    ┌────────────▼────────────┐
+    │  Tempo Network          │
+    │  (Testnet: 42431)       │
+    │  pathUSD Token          │
+    └─────────────────────────┘
+```
     scheme: "exact",
     price: "$0.001",
     network: "eip155:8453",
