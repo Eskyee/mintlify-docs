@@ -19,6 +19,7 @@
         "pages": [
           "index",
           "quickstart",
+          "models",
           "installation",
           "build",
           "development-standard",
