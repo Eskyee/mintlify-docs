@@ -165,6 +165,8 @@ curl -X POST https://agentbot.raveculture.xyz/api/ai/chat \
 | `/api/agents/:id/verification` | GET | Get verification status (backend) |
 | `/api/chat` | GET | List message history |
 | `/api/chat` | POST | Send message to agent |
+| `/api/demo/chat` | GET | List available demo models (no auth) |
+| `/api/demo/chat` | POST | Send a demo chat message (no auth, rate-limited by IP) |
 | `/api/health` | GET | Health check |
 | `/api/heartbeat` | GET | Get heartbeat settings |
 | `/api/heartbeat` | POST | Update heartbeat settings |

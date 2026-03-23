@@ -87,7 +87,8 @@
           "api-reference/underground",
           "api-reference/invite",
           "api-reference/web-summarizer",
-          "api-reference/x402"
+          "api-reference/x402",
+          "api-reference/demo-chat"
         ]
       },
       {
