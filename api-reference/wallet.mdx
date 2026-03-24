@@ -5,7 +5,7 @@ description: "Manage wallets for on-chain transactions and payments"
 
 # Wallet API
 
-Manage wallets for on-chain transactions and payments. Supports both session-based wallets and Coinbase Developer Platform (CDP) wallets.
+Manage wallets for on-chain transactions and payments. Supports session-based wallets, Coinbase Developer Platform (CDP) wallets, and Tempo network balance queries.
 
 ## Get wallet
 
@@ -13,9 +13,72 @@ Manage wallets for on-chain transactions and payments. Supports both session-bas
 GET /api/wallet
 ```
 
-Returns wallet information. When CDP is configured, returns CDP status without authentication. Otherwise, requires session authentication.
+Returns wallet information. Behavior depends on whether an `address` query parameter is provided and on your server configuration.
 
-### Response (CDP configured)
+### Tempo balance query
+
+When the `address` query parameter is present, the endpoint queries the Tempo blockchain for the wallet's balance and fee token information.
+
+```http
+GET /api/wallet?address=0xd8fd...db56f
+```
+
+#### Query parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `address` | string | Yes | Hex-encoded wallet address (0x-prefixed) |
+
+#### Response
+
+```json
+{
+  "address": "0xd8fd0e1dce89beaab924ac68098ddb17613db56f",
+  "chain": "Tempo",
+  "chainId": 4217,
+  "testnet": false,
+  "feeToken": {
+    "address": "0x20c0000000000000000000000000000000000000",
+    "balance": "12.470000",
+    "balanceRaw": "12470000"
+  },
+  "pathUsd": {
+    "address": "0x20c0000000000000000000000000000000000000",
+    "balance": "12.470000",
+    "balanceRaw": "12470000"
+  }
+}
+```
+
+#### Response fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `address` | string | The queried wallet address |
+| `chain` | string | Network name (`Tempo` or `Tempo Testnet`) |
+| `chainId` | number | Chain ID (`4217` for mainnet, `42431` for testnet) |
+| `testnet` | boolean | Whether the server is configured for testnet |
+| `feeToken.address` | string | Contract address of the user's configured fee token |
+| `feeToken.balance` | string | Fee token balance formatted with 6 decimals |
+| `feeToken.balanceRaw` | string | Fee token balance in raw units |
+| `pathUsd.address` | string | pathUSD contract address |
+| `pathUsd.balance` | string | pathUSD balance formatted with 6 decimals |
+| `pathUsd.balanceRaw` | string | pathUSD balance in raw units |
+
+<Note>Balance values are formatted to 6 decimal places. pathUSD uses 6 decimals, not 18. The network is determined server-side by the `TEMPO_TESTNET` environment variable.</Note>
+
+#### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | Missing `address` parameter |
+| 500 | Failed to fetch wallet data from Tempo RPC |
+
+### CDP / session wallet query
+
+When no `address` parameter is provided, the endpoint returns CDP or session-based wallet information. When CDP is configured, returns CDP status without authentication. Otherwise, requires session authentication.
+
+#### Response (CDP configured)
 
 ```json
 {
@@ -34,7 +97,7 @@ Returns wallet information. When CDP is configured, returns CDP status without a
 }
 ```
 
-### Response (user wallet exists)
+#### Response (user wallet exists)
 
 ```json
 {
@@ -46,7 +109,7 @@ Returns wallet information. When CDP is configured, returns CDP status without a
 }
 ```
 
-### Response (no wallet)
+#### Response (no wallet)
 
 ```json
 {
@@ -58,7 +121,7 @@ Returns wallet information. When CDP is configured, returns CDP status without a
 }
 ```
 
-### Errors
+#### Errors
 
 | Code | Description |
 |------|-------------|
