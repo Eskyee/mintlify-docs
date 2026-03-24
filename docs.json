@@ -97,6 +97,7 @@
           "api-reference/fee-payer",
           "api-reference/metrics",
           "api-reference/skills",
+          "api-reference/calendar",
           "api-reference/memory",
           "api-reference/ai",
           "api-reference/render-mcp",
