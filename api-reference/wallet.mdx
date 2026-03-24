@@ -243,3 +243,5 @@ When transferring USDC through the wallet service, the following validation rule
 - Amounts are rounded to 6 decimal places (USDC precision). If the rounded value equals zero, the transfer is rejected.
 
 These checks run before any on-chain transaction is initiated.
+
+<Note>When payments are initiated through the [x402 pay action](/api-reference/x402#pay), additional protections apply: a per-payment maximum of $100, recipient address format validation (EVM or Solana), and audit logging of every payment attempt. See the [x402 gateway reference](/api-reference/x402) for details.</Note>

@@ -203,15 +203,17 @@ Our gateway is registered on the [402 Index](https://402index.io) — a protocol
 
 Domain verified: `x402-gw-v2-production.up.railway.app`
 
-## Anti-Scam Guard
+## Anti-scam guard
 
-The gateway includes built-in protection:
+The gateway and the Agentbot API include built-in payment protections:
 
-- **Rate limiting** — Per-IP request limits
-- **Payment caps** — Maximum single payment amount
+- **Rate limiting** — Per-IP request limits (60 requests/min, 1,000 requests/hr on the web API)
+- **Payment caps** — Maximum single payment of **$100** via the `/api/x402` pay action. Contact support for higher limits.
+- **Address validation** — Recipient addresses are validated against EVM (42-character `0x`-prefixed hex) and Solana (32–44 character Base58) formats before any payment is processed
 - **Cooldowns** — Minimum time between payments
 - **Blacklist** — Blocked addresses/IPs
 - **Whitelist** — Trusted agents bypass checks
+- **Audit logging** — Every payment attempt is logged with the user's email, amount, currency, recipient, and payment method
 
 ```bash
 curl https://x402-gw-v2-production.up.railway.app/gateway/guard

@@ -202,7 +202,7 @@ List all available endpoints on the x402 gateway. This action is **public** and 
 
 #### `pay`
 
-Execute a payment through the x402 gateway.
+Execute a payment through the x402 gateway. Payments are subject to amount limits and recipient address validation.
 
 **Request:**
 
@@ -210,9 +210,9 @@ Execute a payment through the x402 gateway.
 {
   "agentId": "inst_abc123",
   "action": "pay",
-  "amount": "1.0",
+  "amount": 1.0,
   "currency": "USDC",
-  "recipient": "0x5678...efgh",
+  "recipient": "0x5678abcd1234efgh5678abcd1234efgh5678abcd",
   "endpoint": "chat",
   "method": "tempo"
 }
@@ -220,11 +220,31 @@ Execute a payment through the x402 gateway.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `amount` | string | Yes | Payment amount |
-| `currency` | string | Yes | Payment currency (e.g. `USDC`, `pathUSD`). The value is forwarded to the upstream gateway as-is. |
-| `recipient` | string | Yes | Recipient wallet address |
+| `amount` | number | Yes | Payment amount. Must be greater than zero and no more than 100. |
+| `currency` | string | No | Payment currency (e.g. `USDC`, `pathUSD`). Defaults to `USDC` if omitted. The value is forwarded to the upstream gateway as-is. |
+| `recipient` | string | Yes | Recipient wallet address. Must be a valid EVM or Solana address (see validation rules below). |
 | `endpoint` | string | No | Target endpoint slug on the gateway |
-| `method` | string | No | Payment method identifier |
+| `method` | string | No | Payment method identifier. Defaults to `default` if omitted. |
+
+**Amount limits:**
+
+- The amount must be a positive number greater than zero.
+- The maximum amount per payment is **$100**. Payments above this limit are rejected. Contact support if you need higher limits.
+
+**Address validation:**
+
+The `recipient` field must match one of the following formats:
+
+| Network | Format | Example |
+|---------|--------|---------|
+| EVM (Ethereum, Base) | `0x` followed by exactly 40 hexadecimal characters | `0xd8fd0e1dce89beaab924ac68098ddb17613db56f` |
+| Solana | Base58 string between 32 and 44 characters | `DRpbCBMxVnDK7maPGv7USk2Lgt2GXEimhi82kUhP2GBn` |
+
+Addresses that do not match either format are rejected with a `400` error.
+
+**Audit logging:**
+
+Every payment attempt is logged with the user's email, amount, currency, recipient address, and payment method. These logs are available for security review.
 
 ## Authentication behavior
 
@@ -239,6 +259,10 @@ All other actions (`join-colony`, `fitness`, `pricing`, `pay`) require a valid N
 | Status | Error | Description |
 |--------|-------|-------------|
 | 400 | `agentId required` | The `agentId` field is missing from the request body (does not apply to the `endpoints` action) |
+| 400 | `Invalid amount` | The `amount` field is missing, zero, or negative (applies to the `pay` action) |
+| 400 | `Amount exceeds $100 limit. Contact support for higher limits.` | The `amount` exceeds the per-payment maximum of $100 (applies to the `pay` action) |
+| 400 | `Recipient required` | The `recipient` field is missing (applies to the `pay` action) |
+| 400 | `Invalid recipient address` | The `recipient` does not match a valid EVM or Solana address format (applies to the `pay` action) |
 | 400 | `Invalid action. Use: join-colony, fitness, pricing, endpoints, or pay` | The `action` field is missing or not one of the supported values |
 | 401 | `Authentication required` | No valid session. Returned for all actions except `endpoints` and the `GET` health check. |
 | 500 | `x402 gateway error` | An unexpected error occurred while communicating with the upstream gateway |
@@ -305,10 +329,12 @@ curl -X POST https://agentbot.raveculture.xyz/api/x402 \
   -d '{
     "agentId": "inst_abc123",
     "action": "pay",
-    "amount": "1.0",
+    "amount": 1.0,
     "currency": "USDC",
-    "recipient": "0x5678...efgh",
+    "recipient": "0xd8fd0e1dce89beaab924ac68098ddb17613db56f",
     "endpoint": "chat",
     "method": "tempo"
   }'
 ```
+
+<Note>The `recipient` must be a full, valid address. Abbreviated addresses like `0x5678...efgh` are rejected. See [address validation](#pay) for accepted formats.</Note>
