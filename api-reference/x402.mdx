@@ -57,20 +57,20 @@ Returned when the upstream gateway is unreachable.
 POST /api/x402
 ```
 
-Requires an authenticated session with both a user ID and email. Dispatches an action to the x402 gateway.
+Dispatches an action to the x402 gateway. Most actions require an authenticated session with both a user ID and email. The `endpoints` action is public and does not require authentication.
 
 ### Headers
 
 | Header | Type | Required | Description |
 |--------|------|----------|-------------|
 | `Content-Type` | string | Yes | Must be `application/json` |
-| `Cookie` | string | Yes | Valid NextAuth session cookie |
+| `Cookie` | string | Conditional | Valid NextAuth session cookie. Required for all actions except `endpoints`. |
 
 ### Body
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `agentId` | string | Yes | Agent instance identifier |
+| `agentId` | string | Conditional | Agent instance identifier. Required for all actions except `endpoints`. |
 | `walletAddress` | string | No | Agent wallet address. Required for `join-colony`. |
 | `action` | string | Yes | Action to perform. One of `join-colony`, `fitness`, `pricing`, `endpoints`, or `pay`. |
 
@@ -164,13 +164,12 @@ Retrieve dynamic pricing for an agent. Pricing is adjusted based on the agent's 
 
 #### `endpoints`
 
-List all available endpoints on the x402 gateway.
+List all available endpoints on the x402 gateway. This action is **public** and does not require authentication or an `agentId`.
 
 **Request:**
 
 ```json
 {
-  "agentId": "inst_abc123",
   "action": "endpoints"
 }
 ```
@@ -227,13 +226,21 @@ Execute a payment through the x402 gateway.
 | `endpoint` | string | No | Target endpoint slug on the gateway |
 | `method` | string | No | Payment method identifier |
 
+## Authentication behavior
+
+The `endpoints` action and the `GET` health check are fully public and never require a session.
+
+All other actions (`join-colony`, `fitness`, `pricing`, `pay`) require a valid NextAuth session. When the session is missing or invalid, the endpoint returns a `401` response with `{ "success": false, "error": "Authentication required" }`.
+
+<Note>The x402 dashboard handles `401` responses from the `fitness` and `pricing` actions gracefully. When an unauthenticated user views the dashboard, these actions return a `401` and the dashboard displays fallback default values (a fitness score of 50, tier of `new`, and default pricing) along with a banner prompting the user to sign in. This means the dashboard is viewable without authentication, but personalized fitness and pricing data require a valid session.</Note>
+
 ## Error responses
 
 | Status | Error | Description |
 |--------|-------|-------------|
-| 400 | `agentId required` | The `agentId` field is missing from the request body |
+| 400 | `agentId required` | The `agentId` field is missing from the request body (does not apply to the `endpoints` action) |
 | 400 | `Invalid action. Use: join-colony, fitness, pricing, endpoints, or pay` | The `action` field is missing or not one of the supported values |
-| 401 | `Authentication required` | No valid session. You must be signed in with both a user ID and email. |
+| 401 | `Authentication required` | No valid session. Returned for all actions except `endpoints` and the `GET` health check. |
 | 500 | `x402 gateway error` | An unexpected error occurred while communicating with the upstream gateway |
 
 ## Examples
@@ -286,11 +293,7 @@ curl -X POST https://agentbot.raveculture.xyz/api/x402 \
 ```bash
 curl -X POST https://agentbot.raveculture.xyz/api/x402 \
   -H "Content-Type: application/json" \
-  -H "Cookie: next-auth.session-token=YOUR_SESSION" \
-  -d '{
-    "agentId": "inst_abc123",
-    "action": "endpoints"
-  }'
+  -d '{"action": "endpoints"}'
 ```
 
 ### Make a payment
