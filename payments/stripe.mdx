@@ -450,10 +450,10 @@ In addition to subscriptions and credit packs, you can use Stripe to add funds d
 
 ### Start a wallet top-up
 
-Redirect the user to the wallet top-up endpoint with an `amount` query parameter (in cents):
+Redirect the user to the wallet top-up endpoint with `amount` and `address` query parameters:
 
 ```http
-GET /api/wallet/top-up?amount=1000
+GET /api/wallet/top-up?amount=1000&address=0x...
 ```
 
 **Parameters**
@@ -461,14 +461,15 @@ GET /api/wallet/top-up?amount=1000
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `amount` | number | No | Amount in cents: `500`, `1000`, `2500`, or `5000`. Defaults to `1000`. |
+| `address` | string | Yes | Wallet address to credit (0x-prefixed, 42 characters). |
 
-The endpoint returns a JSON response with the Stripe checkout URL and session ID. Redirect the user to the `url` to complete payment.
+The endpoint returns a JSON response with the Stripe checkout URL and session ID. Redirect the user to the `url` to complete payment. No session authentication is required — the wallet address identifies the recipient.
 
 **Example**
 
 ```bash
 # Redirect user to wallet top-up ($25)
-window.location.href = '/api/wallet/top-up?amount=2500'
+window.location.href = '/api/wallet/top-up?amount=2500&address=0xd8fd...db56f'
 ```
 
 On success, the user is redirected to `/dashboard/wallet?top_up=success`. On cancellation, the user is redirected to `/dashboard/wallet?top_up=cancelled`.
