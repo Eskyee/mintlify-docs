@@ -1,11 +1,11 @@
 ---
 title: Gateway
-description: "Route requests to plugins through the v1 gateway with support for Stripe and MPP payments."
+description: "Route requests to plugins through the v1 gateway with support for Stripe, MPP, and session-based payments."
 ---
 
 # Gateway
 
-The v1 gateway routes incoming requests to registered plugins. It supports dual payment methods — Stripe (existing) and [MPP](/payments/mpp) (Machine Payments Protocol) via the Tempo blockchain.
+The v1 gateway routes incoming requests to registered plugins. It supports three payment methods — Stripe (existing), [MPP](/payments/mpp) (Machine Payments Protocol) via the Tempo blockchain, and session-based billing for low-latency, off-chain per-call payments.
 
 ## Base URL
 
@@ -21,8 +21,10 @@ POST /api/v1/gateway
 |--------|------|----------|-------------|
 | `Content-Type` | string | Yes | Must be `application/json` |
 | `X-Plugin-Id` | string | No | Plugin to route the request to. Overrides the `plugin` field in the body. |
-| `X-Payment-Method` | string | No | Payment method to use: `stripe` or `mpp`. Defaults to `stripe`. |
+| `X-Payment-Method` | string | No | Payment method to use: `stripe`, `mpp`, or `session`. Defaults to `stripe`. |
 | `Authorization` | string | No | For MPP payments, use `Payment <credential>`. For session auth, handled via cookies. |
+| `X-Session-Id` | string | No | Active session ID for session-based billing. Required when `X-Payment-Method` is `session`. |
+| `X-Wallet-Address` | string | No | Wallet address that owns the session (0x-prefixed). Required when `X-Payment-Method` is `session`. |
 | `Accept` | string | No | Set to `text/event-stream` for streaming responses (where supported). |
 
 ### Body
@@ -55,18 +57,19 @@ The gateway routes to the following plugins:
 
 ## Authentication
 
-Protected plugins require either a valid session (cookie-based via NextAuth) or a verified MPP payment credential. If you pay with MPP, session authentication is not required.
+Protected plugins require either a valid session (cookie-based via NextAuth), a verified MPP payment credential, or an active payment session. If you pay with MPP or use session-based billing, cookie-based authentication is not required.
 
 ## Payment flow
 
-The gateway supports two payment methods per request:
+The gateway supports three payment methods per request:
 
 1. **Stripe** — Default. Requires an active subscription or credits. See [Stripe integration](/payments/stripe).
 2. **MPP** — Crypto-native payments on the Tempo blockchain. See [MPP payments](/payments/mpp).
+3. **Session** — Off-chain, per-call billing using a pre-funded payment session. See [MPP payments — sessions](/payments/mpp#sessions) and the [wallet sessions API](/api-reference/wallet#mpp-payment-sessions).
 
 The server selects the payment method using the following priority:
 
-1. `X-Payment-Method` header (`mpp` or `stripe`)
+1. `X-Payment-Method` header (`session`, `mpp`, or `stripe`)
 2. Presence of an `Authorization: Payment` header (implies `mpp`)
 3. Default: `stripe`
 
@@ -101,6 +104,19 @@ The `WWW-Authenticate` header is also set:
 Payment amount="0.05", currency="0x20c0000000000000000000000000000000000000", recipient="0xd8fd0e1dce89beaab924ac68098ddb17613db56f"
 ```
 
+### Session-based billing
+
+When `X-Payment-Method` is `session`, the gateway auto-debits the caller's payment session using an off-chain voucher. This avoids the 402 challenge/response round-trip and settles each call in sub-100ms.
+
+To use session-based billing:
+
+1. Open a payment session via `POST /api/wallet/sessions`. See [wallet sessions](/api-reference/wallet#mpp-payment-sessions).
+2. Include `X-Session-Id` and `X-Wallet-Address` headers on every gateway request.
+3. The gateway looks up the session, verifies the balance covers the plugin price, and debits the session automatically.
+4. The response includes a `Payment-Receipt` header with the voucher reference and an `X-Session-Remaining` header with the updated balance.
+
+If the session is missing, expired, or has insufficient balance, the gateway returns `402` with a descriptive error. See [error responses](#error-responses) for the full list of session-related error codes.
+
 ## Response
 
 ### Success (200)
@@ -117,21 +133,27 @@ Payment amount="0.05", currency="0x20c0000000000000000000000000000000000000", re
 }
 ```
 
-When paid via MPP, the response includes a `Payment-Receipt` header and the `payment.receipt` field contains the transaction hash.
+When paid via MPP, the response includes a `Payment-Receipt` header and the `payment.receipt` field contains the transaction hash. When paid via a session, the `payment.receipt` field contains the voucher reference (formatted as `session:<sessionId>:<nonce>`).
 
 ### Response headers
 
 | Header | Description |
 |--------|-------------|
 | `x-plugin-id` | The plugin that handled the request |
-| `Payment-Receipt` | MPP transaction receipt hash (only present for MPP-paid requests) |
+| `Payment-Receipt` | Payment receipt. For MPP: transaction hash. For sessions: voucher reference (`session:<sessionId>:<nonce>`). Only present for MPP or session-paid requests. |
+| `X-Session-Remaining` | Remaining session balance in USD after the debit. Only present for session-paid requests. |
 
 ## Error responses
 
 | Status | Error code | Description |
 |--------|-----------|-------------|
-| 401 | `Unauthorized` | Authentication required for a protected plugin and no valid session or MPP credential |
+| 400 | `unknown_plugin` | No pricing configured for the requested plugin (session billing only) |
+| 401 | `Unauthorized` | Authentication required for a protected plugin and no valid session, MPP credential, or payment session |
 | 402 | `payment_required` | MPP payment required. Response includes challenge and pricing. |
+| 402 | `session_required` | Session billing was requested but `X-Session-Id` or `X-Wallet-Address` header is missing |
+| 402 | `session_invalid` | No active session found for the provided session ID and wallet address |
+| 402 | `insufficient_balance` | Session balance is too low to cover the plugin price. Response includes `session.remaining` and `session.cost`. |
+| 402 | `voucher_failed` | The off-chain voucher could not be processed (e.g., concurrent debit race) |
 | 500 | `internal` | Internal server error |
 | 502 | `no_plugin` | No plugin registered for the given ID |
 
@@ -229,7 +251,7 @@ The gateway monitors channel health for each agent container. When a channel bec
 
 ## CORS
 
-The gateway supports CORS preflight via `OPTIONS /api/v1/gateway`. Allowed methods are `POST` and `OPTIONS`. The `Authorization`, `Content-Type`, `X-Plugin-Id`, and `X-Payment-Method` headers are permitted.
+The gateway supports CORS preflight via `OPTIONS /api/v1/gateway`. Allowed methods are `POST` and `OPTIONS`. The `Authorization`, `Content-Type`, `X-Plugin-Id`, `X-Payment-Method`, `X-Session-Id`, and `X-Wallet-Address` headers are permitted.
 
 ## Rate limits
 
@@ -257,4 +279,23 @@ curl -X POST https://agentbot.raveculture.xyz/api/v1/gateway \
   -H "X-Plugin-Id: generate-text" \
   -H "Authorization: Payment {\"scheme\":\"Payment\",\"transaction\":\"0x76...\",\"challengeNonce\":\"abc123\"}" \
   -d '{"messages": [{"role": "user", "content": "Hello"}]}'
+```
+
+### Route a request with session-based billing
+
+```bash
+curl -X POST https://agentbot.raveculture.xyz/api/v1/gateway \
+  -H "Content-Type: application/json" \
+  -H "X-Plugin-Id: agent" \
+  -H "X-Payment-Method: session" \
+  -H "X-Session-Id: ses_a1b2c3d4e5f6..." \
+  -H "X-Wallet-Address: 0xd8fd0e1dce89beaab924ac68098ddb17613db56f" \
+  -d '{"messages": [{"role": "user", "content": "Summarize my tasks"}]}'
+```
+
+The response includes the remaining session balance:
+
+```
+Payment-Receipt: session:ses_a1b2c3d4e5f6...:v_abc123def456
+X-Session-Remaining: 9.95
 ```
