@@ -182,9 +182,11 @@ Payment sessions provide off-chain, per-call billing without an on-chain transac
 ### How sessions work
 
 1. **Open a session** — deposit pathUSD (minimum $1.00, maximum $100.00) into escrow via `POST /api/wallet/sessions`.
-2. **Sign vouchers** — each agent call produces a signed voucher that debits your session balance off-chain via `POST /api/wallet/sessions/voucher`.
+2. **Make gateway calls** — include `X-Session-Id` and `X-Wallet-Address` headers on your [gateway](/api-reference/gateway) requests with `X-Payment-Method: session`. The gateway auto-debits your session balance using off-chain vouchers — no 402 round-trip needed.
 3. **Automatic settlement** — when accumulated vouchers reach $5.00 or after one hour, the server batches them into a single on-chain transaction.
 4. **Close the session** — call `DELETE /api/wallet/sessions?sessionId=ses_...` to settle any remaining vouchers and return unused funds.
+
+<Tip>You can also submit vouchers manually via `POST /api/wallet/sessions/voucher` if you need fine-grained control. When using the gateway with `X-Payment-Method: session`, voucher creation is handled automatically.</Tip>
 
 ### Session configuration
 
