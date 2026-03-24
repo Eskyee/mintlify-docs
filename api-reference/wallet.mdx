@@ -386,8 +386,24 @@ On successful payment, the user is redirected to `/dashboard/wallet?top_up=succe
 | Code | Description |
 |------|-------------|
 | 400 | Invalid amount. Must be one of: `500`, `1000`, `2500`, `5000`. |
-| 401 | Unauthorized — no valid session |
+| 401 | Unauthorized — no valid session. The response includes a `loginUrl` field with the URL to redirect the user to sign in. |
 | 500 | Stripe not configured or checkout creation failed |
+
+##### 401 response
+
+When the user is not authenticated, the response includes a redirect URL so the client can send the user to the sign-in page:
+
+```json
+{
+  "error": "Please sign in to top up your wallet",
+  "loginUrl": "https://agentbot.raveculture.xyz/signup"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `error` | string | Human-readable error message |
+| `loginUrl` | string | URL to redirect the user for authentication |
 
 #### Example
 
@@ -437,6 +453,56 @@ The webhook processes events where `metadata.type` equals `wallet_top_up`. On a 
 |------|-------------|
 | 400 | Invalid Stripe signature |
 | 500 | Stripe not configured or webhook processing failed |
+
+## Transaction history
+
+```http
+GET /api/wallet/transactions
+```
+
+Returns recent transaction history for a wallet address on the Tempo blockchain. Currently provides a link to the Tempo block explorer for full transaction details.
+
+### Query parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `address` | string | Yes | Hex-encoded wallet address (0x-prefixed) |
+| `limit` | number | No | Maximum number of transactions to return. Defaults to `20`. |
+
+### Response
+
+```json
+{
+  "address": "0xd8fd0e1dce89beaab924ac68098ddb17613db56f",
+  "chain": "Tempo",
+  "chainId": 4217,
+  "currentBlock": "12345",
+  "transactions": [],
+  "note": "Transaction history requires indexer integration. Use Tempo block explorer for now.",
+  "explorerUrl": "https://explore.tempo.xyz/address/0xd8fd0e1dce89beaab924ac68098ddb17613db56f"
+}
+```
+
+### Response fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `address` | string | The queried wallet address |
+| `chain` | string | Network name (`Tempo` or `Tempo Testnet`) |
+| `chainId` | number | Chain ID (`4217` for mainnet, `42431` for testnet) |
+| `currentBlock` | string | Current block number on the chain |
+| `transactions` | array | List of transactions (empty until indexer integration is complete) |
+| `note` | string | Status note about the endpoint |
+| `explorerUrl` | string | Link to the Tempo block explorer for the address |
+
+<Note>Full transaction history requires an indexer integration. In the meantime, use the `explorerUrl` value to link users to the Tempo block explorer where they can view all on-chain activity.</Note>
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | Missing `address` parameter |
+| 500 | Failed to fetch transactions from Tempo RPC |
 
 ## USDC transfer validation
 
@@ -537,10 +603,22 @@ Returns a single session by ID.
 | `deposit` | string | Total deposited amount in USD |
 | `spent` | string | Total spent via vouchers in USD |
 | `remaining` | string | Remaining balance in USD |
-| `vouchers` | array | Pending vouchers not yet settled on-chain |
+| `vouchers` | array | Pending vouchers not yet settled on-chain. See [voucher object fields](#voucher-object-fields) below. |
 | `status` | string | One of `active`, `settling`, or `closed` |
 | `createdAt` | number | Unix timestamp (ms) when the session was created |
 | `lastSettledAt` | number | Unix timestamp (ms) of the last on-chain settlement |
+
+### Voucher object fields
+
+Each entry in the `vouchers` array has the following shape:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `plugin` | string | Plugin identifier that generated the voucher (e.g., `agent`, `generate-text`) |
+| `timestamp` | number | Unix timestamp (ms) when the voucher was created |
+| `amount` | string | Amount debited in USD |
+
+When a session has active vouchers, they appear in the wallet activity feed showing the plugin name, timestamp, and amount for each pending voucher.
 
 ### Create session
 
