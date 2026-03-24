@@ -216,6 +216,43 @@ These apply to all billing POST actions:
 | 401 | Unauthorized — no valid session |
 | 500 | Internal error |
 
+## Stripe checkout
+
+```http
+GET /api/stripe/checkout
+```
+
+Redirects to a Stripe checkout session for subscribing to a plan. This endpoint uses the `solo`, `collective`, `label`, and `network` plan names with GBP pricing. Admin users (configured via `ADMIN_EMAILS`) bypass Stripe and are redirected directly to the onboarding page.
+
+<Note>The Stripe checkout plans (`solo`, `collective`, `label`, `network`) use different names and pricing from the billing API plans (`starter`, `pro`, `scale`). The checkout plans are the primary subscription path for agent provisioning, while the billing API plans power the dashboard billing page.</Note>
+
+### Query parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `plan` | string | Yes | Plan to subscribe to: `solo`, `collective`, `label`, or `network` |
+
+### Checkout plan pricing
+
+| Plan | Price (GBP) |
+|------|-------------|
+| `solo` | £29/mo |
+| `collective` | £69/mo |
+| `label` | £149/mo |
+| `network` | £499/mo |
+
+### Response
+
+On success, redirects (303) to the Stripe checkout URL. On error, redirects to the pricing page with an error query parameter.
+
+| Redirect | Description |
+|----------|-------------|
+| Stripe checkout URL | Successful session creation |
+| `/pricing?error=invalid_plan` | Unrecognized plan name |
+| `/pricing?error=stripe_not_configured` | Stripe secret key not set |
+| `/pricing?error=checkout_failed` | Stripe API error |
+| `/onboard?plan=...&paid=1&admin=1` | Admin bypass (no payment required) |
+
 ## Subscription deploy
 
 ```http
