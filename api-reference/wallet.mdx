@@ -33,12 +33,19 @@ GET /api/wallet?address=0xd8fd...db56f
 
 The endpoint queries the following Tempo stablecoins (all pegged 1:1 to USD):
 
-| Token | Address |
-|-------|---------|
-| pathUSD | `0x20c0000000000000000000000000000000000000` |
-| alphaUSD | `0x20c0000000000000000000000000000000000001` |
-| betaUSD | `0x20c0000000000000000000000000000000000002` |
-| thetaUSD | `0x20c0000000000000000000000000000000000003` |
+| Token | Address | Description |
+|-------|---------|-------------|
+| pathUSD | `0x20c0000000000000000000000000000000000000` | Native Tempo stablecoin |
+| alphaUSD | `0x20c0000000000000000000000000000000000001` | Tempo stablecoin variant |
+| betaUSD | `0x20c0000000000000000000000000000000000002` | Tempo stablecoin variant |
+| thetaUSD | `0x20c0000000000000000000000000000000000003` | Tempo stablecoin variant |
+| USDC.e | `0x20c000000000000000000000b9537d11c60e8b50` | Bridged USDC (Stargate bridge) |
+| EURC.e | `0x20c0000000000000000000001621e21f71cf12fb` | Bridged EURC |
+| USDT0 | `0x20c00000000000000000000014f22ca97301eb73` | Bridged USDT |
+| frxUSD | `0x20c0000000000000000000003554d28269e0f3c2` | Frax USD |
+| cUSD | `0x20c0000000000000000000000520792dcccccccc` | Celo USD |
+| stcUSD | `0x20c0000000000000000000008ee4fcff88888888` | Staked Celo USD |
+| GUSD | `0x20c0000000000000000000005c0bac7cef389a11` | Gemini USD |
 
 #### Response
 
@@ -94,7 +101,7 @@ The endpoint queries the following Tempo stablecoins (all pegged 1:1 to USD):
 | `allTokens[].symbol` | string | Token symbol |
 | `allTokens[].balance` | string | Formatted token balance |
 
-<Note>All supported tokens use 6 decimal places and are pegged 1:1 to USD. The `allTokens` array only includes tokens with a non-zero balance. The `primaryToken` is the first funded token found, defaulting to pathUSD metadata when no tokens are funded. The network is determined server-side by the `TEMPO_TESTNET` environment variable.</Note>
+<Note>The endpoint queries all 11 tokens from the official Tempo tokenlist. All supported tokens are pegged 1:1 to USD. The `allTokens` array only includes tokens with a non-zero balance. The `primaryToken` is the first funded token found, defaulting to pathUSD metadata when no tokens are funded. The network is determined server-side by the `TEMPO_TESTNET` environment variable.</Note>
 
 <Warning>The previous `feeToken` and `pathUsd` response fields have been replaced by `totalUsd`, `primaryToken`, and `allTokens`. Update any integrations that relied on the old response shape.</Warning>
 
