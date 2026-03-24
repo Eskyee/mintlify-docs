@@ -346,13 +346,14 @@ Fund your wallet using a credit card via Stripe checkout. Choose from preset amo
 GET /api/wallet/top-up
 ```
 
-Creates a Stripe checkout session for the specified top-up amount. Requires session authentication.
+Creates a Stripe checkout session for the specified top-up amount. The caller identifies the wallet to credit by passing the wallet address as a query parameter.
 
 #### Query parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `amount` | number | No | Amount in cents. One of `500`, `1000`, `2500`, or `5000`. Defaults to `1000` ($10). |
+| `address` | string | Yes | Hex-encoded wallet address (0x-prefixed, 42 characters). Identifies the wallet to credit. |
 
 #### Top-up options
 
@@ -386,30 +387,13 @@ On successful payment, the user is redirected to `/dashboard/wallet?top_up=succe
 | Code | Description |
 |------|-------------|
 | 400 | Invalid amount. Must be one of: `500`, `1000`, `2500`, `5000`. |
-| 401 | Unauthorized — no valid session. The response includes a `loginUrl` field with the URL to redirect the user to sign in. |
+| 400 | Valid wallet address required. The `address` parameter must be a 42-character hex string starting with `0x`. |
 | 500 | Stripe not configured or checkout creation failed |
-
-##### 401 response
-
-When the user is not authenticated, the response includes a redirect URL so the client can send the user to the sign-in page:
-
-```json
-{
-  "error": "Please sign in to top up your wallet",
-  "loginUrl": "https://agentbot.raveculture.xyz/signup"
-}
-```
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `error` | string | Human-readable error message |
-| `loginUrl` | string | URL to redirect the user for authentication |
 
 #### Example
 
 ```bash
-curl -X GET "https://agentbot.raveculture.xyz/api/wallet/top-up?amount=2500" \
-  -H "Cookie: next-auth.session-token=YOUR_SESSION"
+curl -X GET "https://agentbot.raveculture.xyz/api/wallet/top-up?amount=2500&address=0xd8fd0e1dce89beaab924ac68098ddb17613db56f"
 ```
 
 ### Top-up webhook
@@ -435,8 +419,7 @@ The webhook processes events where `metadata.type` equals `wallet_top_up`. On a 
 | Metadata field | Description |
 |----------------|-------------|
 | `type` | Must be `wallet_top_up` to trigger wallet credit |
-| `userId` | The user's internal ID |
-| `userEmail` | The user's email address |
+| `walletAddress` | The wallet address to credit |
 | `amountCents` | The top-up amount in cents |
 
 #### Response

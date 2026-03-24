@@ -191,6 +191,8 @@ curl -X POST https://agentbot.raveculture.xyz/api/ai/chat \
 | `/api/wallet/create` | POST | Create a CDP wallet |
 | `/api/wallet/cdp` | GET | Get CDP wallet status |
 | `/api/wallet/cdp` | POST | Create a CDP wallet client |
+| `/api/wallet/top-up` | GET | Create a Stripe checkout session for wallet top-up |
+| `/api/wallet/top-up` | POST | Stripe webhook for wallet top-up payment completion |
 | `/api/provision` | POST | Provision agent with channel tokens (requires auth) |
 | `/api/validate-key` | POST | Validate an API key (backend only) |
 | `/api/register-home` | POST | Register a Home mode installation (backend only, requires identity headers) |
