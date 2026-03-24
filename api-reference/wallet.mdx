@@ -298,6 +298,108 @@ Creates a viem wallet client on Base Sepolia.
 }
 ```
 
+## Wallet top-up
+
+Fund your wallet using a credit card via Stripe checkout. Choose from preset amounts and complete payment through Stripe's hosted checkout page. On successful payment, your wallet is credited automatically.
+
+### Create top-up checkout session
+
+```http
+GET /api/wallet/top-up
+```
+
+Creates a Stripe checkout session for the specified top-up amount. Requires session authentication.
+
+#### Query parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `amount` | number | No | Amount in cents. One of `500`, `1000`, `2500`, or `5000`. Defaults to `1000` ($10). |
+
+#### Top-up options
+
+| Amount (cents) | Display | Description |
+|----------------|---------|-------------|
+| `500` | $5 | 5 agent calls |
+| `1000` | $10 | 10 agent calls |
+| `2500` | $25 | 25 agent calls |
+| `5000` | $50 | 50 agent calls |
+
+#### Response
+
+```json
+{
+  "url": "https://checkout.stripe.com/c/pay/...",
+  "sessionId": "cs_live_..."
+}
+```
+
+#### Response fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `url` | string | Stripe checkout URL. Redirect the user here to complete payment. |
+| `sessionId` | string | Stripe checkout session ID |
+
+On successful payment, the user is redirected to `/dashboard/wallet?top_up=success`. On cancellation, the user is redirected to `/dashboard/wallet?top_up=cancelled`.
+
+#### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | Invalid amount. Must be one of: `500`, `1000`, `2500`, `5000`. |
+| 401 | Unauthorized — no valid session |
+| 500 | Stripe not configured or checkout creation failed |
+
+#### Example
+
+```bash
+curl -X GET "https://agentbot.raveculture.xyz/api/wallet/top-up?amount=2500" \
+  -H "Cookie: next-auth.session-token=YOUR_SESSION"
+```
+
+### Top-up webhook
+
+```http
+POST /api/wallet/top-up
+```
+
+Stripe webhook endpoint that processes `checkout.session.completed` events for wallet top-ups. When a payment completes, the webhook verifies the Stripe signature and credits the user's wallet.
+
+<Warning>This endpoint is called by Stripe, not by your application directly. You must configure the webhook URL in your Stripe dashboard to point to this endpoint. The request must include a valid `stripe-signature` header.</Warning>
+
+#### Headers
+
+| Header | Type | Required | Description |
+|--------|------|----------|-------------|
+| `stripe-signature` | string | Yes | Stripe webhook signature for event verification |
+
+#### Webhook behavior
+
+The webhook processes events where `metadata.type` equals `wallet_top_up`. On a matching `checkout.session.completed` event, it reads the following metadata fields from the checkout session:
+
+| Metadata field | Description |
+|----------------|-------------|
+| `type` | Must be `wallet_top_up` to trigger wallet credit |
+| `userId` | The user's internal ID |
+| `userEmail` | The user's email address |
+| `amountCents` | The top-up amount in cents |
+
+#### Response
+
+```json
+{
+  "received": true
+}
+```
+
+#### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | Invalid Stripe signature |
+| 500 | Stripe not configured or webhook processing failed |
+
 ## USDC transfer validation
 
 When transferring USDC through the wallet service, the following validation rules apply:

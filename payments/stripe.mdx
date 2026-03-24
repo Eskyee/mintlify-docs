@@ -41,7 +41,14 @@ Crypto payments are not accepted through Stripe checkout. For USDC payments on B
 2. Enter keys
 3. Click **Connect**
 
-### Step 4: Configure webhook
+### Step 4: Configure webhooks
+
+Two webhook endpoints handle Stripe events:
+
+1. **Subscription webhook** — handles subscription lifecycle events
+2. **Wallet top-up webhook** — handles wallet top-up payments
+
+#### Subscription webhook
 
 1. Go to **Developers → Webhooks**
 2. Add endpoint: `https://agentbot.raveculture.xyz/api/webhooks/stripe`
@@ -53,6 +60,15 @@ Crypto payments are not accepted through Stripe checkout. For USDC payments on B
    - `invoice.payment_succeeded`
    - `invoice.payment_failed`
 4. Copy webhook secret and add to Agentbot
+
+#### Wallet top-up webhook
+
+1. Add a second endpoint: `https://agentbot.raveculture.xyz/api/wallet/top-up`
+2. Select events:
+   - `checkout.session.completed`
+3. Copy webhook secret and add to Agentbot as `STRIPE_WEBHOOK_SECRET`
+
+<Note>The wallet top-up webhook only processes `checkout.session.completed` events where the session metadata `type` field is set to `wallet_top_up`. All other checkout events are ignored by this endpoint.</Note>
 
 ## Pricing plans
 
@@ -418,6 +434,50 @@ When processing `checkout.session.completed` events, the webhook maps the `plan`
 Any unrecognized plan value falls back to `free`. This means the user's subscription is not activated for agent provisioning — they must complete checkout with a valid plan name.
 
 <Warning>If your Stripe product metadata uses a plan name that is not in the table above, the subscription will be recorded as `free` and the user will not be able to provision agents. Make sure your Stripe product metadata `plan` field matches one of the recognized values exactly.</Warning>
+
+## Wallet top-up
+
+In addition to subscriptions and credit packs, you can use Stripe to add funds directly to your wallet for agent calls. The wallet top-up flow uses a dedicated endpoint that creates a one-time Stripe checkout session.
+
+### Available amounts
+
+| Amount | Description |
+|--------|-------------|
+| $5 | 5 agent calls |
+| $10 | 10 agent calls |
+| $25 | 25 agent calls |
+| $50 | 50 agent calls |
+
+### Start a wallet top-up
+
+Redirect the user to the wallet top-up endpoint with an `amount` query parameter (in cents):
+
+```http
+GET /api/wallet/top-up?amount=1000
+```
+
+**Parameters**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `amount` | number | No | Amount in cents: `500`, `1000`, `2500`, or `5000`. Defaults to `1000`. |
+
+The endpoint returns a JSON response with the Stripe checkout URL and session ID. Redirect the user to the `url` to complete payment.
+
+**Example**
+
+```bash
+# Redirect user to wallet top-up ($25)
+window.location.href = '/api/wallet/top-up?amount=2500'
+```
+
+On success, the user is redirected to `/dashboard/wallet?top_up=success`. On cancellation, the user is redirected to `/dashboard/wallet?top_up=cancelled`.
+
+<Note>Wallet top-up payments are processed as one-time charges, not recurring subscriptions. The amount is credited to the user's wallet after successful payment via the webhook at `POST /api/wallet/top-up`. See the [Wallet API reference](/api-reference/wallet#wallet-top-up) for full endpoint details.</Note>
+
+### Direct transfer
+
+You can also fund your wallet by sending pathUSD directly to your wallet address on the Tempo network. Copy your wallet address from the wallet dashboard and transfer funds from any compatible wallet. No Stripe checkout is needed for direct transfers.
 
 ## Troubleshooting
 
