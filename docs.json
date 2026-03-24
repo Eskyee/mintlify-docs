@@ -150,6 +150,22 @@
       {
         "label": "Discord",
         "href": "https://discord.gg/eskyee"
+      },
+      {
+        "label": "Google Dev",
+        "href": "https://g.dev/agentbot"
+      },
+      {
+        "label": "Talent",
+        "href": "https://talent.app/raveculture.base.eth"
+      },
+      {
+        "label": "Base",
+        "href": "https://www.base.dev"
+      },
+      {
+        "label": "Cerebral Valley",
+        "href": "https://cerebralvalley.ai/u/Esky"
       }
     ]
   },
