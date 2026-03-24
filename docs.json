@@ -9,11 +9,7 @@
   "colors": {
     "primary": "#3b82f6",
     "light": "#60a5fa",
-    "dark": "#2563eb",
-    "background": {
-      "light": "#ffffff",
-      "dark": "#000000"
-    }
+    "dark": "#2563eb"
   },
   "favicon": "/favicon.svg",
   "fonts": {
@@ -27,29 +23,18 @@
       "weight": 400
     }
   },
-  "border": {
-    "light": "#e4e4e7",
-    "dark": "#27272a"
+  "appearance": {
+    "default": "dark",
+    "strict": true
   },
-  "topbar": {
-    "style": "dark",
-    "background": "#000000",
-    "border": {
-      "color": "#27272a",
-      "light": "#e4e4e7"
+  "background": {
+    "color": {
+      "dark": "#000000",
+      "light": "#ffffff"
     }
   },
-  "sidebar": {
-    "style": "dark",
-    "background": "#09090b",
-    "border": {
-      "color": "#27272a",
-      "light": "#e4e4e7"
-    }
-  },
-  "codeblock": {
-    "style": "dark",
-    "background": "#18181b"
+  "styling": {
+    "codeblocks": "dark"
   },
   "navigation": {
     "groups": [
@@ -165,31 +150,11 @@
       {
         "label": "Discord",
         "href": "https://discord.gg/eskyee"
-      },
-      {
-        "label": "Google Dev",
-        "href": "https://g.dev/agentbot"
-      },
-      {
-        "label": "Talent",
-        "href": "https://talent.app/raveculture.base.eth"
-      },
-      {
-        "label": "Base",
-        "href": "https://www.base.dev"
-      },
-      {
-        "label": "Builder",
-        "href": "https://basescan.org/address/0x62635f75706a6c6d33796c0b0080218021802180218021802180218021"
-      },
-      {
-        "label": "Cerebral Valley",
-        "href": "https://cerebralvalley.ai/u/Esky"
       }
     ]
   },
   "footer": {
-    "socialLinks": {
+    "socials": {
       "github": "https://github.com/Eskyee/agentbot-opensource",
       "discord": "https://discord.gg/eskyee"
     }
