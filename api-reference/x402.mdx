@@ -57,30 +57,32 @@ Returned when the upstream gateway is unreachable.
 POST /api/x402
 ```
 
-Requires an authenticated session with both a user ID and email. Dispatches an action to the x402 gateway.
+Dispatches an action to the x402 gateway. Most actions require an authenticated session, but `endpoints` is public.
 
 ### Headers
 
 | Header | Type | Required | Description |
 |--------|------|----------|-------------|
 | `Content-Type` | string | Yes | Must be `application/json` |
-| `Cookie` | string | Yes | Valid NextAuth session cookie |
+| `Cookie` | string | Varies | Valid NextAuth session cookie. Required for all actions except `endpoints`. |
 
 ### Body
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `agentId` | string | Yes | Agent instance identifier |
+| `agentId` | string | Varies | Agent instance identifier. Required for all actions except `endpoints`. |
 | `walletAddress` | string | No | Agent wallet address. Required for `join-colony`. |
 | `action` | string | Yes | Action to perform. One of `join-colony`, `fitness`, `pricing`, `endpoints`, or `pay`. |
 
 Additional fields are required depending on the action — see below.
 
+<Note>Several actions return graceful fallback responses when the upstream gateway is unreachable instead of failing with a 500 error. These fallback responses are noted in each action's documentation below.</Note>
+
 ### Actions
 
 #### `join-colony`
 
-Register an agent with the x402 colony.
+Register an agent with the x402 colony. Requires authentication. The request times out after 10 seconds. This action does not have a fallback — if the upstream gateway is unreachable, a 500 error is returned.
 
 ```json
 {
@@ -92,7 +94,7 @@ Register an agent with the x402 colony.
 
 #### `fitness`
 
-Retrieve the fitness score for an agent.
+Retrieve the fitness score for an agent. Requires authentication. The request times out after 10 seconds.
 
 **Request:**
 
@@ -120,12 +122,23 @@ Retrieve the fitness score for an agent.
 | Field | Type | Description |
 |-------|------|-------------|
 | `score` | number | Agent fitness score (0–100) |
-| `tier` | string | Fitness tier (e.g. `bronze`, `silver`, `gold`) |
-| `details` | object | Breakdown of fitness dimensions |
+| `tier` | string | Fitness tier (e.g. `bronze`, `silver`, `gold`, or `new` for fallback) |
+| `details` | object \| null | Breakdown of fitness dimensions. `null` in fallback responses. |
+
+**Fallback response:** When the upstream gateway is unreachable, the API returns a default response instead of an error:
+
+```json
+{
+  "success": true,
+  "score": 50,
+  "tier": "new",
+  "details": null
+}
+```
 
 #### `pricing`
 
-Retrieve dynamic pricing for an agent. Pricing is adjusted based on the agent's fitness score and tier.
+Retrieve dynamic pricing for an agent. Pricing is adjusted based on the agent's fitness score and tier. Requires authentication. The request times out after 10 seconds.
 
 **Request:**
 
@@ -156,21 +169,38 @@ Retrieve dynamic pricing for an agent. Pricing is adjusted based on the agent's 
 | Field | Type | Description |
 |-------|------|-------------|
 | `agentId` | string | Agent instance identifier |
-| `tier` | string | Pricing tier |
+| `tier` | string | Pricing tier (e.g. `gold`, `silver`, or `basic` for fallback) |
 | `pricing.rate` | number | Current rate per request |
 | `pricing.discount` | number | Discount factor applied based on fitness |
 | `fitness.score` | number | Agent fitness score |
 | `fitness.tier` | string | Agent fitness tier |
 
+**Fallback response:** When the upstream gateway is unreachable, the API returns a default response instead of an error:
+
+```json
+{
+  "success": true,
+  "agentId": "inst_abc123",
+  "tier": "basic",
+  "pricing": {
+    "rate": 0.01,
+    "discount": 0
+  },
+  "fitness": {
+    "score": 50,
+    "tier": "new"
+  }
+}
+```
+
 #### `endpoints`
 
-List all available endpoints on the x402 gateway.
+List all available endpoints on the x402 gateway. This action is **public** — no authentication or `agentId` is required. The request times out after 10 seconds.
 
 **Request:**
 
 ```json
 {
-  "agentId": "inst_abc123",
   "action": "endpoints"
 }
 ```
@@ -179,16 +209,27 @@ List all available endpoints on the x402 gateway.
 
 ```json
 {
+  "success": true,
   "endpoints": [
     {
-      "slug": "chat",
-      "description": "Chat with the soul",
-      "price": "0.001"
+      "slug": "/gateway/colony/join",
+      "description": "Join agent colony",
+      "price": "Free"
     },
     {
-      "slug": "clone",
-      "description": "Clone an agent",
-      "price": "1.0"
+      "slug": "/gateway/fitness/:agentId",
+      "description": "Get agent fitness score",
+      "price": "Free"
+    },
+    {
+      "slug": "/gateway/pricing/:agentId",
+      "description": "Get dynamic pricing",
+      "price": "Free"
+    },
+    {
+      "slug": "/gateway/pay",
+      "description": "Make payment",
+      "price": "Variable"
     }
   ]
 }
@@ -196,14 +237,17 @@ List all available endpoints on the x402 gateway.
 
 | Field | Type | Description |
 |-------|------|-------------|
+| `success` | boolean | Whether the request succeeded |
 | `endpoints` | array | List of available gateway endpoints |
-| `endpoints[].slug` | string | Endpoint identifier |
+| `endpoints[].slug` | string | Endpoint path on the gateway |
 | `endpoints[].description` | string | Human-readable description |
-| `endpoints[].price` | string | Price per request |
+| `endpoints[].price` | string | Price per request (e.g. `"Free"`, `"Variable"`, or a numeric string) |
+
+**Fallback response:** When the upstream gateway is unreachable, the API returns a hardcoded default list of endpoints (shown above) instead of an error. The response shape is identical whether served from the upstream gateway or the fallback.
 
 #### `pay`
 
-Execute a payment through the x402 gateway.
+Execute a payment through the x402 gateway. Requires authentication. The request times out after 15 seconds. This action does not have a fallback — if the upstream gateway is unreachable, a 500 error is returned.
 
 **Request:**
 
@@ -231,10 +275,10 @@ Execute a payment through the x402 gateway.
 
 | Status | Error | Description |
 |--------|-------|-------------|
-| 400 | `agentId required` | The `agentId` field is missing from the request body |
+| 400 | `agentId required` | The `agentId` field is missing from the request body. Only applies to authenticated actions (`join-colony`, `fitness`, `pricing`, `pay`). |
 | 400 | `Invalid action. Use: join-colony, fitness, pricing, endpoints, or pay` | The `action` field is missing or not one of the supported values |
-| 401 | `Authentication required` | No valid session. You must be signed in with both a user ID and email. |
-| 500 | `x402 gateway error` | An unexpected error occurred while communicating with the upstream gateway |
+| 401 | `Authentication required` | No valid session. Applies to all actions except `endpoints`. You must be signed in with both a user ID and email. |
+| 500 | `x402 gateway error` | An unexpected error occurred while communicating with the upstream gateway. Only returned for actions without fallback behavior (`join-colony`, `pay`). |
 
 ## Examples
 
@@ -286,9 +330,7 @@ curl -X POST https://agentbot.raveculture.xyz/api/x402 \
 ```bash
 curl -X POST https://agentbot.raveculture.xyz/api/x402 \
   -H "Content-Type: application/json" \
-  -H "Cookie: next-auth.session-token=YOUR_SESSION" \
   -d '{
-    "agentId": "inst_abc123",
     "action": "endpoints"
   }'
 ```
