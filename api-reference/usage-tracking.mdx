@@ -9,43 +9,15 @@ The usage tracking system records per-event token consumption and tool execution
 
 <Note>The usage tracker records events to a PostgreSQL database whenever an AI completion or tool call is made. The endpoints below are read-only query APIs for retrieving aggregated usage data. When no real usage data exists yet, the cost dashboard returns sample data with a `isMockData: true` flag.</Note>
 
-## Test usage logging
+## Test usage logging (deprecated)
+
+<Warning>This endpoint was removed in the March 2026 security audit and is no longer available. Requests to this path return `404`. Use the [cost dashboard](#cost-dashboard) endpoint to verify that usage tracking is working.</Warning>
 
 ```http
 POST /api/test-usage
 ```
 
-A debug endpoint that fires a single test event through the usage logging pipeline. Use it to verify that usage tracking is configured correctly and the database write succeeds. The endpoint calls the usage logger with hard-coded test values and returns immediately.
-
-<Warning>This endpoint is intended for development and debugging only. It writes a test row to the `usage_logs` table every time it is called.</Warning>
-
-### Request
-
-No request body or parameters are required.
-
-### Response
-
-```json
-{
-  "status": "ok",
-  "message": "Usage logger called",
-  "timestamp": "2026-03-23T21:30:00.000Z"
-}
-```
-
-### Response fields
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `status` | string | `"ok"` on success, `"error"` on failure |
-| `message` | string | Human-readable result description |
-| `timestamp` | string | ISO 8601 timestamp of when the response was generated |
-
-### Errors
-
-| Code | Description |
-|------|-------------|
-| 500 | The usage logger threw an error. The response body includes `status: "error"` and the error `message`. |
+~~A debug endpoint that fires a single test event through the usage logging pipeline.~~
 
 ---
 
