@@ -7,7 +7,7 @@ description: "Monitor your agent fleet with real-time graphs, execution traces, 
 
 Mission control provides a real-time view of your agent fleet. Use these endpoints to visualize agent relationships, trace execution activity, attribute costs per agent, and track talent bookings.
 
-<Note>All mission control endpoints require bearer token (API key) authentication. The fleet graph and traces endpoints also require a `userId` query parameter. The web proxy uses session authentication and resolves the user ID from the session before forwarding to these endpoints.</Note>
+<Note>All mission control endpoints require bearer token (API key) authentication. The fleet graph and traces endpoints also require a `userId` query parameter. The web proxy uses session authentication and resolves the user ID from the session before forwarding to these endpoints. The fleet graph and traces endpoints return safe default responses for unauthenticated requests instead of an error.</Note>
 
 ## Fleet graph
 
@@ -123,6 +123,28 @@ When no souls are reachable, the response uses the fallback shape with minimal n
 }
 ```
 
+When the request is unauthenticated (no valid session), the endpoint returns a default response instead of an error:
+
+```json
+{
+  "nodes": [
+    {
+      "id": "atlas",
+      "name": "Atlas",
+      "role": "orchestrator",
+      "status": "offline",
+      "x": 400,
+      "y": 300,
+      "load": 0,
+      "memory": 0
+    }
+  ],
+  "edges": [],
+  "timestamp": "2026-03-22T12:00:00.000Z",
+  "source": "unauthenticated"
+}
+```
+
 ### Node object
 
 | Field | Type | Description |
@@ -162,14 +184,12 @@ When no souls are reachable, the response uses the fallback shape with minimal n
 | Field | Type | Description |
 |-------|------|-------------|
 | `timestamp` | string | ISO 8601 timestamp of the response |
-| `source` | string | Data source. `"soul"` for live data, `"fallback"` when no souls are reachable |
+| `source` | string | Data source. `"soul"` for live data, `"fallback"` when no souls are reachable, `"unauthenticated"` when no valid session is present |
 | `nodeCount` | number | Number of live soul nodes fetched. Only present when `source` is `"soul"` |
 
 ### Errors
 
-| Code | Description |
-|------|-------------|
-| 401 | Unauthorized — missing or invalid bearer token |
+Unauthenticated requests return a `200` response with default empty data (see above) instead of an error.
 
 ## Execution traces
 
@@ -177,7 +197,7 @@ When no souls are reachable, the response uses the fallback shape with minimal n
 GET /api/mission-control/fleet/traces
 ```
 
-Returns up to 20 of the most recent execution traces for your agent fleet, sorted by recency. Traces include active plan steps, recent thoughts, free energy component readings, and cycle status from live soul instances. Returns an empty array when no soul instances are reachable.
+Returns up to 20 of the most recent execution traces for your agent fleet, sorted by recency. Traces include active plan steps, recent thoughts, free energy component readings, and cycle status from live soul instances. Returns an empty array when no soul instances are reachable or when the request is unauthenticated.
 
 ### Authentication
 
@@ -253,9 +273,7 @@ Requires bearer token authentication.
 
 ### Errors
 
-| Code | Description |
-|------|-------------|
-| 401 | Unauthorized — missing or invalid bearer token |
+Unauthenticated requests return a `200` response with an empty array `[]` instead of an error.
 
 ## Cost attribution
 
