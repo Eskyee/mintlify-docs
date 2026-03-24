@@ -23,6 +23,7 @@ POST /api/v1/gateway
 | `X-Plugin-Id` | string | No | Plugin to route the request to. Overrides the `plugin` field in the body. |
 | `X-Payment-Method` | string | No | Payment method to use: `stripe` or `mpp`. Defaults to `stripe`. |
 | `Authorization` | string | No | For MPP payments, use `Payment <credential>`. For session auth, handled via cookies. |
+| `Payment` | string | No | Alternative header for passing MPP payment credentials. Included in the gateway CORS allowlist. |
 | `Accept` | string | No | Set to `text/event-stream` for streaming responses (where supported). |
 
 ### Body
@@ -36,7 +37,7 @@ POST /api/v1/gateway
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `plugin` | string | No | Plugin ID to route to. The `X-Plugin-Id` header takes priority if both are provided. Defaults to `generate-text`. |
+| `plugin` | string | No | Plugin ID to route to. The `X-Plugin-Id` header takes priority if both are provided. Defaults to `agent`. |
 
 Additional body fields are forwarded to the target plugin.
 
@@ -46,16 +47,18 @@ The gateway routes to the following plugins:
 
 | Plugin ID | Name | Description | Auth required | Streaming |
 |-----------|------|-------------|---------------|-----------|
-| `agent` | Agent | Agent orchestrator for multi-step tasks | Yes | Yes |
-| `generate-text` | Text Generation | LLM text generation | Yes | Yes |
-| `tts` | Text-to-Speech | Speech synthesis | Yes | No |
-| `stt` | Speech-to-Text | Speech transcription | Yes | No |
+| `agent` | Agent | Agent orchestrator for multi-step tasks | No | Yes |
+| `generate-text` | Text Generation | LLM text generation | No | Yes |
+| `tts` | Text-to-Speech | Speech synthesis | No | No |
+| `stt` | Speech-to-Text | Speech transcription | No | No |
 
-<Note>`generate-text` is the default plugin when no plugin ID is specified.</Note>
+<Note>Authentication is controlled per-plugin via the gateway configuration. Plugins without the `auth` flag set do not require session authentication. When a plugin has `auth` enabled, requests must include either a valid session cookie or a verified MPP payment credential.</Note>
+
+<Note>`agent` is the default plugin when no plugin ID is specified.</Note>
 
 ## Authentication
 
-Protected plugins require either a valid session (cookie-based via NextAuth) or a verified MPP payment credential. If you pay with MPP, session authentication is not required.
+Plugins with the `auth` flag enabled in the gateway configuration require either a valid session (cookie-based via NextAuth) or a verified MPP payment credential. If you pay with MPP, session authentication is not required. Plugins without the `auth` flag can be called without authentication.
 
 ## Payment flow
 
@@ -229,7 +232,7 @@ The gateway monitors channel health for each agent container. When a channel bec
 
 ## CORS
 
-The gateway supports CORS preflight via `OPTIONS /api/v1/gateway`. Allowed methods are `POST` and `OPTIONS`. The `Authorization`, `Content-Type`, `X-Plugin-Id`, and `X-Payment-Method` headers are permitted.
+The gateway supports CORS preflight via `OPTIONS /api/v1/gateway`. Allowed methods are `GET`, `POST`, `PUT`, `DELETE`, and `OPTIONS`. The `Content-Type`, `Authorization`, `X-Plugin-Id`, and `Payment` headers are permitted.
 
 ## Rate limits
 
