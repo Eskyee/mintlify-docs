@@ -268,14 +268,16 @@ Each plan enforces a monthly token budget across all AI chat requests. Token usa
 
 Each subscription plan grants access to a specific set of AI models. The chat endpoint enforces these limits automatically.
 
-| Plan | Price | Models | Agent limit | Skill limit | A2A messages/day |
-|------|-------|--------|-------------|-------------|------------------|
-| `label` | £29/mo | `openai/gpt-4o-mini`, `google/gemini-2.0-flash`, `xiaomi/mimo-v2-pro` | 1 | 3 | 100 |
-| `solo` | £79/mo | `openai/gpt-4o-mini`, `openai/gpt-4o`, `google/gemini-2.0-flash`, `anthropic/claude-3.5-sonnet`, `xiaomi/mimo-v2-pro` | 3 | 10 | 500 |
-| `collective` | £199/mo | `openai/gpt-4o-mini`, `openai/gpt-4o`, `openai/gpt-4-turbo`, `google/gemini-2.0-flash`, `anthropic/claude-3.5-sonnet`, `anthropic/claude-3-opus`, `xiaomi/mimo-v2-pro` | 10 | 25 | 2,000 |
-| `network` | £499/mo | All models | 100 | 100 | 10,000 |
+| Plan | Price | Models | Provision limit | Skill limit | A2A messages/day |
+|------|-------|--------|-----------------|-------------|------------------|
+| `solo` | £29/mo | `openai/gpt-4o-mini`, `openai/gpt-4o`, `google/gemini-2.0-flash`, `anthropic/claude-3.5-sonnet`, `xiaomi/mimo-v2-pro` | 1 | 10 | 500 |
+| `collective` | £69/mo | `openai/gpt-4o-mini`, `openai/gpt-4o`, `openai/gpt-4-turbo`, `google/gemini-2.0-flash`, `anthropic/claude-3.5-sonnet`, `anthropic/claude-3-opus`, `xiaomi/mimo-v2-pro` | 3 | 25 | 2,000 |
+| `label` | £149/mo | `openai/gpt-4o-mini`, `google/gemini-2.0-flash`, `xiaomi/mimo-v2-pro` | 10 | 3 | 100 |
+| `network` | £499/mo | All models | Unlimited | 100 | 10,000 |
 
 <Note>Admin users are automatically granted `network`-level access regardless of their subscription plan.</Note>
+
+<Warning>The plan middleware enforces model access based on the `x-user-plan` header. The `label` plan has the smallest model set (3 models) despite having a higher provision limit (10 agents) than `solo`. This is because `label` is designed for label operations where fewer model choices are needed but more agents are required.</Warning>
 
 ## Model fallbacks
 
