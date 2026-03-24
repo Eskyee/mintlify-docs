@@ -1,11 +1,11 @@
 ---
 title: Gateway
-description: "Route requests to plugins through the v1 gateway with support for Stripe and MPP payments."
+description: "Route requests to plugins through the v1 gateway with support for session, MPP, and Stripe payments."
 ---
 
 # Gateway
 
-The v1 gateway routes incoming requests to registered plugins. It supports dual payment methods — Stripe (existing) and [MPP](/payments/mpp) (Machine Payments Protocol) via the Tempo blockchain.
+The v1 gateway routes incoming requests to registered plugins. It supports three payment methods — session-based billing (off-chain vouchers), [MPP](/payments/mpp) (Machine Payments Protocol on the Tempo blockchain), and Stripe.
 
 ## Base URL
 
@@ -21,9 +21,10 @@ POST /api/v1/gateway
 |--------|------|----------|-------------|
 | `Content-Type` | string | Yes | Must be `application/json` |
 | `X-Plugin-Id` | string | No | Plugin to route the request to. Overrides the `plugin` field in the body. |
-| `X-Payment-Method` | string | No | Payment method to use: `stripe` or `mpp`. Defaults to `stripe`. |
+| `X-Payment-Method` | string | No | Payment method to use: `session`, `mpp`, or `stripe`. Defaults to `stripe`. |
+| `X-Session-Id` | string | No | Active session ID for session-based billing. When present, implies `session` payment method. |
+| `X-Wallet-Address` | string | No | Wallet address (0x-prefixed) for session-based billing. Required when `X-Session-Id` is set. |
 | `Authorization` | string | No | For MPP payments, use `Payment <credential>`. For session auth, handled via cookies. |
-| `Payment` | string | No | Alternative header for passing MPP payment credentials. Included in the gateway CORS allowlist. |
 | `Accept` | string | No | Set to `text/event-stream` for streaming responses (where supported). |
 
 ### Body
@@ -47,31 +48,72 @@ The gateway routes to the following plugins:
 
 | Plugin ID | Name | Description | Auth required | Streaming |
 |-----------|------|-------------|---------------|-----------|
-| `agent` | Agent | Agent orchestrator for multi-step tasks | No | Yes |
-| `generate-text` | Text Generation | LLM text generation | No | Yes |
-| `tts` | Text-to-Speech | Speech synthesis | No | No |
-| `stt` | Speech-to-Text | Speech transcription | No | No |
-
-<Note>Authentication is controlled per-plugin via the gateway configuration. Plugins without the `auth` flag set do not require session authentication. When a plugin has `auth` enabled, requests must include either a valid session cookie or a verified MPP payment credential.</Note>
+| `agent` | Agent | Agent orchestrator for multi-step tasks | Yes | Yes |
+| `generate-text` | Text Generation | LLM text generation | Yes | Yes |
+| `tts` | Text-to-Speech | Speech synthesis | Yes | No |
+| `stt` | Speech-to-Text | Speech transcription | Yes | No |
 
 <Note>`agent` is the default plugin when no plugin ID is specified.</Note>
 
 ## Authentication
 
-Plugins with the `auth` flag enabled in the gateway configuration require either a valid session (cookie-based via NextAuth) or a verified MPP payment credential. If you pay with MPP, session authentication is not required. Plugins without the `auth` flag can be called without authentication.
+Protected plugins require either a valid session (cookie-based via NextAuth), a verified MPP payment credential, or a valid payment session with receipt. If you pay with MPP or session-based billing, NextAuth session authentication is not required.
 
 ## Payment flow
 
-The gateway supports two payment methods per request:
+The gateway supports three payment methods per request:
 
-1. **Stripe** — Default. Requires an active subscription or credits. See [Stripe integration](/payments/stripe).
-2. **MPP** — Crypto-native payments on the Tempo blockchain. See [MPP payments](/payments/mpp).
+1. **Session** — Off-chain billing via payment sessions. Each agent call auto-debits a voucher from the session balance with sub-100ms latency. See [MPP sessions](/payments/mpp#sessions).
+2. **MPP** — Crypto-native per-request payments on the Tempo blockchain. See [MPP payments](/payments/mpp).
+3. **Stripe** — Credit card payments. Requires an active subscription or credits. See [Stripe integration](/payments/stripe).
 
 The server selects the payment method using the following priority:
 
-1. `X-Payment-Method` header (`mpp` or `stripe`)
+1. `X-Payment-Method` header (`session`, `mpp`, or `stripe`)
 2. Presence of an `Authorization: Payment` header (implies `mpp`)
-3. Default: `stripe`
+3. Presence of an `X-Session-Id` header (implies `session`)
+4. Default: `stripe`
+
+### Session billing
+
+When the payment method is `session`, the gateway auto-debits the session balance via an off-chain voucher. You must provide both `X-Session-Id` and `X-Wallet-Address` headers.
+
+The gateway checks the session balance against the plugin's price before forwarding the request. If the balance is insufficient, the gateway returns `402` with the current balance and required cost.
+
+```bash
+curl -X POST https://agentbot.raveculture.xyz/api/v1/gateway \
+  -H "Content-Type: application/json" \
+  -H "X-Plugin-Id: agent" \
+  -H "X-Session-Id: ses_a1b2c3d4e5f6" \
+  -H "X-Wallet-Address: 0xYOUR_WALLET_ADDRESS" \
+  -d '{"messages": [{"role": "user", "content": "Summarize my tasks"}]}'
+```
+
+On success, the response includes a `Payment-Receipt` header with the session receipt and an `X-Session-Remaining` header with the updated balance.
+
+#### Session 402 errors
+
+When a session payment fails, the response includes a specific error code:
+
+| Error code | Description |
+|------------|-------------|
+| `session_required` | `X-Session-Id` or `X-Wallet-Address` header is missing |
+| `session_invalid` | No active session found for the given address and session ID |
+| `insufficient_balance` | Session balance is too low for the requested plugin. The response body includes the current `remaining` balance and the `cost`. |
+| `voucher_failed` | The off-chain voucher could not be processed |
+
+Example insufficient balance response:
+
+```json
+{
+  "error": "insufficient_balance",
+  "message": "Need $0.05, have $0.02",
+  "session": {
+    "remaining": "0.02",
+    "cost": "0.05"
+  }
+}
+```
 
 ### MPP 402 challenge
 
@@ -120,21 +162,27 @@ Payment amount="0.05", currency="0x20c0000000000000000000000000000000000000", re
 }
 ```
 
-When paid via MPP, the response includes a `Payment-Receipt` header and the `payment.receipt` field contains the transaction hash.
+When paid via MPP, the response includes a `Payment-Receipt` header and the `payment.receipt` field contains the transaction hash. When paid via session, the `Payment-Receipt` header contains the session receipt and the `X-Session-Remaining` header contains the updated balance.
 
 ### Response headers
 
 | Header | Description |
 |--------|-------------|
 | `x-plugin-id` | The plugin that handled the request |
-| `Payment-Receipt` | MPP transaction receipt hash (only present for MPP-paid requests) |
+| `Payment-Receipt` | Payment receipt. For MPP: the transaction hash. For session: a receipt in the format `session:<sessionId>:<nonce>`. Only present for MPP or session-paid requests. |
+| `X-Session-Remaining` | Remaining session balance in USD after the debit. Only present for session-paid requests. |
 
 ## Error responses
 
 | Status | Error code | Description |
 |--------|-----------|-------------|
-| 401 | `Unauthorized` | Authentication required for a protected plugin and no valid session or MPP credential |
+| 400 | `unknown_plugin` | No pricing configured for the specified plugin (session billing only) |
+| 401 | `Unauthorized` | Authentication required for a protected plugin and no valid session, MPP credential, or payment session |
 | 402 | `payment_required` | MPP payment required. Response includes challenge and pricing. |
+| 402 | `session_required` | Session ID and wallet address required for session billing |
+| 402 | `session_invalid` | No active session found for the given address |
+| 402 | `insufficient_balance` | Session balance too low for the requested plugin |
+| 402 | `voucher_failed` | Off-chain voucher processing failed |
 | 500 | `internal` | Internal server error |
 | 502 | `no_plugin` | No plugin registered for the given ID |
 
@@ -260,4 +308,15 @@ curl -X POST https://agentbot.raveculture.xyz/api/v1/gateway \
   -H "X-Plugin-Id: generate-text" \
   -H "Authorization: Payment {\"scheme\":\"Payment\",\"transaction\":\"0x76...\",\"challengeNonce\":\"abc123\"}" \
   -d '{"messages": [{"role": "user", "content": "Hello"}]}'
+```
+
+### Route a request with session billing
+
+```bash
+curl -X POST https://agentbot.raveculture.xyz/api/v1/gateway \
+  -H "Content-Type: application/json" \
+  -H "X-Plugin-Id: agent" \
+  -H "X-Session-Id: ses_a1b2c3d4e5f6" \
+  -H "X-Wallet-Address: 0xYOUR_WALLET_ADDRESS" \
+  -d '{"messages": [{"role": "user", "content": "Summarize my tasks"}]}'
 ```
