@@ -5,7 +5,7 @@ description: "Pay for API requests with crypto using the Machine Payments Protoc
 
 # MPP payments
 
-The Machine Payments Protocol (MPP) enables crypto-native, per-request payments on the Tempo blockchain. MPP is an additive payment method alongside [Stripe](/payments/stripe) — you choose which to use on each request.
+The Machine Payments Protocol (MPP) enables crypto-native, per-request payments on the Tempo blockchain. MPP is an additive payment method alongside [Stripe](/payments/stripe) and session-based billing — you choose which to use on each request.
 
 ## How it works
 
@@ -174,6 +174,41 @@ const { supported } = await checkMppSupport(
 ```
 
 The function sends an `OPTIONS` request and checks for a `WWW-Authenticate: Payment` header.
+
+## Sessions
+
+Payment sessions provide off-chain, per-call billing without an on-chain transaction for every request. This reduces latency to sub-100ms per call while still settling on-chain periodically.
+
+### How sessions work
+
+1. **Open a session** — deposit pathUSD (minimum $1.00, maximum $100.00) into escrow via `POST /api/wallet/sessions`. You can also fund your session via Stripe using the [wallet top-up](/api-reference/wallet#wallet-top-up) endpoint.
+2. **Make gateway requests** — send requests to the [gateway](/api-reference/gateway) with `X-Session-Id` and `X-Wallet-Address` headers. The gateway auto-debits your session balance via an off-chain voucher on each call. You can also submit vouchers directly via `POST /api/wallet/sessions/voucher`.
+3. **Automatic settlement** — when accumulated vouchers reach $5.00 or after one hour, the server batches them into a single on-chain transaction.
+4. **Close the session** — call `DELETE /api/wallet/sessions?sessionId=ses_...` to settle any remaining vouchers and return unused funds.
+
+### Session configuration
+
+| Parameter | Value | Description |
+|-----------|-------|-------------|
+| Minimum deposit | $1.00 | Minimum amount to open a session |
+| Maximum deposit | $100.00 | Maximum amount per session |
+| Settle threshold | $5.00 | Accumulated voucher total that triggers on-chain settlement |
+| Settle interval | 1 hour | Maximum time between on-chain settlements |
+
+### Session states
+
+| State | Description |
+|-------|-------------|
+| `active` | Session is open and accepting vouchers |
+| `settling` | Vouchers are being settled on-chain (temporary) |
+| `closed` | Session has been closed and remaining funds returned |
+
+### When to use sessions vs. per-request MPP
+
+- **Sessions** are ideal for high-frequency agent calls where sub-100ms billing latency matters (e.g., chat, real-time orchestration). The gateway auto-debits your session on each call when you provide `X-Session-Id` and `X-Wallet-Address` headers.
+- **Per-request MPP** (the standard 402 flow) is better for infrequent or large-value calls where on-chain settlement per request is acceptable.
+
+See the [Wallet API — MPP payment sessions](/api-reference/wallet#mpp-payment-sessions) reference for the full endpoint documentation and the [Gateway API](/api-reference/gateway#session-billing) for how sessions integrate with the gateway.
 
 ## Troubleshooting
 
