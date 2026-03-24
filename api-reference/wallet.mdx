@@ -1,127 +1,114 @@
 ---
 title: Wallet API
-description: "Manage wallets for on-chain transactions and payments"
+description: "Query Tempo chain wallet balances, view transactions, and manage CDP wallets"
 ---
 
 # Wallet API
 
-Manage wallets for on-chain transactions and payments. Supports both session-based wallets and Coinbase Developer Platform (CDP) wallets.
+Query wallet balances and transaction history on the Tempo network. Also supports Coinbase Developer Platform (CDP) wallet creation and management.
 
-## Get wallet
+## Get wallet balance
 
 ```http
-GET /api/wallet
+GET /api/wallet?address=0x...
 ```
 
-Returns wallet information. When CDP is configured, returns CDP status without authentication. Otherwise, requires session authentication.
+Returns the balance and fee token information for a wallet address on the Tempo network. Connects to mainnet by default, or testnet when the `TEMPO_TESTNET` environment variable is set to `true`.
 
-### Response (CDP configured)
+### Query parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `address` | string | Yes | Wallet address (0x-prefixed) |
+
+### Response
 
 ```json
 {
-  "agenticWallet": {
-    "status": "configured",
-    "projectId": "abc12345...",
-    "features": [
-      "create_wallet",
-      "get_balance",
-      "send_usdc",
-      "trade_tokens",
-      "x402_payments"
-    ]
+  "address": "0xd8fd0e1dce89beaab924ac68098ddb17613db56f",
+  "chain": "Tempo",
+  "chainId": 1,
+  "testnet": false,
+  "feeToken": {
+    "address": "0x20c0000000000000000000000000000000000000",
+    "balance": "12.50",
+    "balanceRaw": "12500000"
   },
-  "instructions": "CDP Agentic Wallet is configured. Use /api/wallet/cdp/* endpoints."
+  "pathUsd": {
+    "address": "0x20c0000000000000000000000000000000000000",
+    "balance": "50.00",
+    "balanceRaw": "50000000"
+  }
 }
 ```
 
-### Response (user wallet exists)
-
-```json
-{
-  "address": "0x...",
-  "balance": "0",
-  "network": "base-sepolia",
-  "hasWallet": true,
-  "createdAt": "2026-03-01T00:00:00Z"
-}
-```
-
-### Response (no wallet)
-
-```json
-{
-  "address": null,
-  "balance": "0",
-  "network": "base-sepolia",
-  "hasWallet": false,
-  "message": "No wallet found. Create one to get started."
-}
-```
+| Field | Type | Description |
+|-------|------|-------------|
+| `address` | string | The queried wallet address |
+| `chain` | string | Network name (`Tempo` or `Tempo Testnet`) |
+| `chainId` | number | Chain ID of the connected network |
+| `testnet` | boolean | Whether the response is from the testnet |
+| `feeToken.address` | string | Contract address of the user's configured fee token |
+| `feeToken.balance` | string | Human-readable fee token balance (6 decimals) |
+| `feeToken.balanceRaw` | string | Raw fee token balance in smallest units |
+| `pathUsd.address` | string | pathUSD token contract address |
+| `pathUsd.balance` | string | Human-readable pathUSD balance (6 decimals) |
+| `pathUsd.balanceRaw` | string | Raw pathUSD balance in smallest units |
 
 ### Errors
 
 | Code | Description |
 |------|-------------|
-| 401 | Unauthorized (no session and CDP not configured) |
+| 400 | Missing `address` parameter |
+| 500 | Failed to fetch wallet data from Tempo RPC |
 
-## Wallet actions
+## Get transaction history
 
 ```http
-POST /api/wallet
+GET /api/wallet/transactions?address=0x...&limit=20
 ```
 
-Requires session authentication.
+Returns recent transaction history for a wallet address on Tempo. Currently returns a placeholder response with an explorer link while indexer integration is in progress.
 
-### Request body
+### Query parameters
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `action` | string | Yes | One of: `create`, `get_seed`, `export_seed` |
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `address` | string | Yes | Wallet address (0x-prefixed) |
+| `limit` | number | No | Maximum number of transactions to return. Defaults to `20`. |
 
-### Action: `create`
-
-Creates a new wallet for the authenticated user.
+### Response
 
 ```json
 {
-  "address": "0x...",
-  "network": "base-sepolia",
-  "message": "Wallet created successfully"
+  "address": "0xd8fd0e1dce89beaab924ac68098ddb17613db56f",
+  "chain": "Tempo",
+  "chainId": 1,
+  "currentBlock": "1234567",
+  "transactions": [],
+  "note": "Transaction history requires indexer integration. Use Tempo block explorer for now.",
+  "explorerUrl": "https://explore.tempo.xyz/address/0xd8fd0e1dce89beaab924ac68098ddb17613db56f"
 }
 ```
 
-Returns `400` if a wallet already exists.
+| Field | Type | Description |
+|-------|------|-------------|
+| `address` | string | The queried wallet address |
+| `chain` | string | Network name |
+| `chainId` | number | Chain ID |
+| `currentBlock` | string | Latest block number at time of request |
+| `transactions` | array | List of transactions (currently empty, pending indexer integration) |
+| `note` | string | Status message about indexer availability |
+| `explorerUrl` | string | Direct link to the address on Tempo Explorer |
 
-### Action: `get_seed`
-
-Returns wallet metadata. Private keys are stored encrypted server-side and are never exposed.
-
-```json
-{
-  "address": "0x...",
-  "network": "base-sepolia",
-  "createdAt": "2026-03-01T00:00:00Z",
-  "warning": "Private keys are stored encrypted server-side and never exposed."
-}
-```
-
-### Action: `export_seed`
-
-Seed export is disabled for security. Returns `403`.
-
-```json
-{
-  "error": "Seed export is disabled for security. Contact support if you need your private key."
-}
-```
+<Note>When `TEMPO_TESTNET` is `true`, the explorer URL points to `explore.testnet.tempo.xyz` instead of `explore.tempo.xyz`.</Note>
 
 ### Errors
 
 | Code | Description |
 |------|-------------|
-| 400 | Invalid action or wallet already exists |
-| 401 | Unauthorized |
-| 404 | No wallet found (for `get_seed`) |
+| 400 | Missing `address` parameter |
+| 500 | Failed to fetch transactions |
 
 ## Get CDP wallet address
 
