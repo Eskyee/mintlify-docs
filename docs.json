@@ -17,16 +17,13 @@
   },
   "favicon": "/favicon.svg",
   "fonts": {
+    "family": "Inter",
     "heading": {
-      "family": "Geist",
-      "source": "/fonts/Geist-Bold.woff2",
-      "format": "woff2",
+      "family": "Inter",
       "weight": 700
     },
     "body": {
-      "family": "Geist",
-      "source": "/fonts/Geist-Regular.woff2",
-      "format": "woff2",
+      "family": "Inter",
       "weight": 400
     }
   },
