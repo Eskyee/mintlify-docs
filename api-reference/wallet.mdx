@@ -17,7 +17,7 @@ Returns wallet information. Behavior depends on whether an `address` query param
 
 ### Tempo balance query
 
-When the `address` query parameter is present, the endpoint queries the Tempo blockchain for the wallet's balance and fee token information.
+When the `address` query parameter is present, the endpoint queries the Tempo blockchain for the wallet's balances across all known stablecoins. The endpoint reads balances using standard ERC-20 `balanceOf` calls and returns a total USD value along with per-token breakdowns.
 
 ```http
 GET /api/wallet?address=0xd8fd...db56f
@@ -29,6 +29,17 @@ GET /api/wallet?address=0xd8fd...db56f
 |-----------|------|----------|-------------|
 | `address` | string | Yes | Hex-encoded wallet address (0x-prefixed) |
 
+#### Supported tokens
+
+The endpoint queries the following Tempo stablecoins (all pegged 1:1 to USD):
+
+| Token | Address |
+|-------|---------|
+| pathUSD | `0x20c0000000000000000000000000000000000000` |
+| alphaUSD | `0x20c0000000000000000000000000000000000001` |
+| betaUSD | `0x20c0000000000000000000000000000000000002` |
+| thetaUSD | `0x20c0000000000000000000000000000000000003` |
+
 #### Response
 
 ```json
@@ -37,16 +48,28 @@ GET /api/wallet?address=0xd8fd...db56f
   "chain": "Tempo",
   "chainId": 4217,
   "testnet": false,
-  "feeToken": {
+  "totalUsd": "24.94",
+  "primaryToken": {
     "address": "0x20c0000000000000000000000000000000000000",
-    "balance": "12.470000",
-    "balanceRaw": "12470000"
+    "name": "Path USD",
+    "symbol": "pathUSD",
+    "decimals": 6,
+    "balance": "12.470000"
   },
-  "pathUsd": {
-    "address": "0x20c0000000000000000000000000000000000000",
-    "balance": "12.470000",
-    "balanceRaw": "12470000"
-  }
+  "allTokens": [
+    {
+      "address": "0x20c0000000000000000000000000000000000000",
+      "name": "Path USD",
+      "symbol": "pathUSD",
+      "balance": "12.470000"
+    },
+    {
+      "address": "0x20c0000000000000000000000000000000000001",
+      "name": "Alpha USD",
+      "symbol": "alphaUSD",
+      "balance": "12.470000"
+    }
+  ]
 }
 ```
 
@@ -58,14 +81,22 @@ GET /api/wallet?address=0xd8fd...db56f
 | `chain` | string | Network name (`Tempo` or `Tempo Testnet`) |
 | `chainId` | number | Chain ID (`4217` for mainnet, `42431` for testnet) |
 | `testnet` | boolean | Whether the server is configured for testnet |
-| `feeToken.address` | string | Contract address of the user's configured fee token |
-| `feeToken.balance` | string | Fee token balance formatted with 6 decimals |
-| `feeToken.balanceRaw` | string | Fee token balance in raw units |
-| `pathUsd.address` | string | pathUSD contract address |
-| `pathUsd.balance` | string | pathUSD balance formatted with 6 decimals |
-| `pathUsd.balanceRaw` | string | pathUSD balance in raw units |
+| `totalUsd` | string | Total USD value across all funded tokens, formatted to 2 decimal places |
+| `primaryToken` | object \| null | The first token with a non-zero balance, or `null` if no tokens are funded |
+| `primaryToken.address` | string | Token contract address |
+| `primaryToken.name` | string | Token name (e.g., `Path USD`) |
+| `primaryToken.symbol` | string | Token symbol (e.g., `pathUSD`) |
+| `primaryToken.decimals` | number | Token decimal places |
+| `primaryToken.balance` | string | Formatted token balance |
+| `allTokens` | array | All tokens with a non-zero balance |
+| `allTokens[].address` | string | Token contract address |
+| `allTokens[].name` | string | Token name |
+| `allTokens[].symbol` | string | Token symbol |
+| `allTokens[].balance` | string | Formatted token balance |
 
-<Note>Balance values are formatted to 6 decimal places. pathUSD uses 6 decimals, not 18. The network is determined server-side by the `TEMPO_TESTNET` environment variable.</Note>
+<Note>All supported tokens use 6 decimal places and are pegged 1:1 to USD. The `allTokens` array only includes tokens with a non-zero balance. The `primaryToken` is the first funded token found, defaulting to pathUSD metadata when no tokens are funded. The network is determined server-side by the `TEMPO_TESTNET` environment variable.</Note>
+
+<Warning>The previous `feeToken` and `pathUsd` response fields have been replaced by `totalUsd`, `primaryToken`, and `allTokens`. Update any integrations that relied on the old response shape.</Warning>
 
 #### Errors
 
