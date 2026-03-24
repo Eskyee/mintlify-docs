@@ -51,7 +51,7 @@ Two webhook endpoints handle Stripe events:
 #### Subscription webhook
 
 1. Go to **Developers → Webhooks**
-2. Add endpoint: `https://agentbot.raveculture.xyz/api/webhooks/stripe`
+2. Add endpoint: `https://agentbot.raveculture.xyz/api/stripe/webhook`
 3. Select events:
    - `checkout.session.completed`
    - `customer.subscription.created`
@@ -392,7 +392,7 @@ Redirect the user to the returned `url` to complete the upgrade. On success, the
 Handle subscription events:
 
 ```typescript
-// /api/webhooks/stripe
+// /api/stripe/webhook
 export async function POST(request) {
   const sig = request.headers.get('stripe-signature');
   const body = await request.text();
@@ -401,7 +401,7 @@ export async function POST(request) {
   try {
     event = stripe.webhooks.constructEvent(body, sig, webhookSecret);
   } catch (err) {
-    return new Response(`Webhook Error: ${err.message}`, { status: 400 });
+    return new Response(`Webhook Error: ${err.message}`, { status: 401 });
   }
   
   switch (event.type) {
@@ -477,7 +477,7 @@ On success, the user is redirected to `/dashboard/wallet?top_up=success`. On can
 
 ### Direct transfer
 
-You can also fund your wallet by sending pathUSD directly to your wallet address on the Tempo network. Copy your wallet address from the wallet dashboard and transfer funds from any compatible wallet. No Stripe checkout is needed for direct transfers.
+You can also fund your wallet by sending USDC directly to your wallet address on the Tempo network. Copy your wallet address from the wallet dashboard and transfer funds from any compatible wallet. No Stripe checkout is needed for direct transfers.
 
 ## Troubleshooting
 
