@@ -16,16 +16,18 @@
     }
   },
   "favicon": "/favicon.svg",
-  "typography": {
-    "fontFamily": "Geist, system-ui, -apple-system, sans-serif",
-    "fontFamilyCode": "Geist Mono, ui-monospace, monospace",
-    "headings": {
-      "fontFamily": "Geist, system-ui, -apple-system, sans-serif",
-      "weight": "700"
+  "fonts": {
+    "heading": {
+      "family": "Geist",
+      "source": "/fonts/Geist-Bold.woff2",
+      "format": "woff2",
+      "weight": 700
     },
     "body": {
-      "fontFamily": "Geist, system-ui, -apple-system, sans-serif",
-      "weight": "400"
+      "family": "Geist",
+      "source": "/fonts/Geist-Regular.woff2",
+      "format": "woff2",
+      "weight": 400
     }
   },
   "border": {
