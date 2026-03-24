@@ -423,3 +423,61 @@ Agent wallets on the Tempo chain are created automatically during provisioning a
 </Accordion>
 
 </AccordionGroup>
+
+---
+
+## MPP (Machine Payments Protocol)
+
+For autonomous agents, use [MPP](https://mpp.dev) with Tempo Wallet for automated payments.
+
+### Environment Variables
+
+```bash
+# MPP / Machine Payments Protocol
+MPP_PRIVATE_KEY=0x...  # Generate from https://wallet.tempo.xyz
+```
+
+### Agent Integration
+
+```typescript
+import { createMPPClient, makeMPPRequest } from '@/lib/mpp';
+
+// Initialize at startup
+await createMPPClient();
+
+// Make paid requests - 402 handled automatically
+const result = await makeMPPRequest('https://mpp.dev/api/ping/paid');
+```
+
+### Tempo Wallet
+
+Agents use Tempo Wallet for autonomous payments:
+- [Create wallet](https://wallet.tempo.xyz)
+- Fund with USDC on Base
+- Configure `MPP_PRIVATE_KEY` in environment
+
+### Multi-Wallet Support
+
+Each agent/company can have their own Tempo wallet:
+
+```env
+# Default wallet
+MPP_PRIVATE_KEY=0x...
+
+# Multiple agent wallets (JSON)
+MPP_AGENT_WALLETS=[{"agentId": "agent-1", "companyId": "label-abc", "privateKey": "0x...", "address": "0x..."}]
+```
+
+```typescript
+import { makeMPPRequest, getAgentWalletAddress } from '@/lib/mpp';
+
+// Agent uses company's wallet
+const result = await makeMPPRequest('https://mpp.dev/api/paid-service', {
+  agentId: 'agent-1',  // Uses label-abc's wallet
+});
+
+// Get agent's wallet address
+const address = getAgentWalletAddress('agent-1');
+```
+
+See [MPP Documentation](https://mpp.dev) for more details.

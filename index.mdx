@@ -234,12 +234,22 @@ We use the 5 Readiness Levels to build autonomous-capable infrastructure:
 | Level | Name | Status |
 |-------|------|--------|
 | 1 | Functional | ✅ Ready |
-| 2 | Documented | ⚠️ In Progress |
-| 3 | Standardized | 🔧 Needed |
-| 4 | Optimized | 🔧 Needed |
+| 2 | Documented | ✅ Ready |
+| 3 | Standardized | ✅ Ready |
+| 4 | Optimized | ⚠️ In Progress |
 | 5 | Autonomous | 🎯 Goal |
 
+**Level 3 Achieved:**
+- AGENTS.md — Developer guide for AI agents
+- .devcontainer — Reproducible cloud dev environments  
+- .pre-commit-config.yaml — Pre-commit hooks
+- .github/CODEOWNERS — Security ownership
+- Secret scanning in CI/CD
+- OpenTelemetry instrumentation
+
 Learn more in [skills/readiness-assessment.md](https://github.com/Eskyee/agentbot-opensource/blob/main/skills/readiness-assessment.md)
+
+---
 
 ## x402-Tempo Gateway
 
@@ -260,6 +270,52 @@ Learn more in [skills/readiness-assessment.md](https://github.com/Eskyee/agentbo
 
 ---
 
+## Zero-Human Company
+
+Autonomous software organizations build systems that maintain and improve themselves with minimal human intervention. Developers describe what they want built, and the system executes with quality and precision.
+
+### What Autonomous Development Looks Like
+
+**Code from Conversation**
+A developer describes what they need built, and the system executes through deployment.
+
+> "Build a new agent for music royalty splitting"
+
+The system:
+- Generates idiomatic code following established patterns
+- Validates against linters, type checkers, and test suites
+- Handles the pull request and code review process
+- Updates documentation and notifies stakeholders
+- Deploys and monitors for issues
+
+**Bug to Deployed Fix**
+A customer reports an issue, and the system diagnoses, fixes, and deploys autonomously.
+
+> "Payment webhook failing for USDC transactions"
+
+The system:
+- Triages based on error logs and impact
+- Identifies the root cause from code analysis
+- Generates a fix and comprehensive tests
+- Opens a PR and assigns for review
+- Notifies when the fix is deployed
+
+### The Technical Pillars
+
+**Style & Validation**
+Linters, type checkers, and formatters catch obvious errors instantly.
+
+**Testing**
+Fast unit and integration tests create tight feedback loops.
+
+**Documentation**
+Explicit instructions house tribal knowledge for agents.
+
+**Observability**
+Structured logging, tracing, and metrics give agents runtime visibility.
+
+**Security**
+Branch protection, secret scanning, and code owners ensure agents move fast—safely.
 ## Getting Started
 
 1. Sign up at [agentbot.raveculture.xyz](https://agentbot.raveculture.xyz)
