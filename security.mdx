@@ -133,7 +133,7 @@ The backend API uses auth middleware that runs before protected endpoints. API k
 
 ### Admin endpoints
 
-Endpoints that require admin access use an additional `requireAdmin` check after authentication. Non-admin users receive a `403` response with code `ADMIN_REQUIRED`.
+Endpoints that require admin access use an additional `requireAdmin` check after authentication. The admin check compares the authenticated user's email against the `ADMIN_EMAILS` environment variable using a **case-insensitive** match. Non-admin users receive a `403` response with code `ADMIN_REQUIRED`.
 
 ## Header stripping
 

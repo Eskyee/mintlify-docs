@@ -49,7 +49,7 @@ The AI chat endpoint (`/api/ai/chat`) reads user context from request headers ra
 
 ### Admin middleware
 
-Endpoints that require admin access check the `x-user-email` header against the `ADMIN_EMAILS` environment variable.
+Endpoints that require admin access check the `x-user-email` header against the `ADMIN_EMAILS` environment variable. The comparison is **case-insensitive** — both the configured emails and the request email are normalized to lowercase before matching.
 
 | HTTP status | Error code | Description |
 |-------------|------------|-------------|
