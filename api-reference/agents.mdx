@@ -692,7 +692,7 @@ POST /api/agents/:id/restart
 POST /api/agents/:id/update
 ```
 
-Triggers an image update on the backend.
+Triggers an image update on the backend. Before replacing the container, the endpoint creates a compressed backup of the agent's data volume. If the new image fails to start, the endpoint automatically rolls back to the previous image.
 
 #### Request body
 
@@ -717,15 +717,17 @@ Triggers an image update on the backend.
 |-------|------|-------------|
 | `image` | string | New container image. The platform default is `ghcr.io/openclaw/openclaw:2026.3.13`. |
 | `previousImage` | string | Previous container image before the update |
-| `backupPath` | string | Path to the pre-update backup |
+| `backupPath` | string \| null | Path to the pre-update backup archive |
 | `openclawVersion` | string | Current OpenClaw runtime version |
+
+<Note>When the new container fails to start, the endpoint removes the failed container and recreates it using `previousImage`. The caller still receives a `500` error, but the agent is restored to its prior working state. The pre-update backup remains available at `backupPath` for manual recovery if needed.</Note>
 
 #### Errors
 
 | Code | Description |
 |------|-------------|
 | 400 | Invalid Docker image name |
-| 500 | Update failed |
+| 500 | Update failed. When automatic rollback succeeds, the agent continues running on the previous image. |
 
 ### Repair agent
 
@@ -1133,6 +1135,21 @@ When an agent is provisioned, its channel configuration is generated based on th
 ### Group chat mention patterns
 
 All channels that support group chat use the following default mention patterns: `@agent` and `agent`. The agent only responds in group conversations when one of these patterns is detected in the message.
+
+## Tool profiles
+
+Each agent is assigned a tool profile at provisioning time based on its plan tier. The tool profile determines which built-in tools the agent can use.
+
+| Plan | Tool profile | Description |
+|------|-------------|-------------|
+| `solo` | `messaging` | Chat-only tools suitable for messaging workflows |
+| `collective` | `coding` | Full development tools including code execution |
+| `label` | `coding` | Full development tools including code execution |
+| `network` | `coding` | Full development tools including code execution |
+
+<Note>The tool profile is set once at container creation and persists for the lifetime of the agent. Upgrading your plan does not automatically change the tool profile of existing agents — you need to reprovision the agent or use the [repair endpoint](#repair-agent) to apply the new profile.</Note>
+
+All tool profiles deny `browser` and `canvas` tools inside containers. The `coding` profile includes shell commands (`ls`, `cat`, `grep`, `curl`, `git`, `node`, `python3`, and others) while the `messaging` profile restricts the agent to chat-oriented capabilities.
 
 ## Deploy agent (backend)
 
