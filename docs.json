@@ -5,13 +5,53 @@
     "light": "/logo/agentbot-logo-light.svg",
     "dark": "/logo/agentbot-logo-dark.svg"
   },
-  "theme": "willow",
+  "theme": "mint",
   "colors": {
-    "primary": "#8b5cf6",
-    "light": "#a78bfa",
-    "dark": "#8b5cf6"
+    "primary": "#3b82f6",
+    "light": "#60a5fa",
+    "dark": "#2563eb",
+    "background": {
+      "light": "#ffffff",
+      "dark": "#000000"
+    }
   },
   "favicon": "/favicon.svg",
+  "typography": {
+    "fontFamily": "Geist, system-ui, -apple-system, sans-serif",
+    "fontFamilyCode": "Geist Mono, ui-monospace, monospace",
+    "headings": {
+      "fontFamily": "Geist, system-ui, -apple-system, sans-serif",
+      "weight": "700"
+    },
+    "body": {
+      "fontFamily": "Geist, system-ui, -apple-system, sans-serif",
+      "weight": "400"
+    }
+  },
+  "border": {
+    "light": "#e4e4e7",
+    "dark": "#27272a"
+  },
+  "topbar": {
+    "style": "dark",
+    "background": "#000000",
+    "border": {
+      "color": "#27272a",
+      "light": "#e4e4e7"
+    }
+  },
+  "sidebar": {
+    "style": "dark",
+    "background": "#09090b",
+    "border": {
+      "color": "#27272a",
+      "light": "#e4e4e7"
+    }
+  },
+  "codeblock": {
+    "style": "dark",
+    "background": "#18181b"
+  },
   "navigation": {
     "groups": [
       {
