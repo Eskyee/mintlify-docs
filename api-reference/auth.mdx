@@ -61,6 +61,10 @@ Most web API endpoints use cookie-based session authentication. The platform iss
 
 You can retrieve the current session at any time using the [Get session](#get-session) endpoint and end it using the [Sign out](#sign-out) endpoint.
 
+#### Admin session fallback
+
+The [`POST /api/provision`](/api-reference/agents#provision-with-channel-tokens) endpoint supports an admin fallback when the session is missing (for example, after a Stripe checkout redirect loses the session cookie). When `getServerSession` returns null, the endpoint checks the `email` field in the request body against `ADMIN_EMAILS`. If the email matches, the request proceeds without a session. This fallback only applies to admin users on the provisioning endpoint — all other session-authenticated endpoints still require a valid session.
+
 ## Sign up
 
 ```http
