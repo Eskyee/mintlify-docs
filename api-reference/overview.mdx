@@ -284,8 +284,10 @@ curl -X POST https://agentbot.raveculture.xyz/api/ai/chat \
 | `/api/underground/wallets/:address/balance` | GET | Get agent wallet USDC balance (backend only, requires auth) |
 | `/api/underground/splits` | POST | Create and queue a royalty split (backend only, requires auth) |
 | `/api/colony/status` | GET | Get colony tree, soul cognitive state, or diagnostics |
-| `/api/invite/generate` | POST | Generate an invite code (backend only, requires internal API key) |
-| `/api/invite/validate` | POST | Validate and consume an invite code (backend only, no auth) |
+| `/api/invite` | POST | Create an invite token (requires session auth) |
+| `/api/invites/verify` | POST | Verify an invite token (no auth required) |
+| `/api/admin/invites` | GET | List all invites (requires admin session) |
+| `/api/admin/invites` | POST | Create an invite for a specific email (requires admin session) |
 | `/api/summarize` | POST | Summarize a URL — returns title, description, headings, paragraphs, word count (web summarizer service) |
 | `/api/extract` | POST | Extract links, images, and Open Graph metadata from a URL (web summarizer service) |
 | `/api/clawmerchants` | GET | List available ClawMerchants data feeds, or fetch a specific feed by `feed` query parameter |
