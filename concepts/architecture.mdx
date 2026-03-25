@@ -58,8 +58,8 @@ Key directories:
 The core API server. Handles agent provisioning, deployments, A2A communication, and skill management.
 
 Key services:
-- `POST /api/provision` — Create new agents (public, no auth)
-- `POST /api/deployments` — Deploy agent containers (auth required)
+- `POST /api/provision` — Create new agents (auth required)
+- `POST /api/deployments` — Deploy agent services on Render (auth required)
 - `GET /api/agents` — List and manage agents
 - `POST /api/ai/*` — AI provider proxy (OpenRouter, Anthropic, etc.)
 - `GET /api/browse/*` — File explorer (tree, read, write, git sync)
@@ -140,7 +140,7 @@ See [File Explorer API](/api-reference/browse) for the full API.
 
 ### Usage Tracker
 
-SQLite-backed token and cost tracking per agent, model, and time period:
+PostgreSQL-backed token and cost tracking per agent, model, and time period:
 
 - Per-event recording (session, agent, provider, model, tokens, cost)
 - Daily aggregation with upsert
@@ -171,9 +171,8 @@ POST /api/provision (Render backend)
        ├── Validate input (plan, provider, tokens)
        ├── Generate userId + agentId
        ├── Store config in PostgreSQL
-       ├── Allocate port + subdomain
-       ├── Deploy Docker container
-       ├── Configure Caddy reverse proxy
+       ├── Create Render web service via Render API
+       ├── Assign subdomain
        │
        ▼
 Return agent URL + stream key to user
@@ -202,7 +201,7 @@ Response sent back to user
 Agentbot is fully open source. To self-host:
 
 1. **Frontend:** Deploy `web/` to Vercel or any Next.js-compatible host
-2. **Backend:** Run `agentbot-backend/` on any Docker-capable server
+2. **Backend:** Run `agentbot-backend/` on Render or any Express-compatible host
 3. **Worker:** Run the worker entry point from `agentbot-backend/` using `Dockerfile.worker`
 4. **Database:** Neon Postgres (free tier available) or any PostgreSQL 15+
 5. **Redis:** Any Redis 7+ instance
@@ -218,6 +217,6 @@ See [Installation](/installation) for full setup instructions.
 | Express (not serverless) | Long-running agent processes need persistent connections |
 | Neon Postgres | Serverless, scales to zero, generous free tier |
 | Redis | Fast rate limiting and session management |
-| Docker | Isolated agent environments per user |
+| Render services | Isolated agent environments per user (provisioned via Render API) |
 | BYOK over reselling | Users pay providers directly — no markup, no lock-in |
 | Base (not Ethereum) | Low fees, fast finality, Coinbase ecosystem |

@@ -104,13 +104,13 @@ No authentication required. Returns backend service status including Render API 
 |-------|------|-------------|
 | `status` | string | Always `ok` when the backend is running |
 | `timestamp` | string | ISO 8601 timestamp of the health check |
-| `docker` | string | Docker availability. `available` when the Docker daemon is reachable, `unavailable` otherwise. |
-| `provisioning` | string | Agent provisioning capability. `enabled` when Docker is available, `disabled` otherwise. |
+| `docker` | string | Provisioning infrastructure availability. `available` when the Render API is reachable, `unavailable` otherwise. This field name is retained for backward compatibility. |
+| `provisioning` | string | Agent provisioning capability. `enabled` when the Render API is reachable, `disabled` otherwise. |
 | `provider` | string | Provisioning infrastructure provider. Currently always `render`. |
 
-### Response when Docker is unavailable
+### Response when the Render API is unavailable
 
-When the Docker daemon is not reachable, the health endpoint still returns HTTP `200` but reports degraded capabilities:
+When the Render API is not reachable, the health endpoint still returns HTTP `200` but reports degraded capabilities:
 
 ```json
 {
@@ -303,7 +303,7 @@ Both endpoints are unauthenticated and bind to the service's internal port (`187
 | `failing` | array | List of failing readiness checks. Empty when all checks pass. |
 | `uptimeMs` | number | Gateway uptime in milliseconds since startup |
 
-<Note>The backend also probes `/health` on port `18789` for application-level health checks. The `/healthz` and `/readyz` endpoints are provided by the OpenClaw image itself and are available on all agent services.</Note>
+<Note>The backend probes `/healthz` on the agent's public Render URL for health checks (with a 5-second timeout). The `/healthz` and `/readyz` endpoints are provided by the OpenClaw image itself and are available on all agent services.</Note>
 
 ### Container health statuses
 
@@ -311,9 +311,11 @@ Both endpoints are unauthenticated and bind to the service's internal port (`187
 |--------|-----------|
 | `healthy` | Service is running and the internal health endpoint responds successfully |
 | `starting` | Service is running but the health endpoint is not yet responding after all retries |
+| `running` | Service is active on Render and not suspended |
 | `stopped` | Service has exited |
-| `suspended` | Service has been suspended (paused to save resources) |
-| `unhealthy` | Service is in an unexpected state or cannot be inspected |
+| `suspended` | Service has been suspended on Render (saves resources, retains data) |
+| `not_found` | No matching Render service exists for this agent |
+| `error` | Service is in an unexpected state, build failed, or cannot be inspected |
 
 ### Health check behavior
 
