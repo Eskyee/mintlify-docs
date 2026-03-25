@@ -116,6 +116,8 @@ No authentication required.
 POST /api/ai/models/select
 ```
 
+Requires bearer token authentication and a valid subscription plan.
+
 Automatically selects the best model for a given task type.
 
 ### Request body
@@ -141,6 +143,8 @@ Automatically selects the best model for a given task type.
 
 | Code | Description |
 |------|-------------|
+| 401 | Unauthorized — missing or invalid bearer token |
+| 402 | Valid subscription required |
 | 404 | No models available |
 
 ## Chat completion
@@ -285,7 +289,7 @@ Each AI provider is configured with a primary model and a fallback model. When t
 
 | Provider | Primary model | Fallback model |
 |----------|--------------|----------------|
-| `openrouter` | `xiaomi/mimo-v2-pro` | `openrouter/anthropic/claude-sonnet-4`, `openrouter/google/gemini-2.5-flash` |
+| `openrouter` | `moonshotai/kimi-k2.5` | `openrouter/openai/gpt-4o-mini` |
 | `gemini` | `google/gemini-2.0-flash` | `openrouter/anthropic/claude-sonnet-4-5` |
 | `groq` | `groq/gemma2-9b-it` | `openai/gpt-4o-mini` |
 | `anthropic` | `anthropic/claude-sonnet-4-5` | `openai/gpt-4o` |
@@ -313,6 +317,8 @@ Each model attempt has a timeout of 30 seconds by default. You can override this
 ```http
 POST /api/ai/estimate-cost
 ```
+
+Requires bearer token authentication and a valid subscription plan.
 
 Estimate the cost of a request based on token counts and model pricing.
 
@@ -342,3 +348,5 @@ Estimate the cost of a request based on token counts and model pricing.
 | Code | Description |
 |------|-------------|
 | 400 | Model, inputTokens, and outputTokens are all required |
+| 401 | Unauthorized — missing or invalid bearer token |
+| 402 | Valid subscription required |

@@ -7,7 +7,7 @@ description: "Monitor your agent fleet with real-time graphs, execution traces, 
 
 Mission control provides a real-time view of your agent fleet. Use these endpoints to visualize agent relationships, trace execution activity, attribute costs per agent, and track talent bookings.
 
-<Note>All mission control endpoints require bearer token (API key) authentication. The fleet graph and traces endpoints also require a `userId` query parameter. The web proxy uses session authentication and resolves the user ID from the session before forwarding to these endpoints. The fleet graph and traces endpoints return safe default responses for unauthenticated requests instead of an error.</Note>
+<Note>All four mission control endpoints require bearer token (API key) authentication and accept a `userId` query parameter. The web proxy uses session authentication and resolves the user ID from the session before forwarding to these backend endpoints. The fleet graph and traces endpoints return safe default responses for unauthenticated requests instead of an error.</Note>
 
 ## Fleet graph
 
@@ -257,11 +257,17 @@ Unauthenticated requests return a `200` response with an empty array `[]` instea
 GET /api/mission-control/fleet/costs
 ```
 
-Returns a cost breakdown for your agent fleet. Uses session authentication — the user is resolved from the active session. Returns a default empty response for unauthenticated requests.
+Returns a cost breakdown for your agent fleet. Requires bearer token authentication. The web proxy uses session authentication and resolves the user ID from the session before forwarding to this backend endpoint. Returns a default empty response for unauthenticated requests.
 
 ### Authentication
 
-Requires session authentication.
+Requires bearer token authentication.
+
+### Query parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `userId` | number | Yes | The user ID to fetch cost data for |
 
 ### Response
 
@@ -293,11 +299,17 @@ Unauthenticated requests return a `200` response with `{ costs: [] }` instead of
 GET /api/mission-control/fleet/bookings
 ```
 
-Returns active booking requests for your agent fleet. Uses session authentication — the user is resolved from the active session. Returns a default empty response for unauthenticated requests.
+Returns active booking requests for your agent fleet. Requires bearer token authentication. The web proxy uses session authentication and resolves the user ID from the session before forwarding to this backend endpoint. Returns a default empty response for unauthenticated requests.
 
 ### Authentication
 
-Requires session authentication.
+Requires bearer token authentication.
+
+### Query parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `userId` | number | Yes | The user ID to fetch booking data for |
 
 ### Response
 
