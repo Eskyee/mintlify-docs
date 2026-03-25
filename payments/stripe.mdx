@@ -76,12 +76,14 @@ All plans are billed monthly in GBP. A paid subscription is required to provisio
 
 <Warning>Attempting to provision an agent without an active paid subscription returns `402 Payment Required`. All users must subscribe to a plan before creating agents.</Warning>
 
-| Plan | Price | Features |
-|------|-------|----------|
-| Solo | £29/mo | 1 Creative Agent thread, Telegram, 2GB RAM |
-| Collective | £69/mo | 3 Creative Agent threads, +1 OpenClaw seat, WhatsApp, 4GB RAM |
-| Label | £149/mo | 10 Creative Agent threads, +3 OpenClaw seats, white-label emails, 8GB RAM |
-| Network | £499/mo | Unlimited agents and OpenClaw seats, white-label reselling, 16GB RAM |
+| Plan | Price | Specs | Key features |
+|------|-------|-------|--------------|
+| Underground | £29/mo | 1 Agent · Mistral 7B | Telegram, BYOK, A2A Bus Access, Basic Analytics |
+| Collective | £69/mo | 3 Agents · Llama 3.3 | Everything in Underground + Royalty Split Engine, Mission Control Graph, WhatsApp, Priority support |
+| Label | £149/mo | Unlimited · DeepSeek R1 | Everything in Collective + Priority A2A Routing, 24/7 Signal Guard, White-glove staging, Custom integrations, Dedicated account manager |
+| Network | £499/mo | Unlimited | Everything in Label + white-label reselling, 16GB RAM |
+
+<Note>The billing page displays the Underground, Collective, and Label plans as upgrade options. The Network plan is available by contacting sales.</Note>
 
 ## Enterprise add-ons
 
@@ -116,6 +118,15 @@ The Full Enterprise Suite bundles all add-ons and additional enterprise capabili
 
 To purchase the Full Enterprise Suite, contact sales or use the billing page in the dashboard.
 
+## Payment methods
+
+The billing page supports two payment methods:
+
+- **Stripe** — pay with card for instant activation
+- **Tempo Wallet** — pay with USDC for on-chain settlement
+
+Card payments go through the Stripe checkout flow described below. For USDC payments, see the [Wallet API reference](/api-reference/wallet) and [MPP payments](/payments/mpp).
+
 ## Checkout
 
 ### Start a checkout session
@@ -131,6 +142,8 @@ GET /api/stripe/checkout?plan={plan_id}
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `plan` | string | Yes | One of `solo`, `collective`, `label`, or `network` |
+
+<Note>The `plan` parameter uses internal plan IDs. The billing page maps these to display names: `solo` is shown as "Underground", `collective` as "Collective", and `label` as "Label".</Note>
 
 The endpoint redirects the user to Stripe's hosted checkout page. On success, the user is redirected to the onboarding page. On cancellation, the user returns to the pricing page.
 
