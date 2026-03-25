@@ -64,7 +64,7 @@ Returns the available plans, the authenticated user's current plan, subscription
 | `usage.used` | number | Units used today |
 | `usage.remaining` | number | Units remaining today |
 
-<Note>The `currentPlan` value is set by the Stripe webhook when a checkout completes. Plans created through the primary checkout flow (`/api/stripe/checkout`) use `solo`, `collective`, `label`, or `network`. The billing dashboard displays these with updated names: `solo` appears as "Underground", `collective` as "Collective", and `label` as "Label".</Note>
+<Note>The `currentPlan` value is set by the Stripe webhook when a checkout completes. Plans created through the primary checkout flow (`/api/stripe/checkout`) use `solo`, `collective`, `label`, or `network`. The billing dashboard displays these with their plan names: `solo` appears as "Solo", `collective` as "Collective", and `label` as "Label".</Note>
 
 ### Errors
 
@@ -226,7 +226,7 @@ GET /api/stripe/checkout
 
 Redirects to a Stripe checkout session for subscribing to a plan. This endpoint uses the `solo`, `collective`, `label`, and `network` plan names with GBP pricing. Admin users (configured via `ADMIN_EMAILS`) bypass Stripe and are redirected directly to the onboarding page.
 
-<Note>The Stripe checkout plans (`solo`, `collective`, `label`, `network`) use different identifiers and GBP pricing from the billing API plans (`starter`, `pro`, `scale` with USD pricing). The checkout plans are the primary subscription path for agent provisioning. The billing dashboard displays checkout plan IDs with updated names: `solo` as "Underground", `collective` as "Collective", and `label` as "Label".</Note>
+<Note>The Stripe checkout plans (`solo`, `collective`, `label`, `network`) use different identifiers and GBP pricing from the billing API plans (`starter`, `pro`, `scale` with USD pricing). The checkout plans are the primary subscription path for agent provisioning. The billing dashboard displays checkout plan IDs with their plan names: `solo` as "Solo", `collective` as "Collective", and `label` as "Label".</Note>
 
 ### Query parameters
 
