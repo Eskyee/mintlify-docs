@@ -167,26 +167,37 @@ Returns all available pre-built team templates. No authentication required.
       ]
     },
     {
-      "key": "content_team",
-      "name": "Content Team",
-      "description": "Content Manager + Writer + Editor",
+      "key": "devops_team",
+      "name": "DevOps Team",
+      "description": "SRE Lead + Infrastructure Engineer + Security Auditor",
       "agent_count": 3,
       "agents": [
-        { "name": "manager", "role": "Content Manager" },
-        { "name": "writer", "role": "Writer" },
-        { "name": "editor", "role": "Editor" }
+        { "name": "sre", "role": "SRE Lead" },
+        { "name": "infra", "role": "Infrastructure Engineer" },
+        { "name": "security", "role": "Security Auditor" }
       ]
+    }
+  ],
+  "categories": [
+    {
+      "key": "developer",
+      "label": "Developer",
+      "templates": ["dev_team", "devops_team", "api_team"]
     },
     {
-      "key": "research_team",
-      "name": "Research Team",
-      "description": "Lead Researcher + Analyst + Writer",
-      "agent_count": 3,
-      "agents": [
-        { "name": "lead", "role": "Lead Researcher" },
-        { "name": "analyst", "role": "Analyst" },
-        { "name": "writer", "role": "Research Writer" }
-      ]
+      "key": "creator",
+      "label": "Creator",
+      "templates": ["content_team", "social_media_team", "research_team"]
+    },
+    {
+      "key": "business",
+      "label": "Business",
+      "templates": ["legal_team", "finance_team", "marketing_team", "sales_team"]
+    },
+    {
+      "key": "personal",
+      "label": "Personal",
+      "templates": ["personal_assistant", "solopreneur"]
     }
   ]
 }
@@ -202,10 +213,18 @@ Returns all available pre-built team templates. No authentication required.
 | `templates[].agents` | array | Agent definitions within the template |
 | `templates[].agents[].name` | string | Agent identifier |
 | `templates[].agents[].role` | string | Agent role |
+| `categories` | array | Template categories for organizing templates by use case |
+| `categories[].key` | string | Category identifier |
+| `categories[].label` | string | Human-readable category name |
+| `categories[].templates` | string[] | List of template keys belonging to this category |
 
 ## Available templates
 
-### Dev Team (`dev_team`)
+Templates are organized into four categories: **Developer**, **Creator**, **Business**, and **Personal**.
+
+### Developer
+
+#### Dev Team (`dev_team`)
 
 A development team with three agents:
 
@@ -215,7 +234,29 @@ A development team with three agents:
 | `engineer` | Engineer | `filesystem`, `shell`, `think` |
 | `qa` | QA | `filesystem`, `shell`, `think` |
 
-### Content Team (`content_team`)
+#### DevOps Team (`devops_team`)
+
+An infrastructure and reliability team with three agents:
+
+| Agent | Role | Tools |
+|-------|------|-------|
+| `sre` | SRE Lead | `filesystem`, `shell`, `think`, `todo`, `memory` |
+| `infra` | Infrastructure Engineer | `filesystem`, `shell`, `think` |
+| `security` | Security Auditor | `filesystem`, `shell`, `think` |
+
+#### API Team (`api_team`)
+
+An API development team with three agents:
+
+| Agent | Role | Tools |
+|-------|------|-------|
+| `architect` | API Architect | `filesystem`, `think`, `todo`, `memory` |
+| `backend` | Backend Engineer | `filesystem`, `shell`, `think` |
+| `docs` | Docs Writer | `filesystem`, `think` |
+
+### Creator
+
+#### Content Team (`content_team`)
 
 A content production team with three agents:
 
@@ -225,7 +266,17 @@ A content production team with three agents:
 | `writer` | Writer | `filesystem`, `think`, `memory` |
 | `editor` | Editor | `filesystem`, `think` |
 
-### Research Team (`research_team`)
+#### Social Media Team (`social_media_team`)
+
+A social media team with three agents:
+
+| Agent | Role | Tools |
+|-------|------|-------|
+| `strategy` | Strategy Lead | `filesystem`, `think`, `todo`, `memory` |
+| `creator` | Content Creator | `filesystem`, `think`, `memory` |
+| `engagement` | Engagement Manager | `filesystem`, `think`, `memory` |
+
+#### Research Team (`research_team`)
 
 A research team with three agents:
 
@@ -234,5 +285,69 @@ A research team with three agents:
 | `lead` | Lead Researcher | `filesystem`, `think`, `todo`, `memory` |
 | `analyst` | Analyst | `filesystem`, `shell`, `think` |
 | `writer` | Research Writer | `filesystem`, `think` |
+
+### Business
+
+#### Legal Team (`legal_team`)
+
+A legal advisory team with three agents:
+
+| Agent | Role | Tools |
+|-------|------|-------|
+| `advisor` | Legal Advisor | `filesystem`, `think`, `todo`, `memory` |
+| `drafter` | Contract Drafter | `filesystem`, `think` |
+| `compliance` | Compliance Officer | `filesystem`, `think`, `memory` |
+
+#### Finance Team (`finance_team`)
+
+A financial operations team with three agents:
+
+| Agent | Role | Tools |
+|-------|------|-------|
+| `analyst` | Financial Analyst | `filesystem`, `shell`, `think`, `memory` |
+| `accountant` | Accountant | `filesystem`, `think` |
+| `budget` | Budget Manager | `filesystem`, `think`, `todo` |
+
+#### Marketing Team (`marketing_team`)
+
+A marketing team with three agents:
+
+| Agent | Role | Tools |
+|-------|------|-------|
+| `strategist` | Marketing Strategist | `filesystem`, `think`, `todo`, `memory` |
+| `copywriter` | Copywriter | `filesystem`, `think`, `memory` |
+| `growth` | Growth Analyst | `filesystem`, `shell`, `think` |
+
+#### Sales Team (`sales_team`)
+
+A sales team with three agents:
+
+| Agent | Role | Tools |
+|-------|------|-------|
+| `manager` | Sales Manager | `filesystem`, `think`, `todo`, `memory` |
+| `qualifier` | Lead Qualifier | `filesystem`, `think`, `memory` |
+| `ae` | Account Executive | `filesystem`, `think`, `memory` |
+
+### Personal
+
+#### Personal Assistant (`personal_assistant`)
+
+A daily productivity team with three agents:
+
+| Agent | Role | Tools |
+|-------|------|-------|
+| `scheduler` | Scheduler | `filesystem`, `think`, `todo`, `memory` |
+| `researcher` | Researcher | `filesystem`, `think`, `memory` |
+| `writer` | Writer | `filesystem`, `think`, `memory` |
+
+#### Solopreneur (`solopreneur`)
+
+A solo business operations team with three agents:
+
+| Agent | Role | Tools |
+|-------|------|-------|
+| `ops` | Business Manager | `filesystem`, `think`, `todo`, `memory` |
+| `marketer` | Marketer | `filesystem`, `think`, `memory` |
+| `support` | Support Agent | `filesystem`, `think`, `memory` |
 
 <Note>All pre-built templates use `openrouter/xiaomi/mimo-v2-pro` as the default model and enable shared memory across all agents in the team.</Note>
