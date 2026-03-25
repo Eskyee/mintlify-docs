@@ -257,45 +257,35 @@ Unauthenticated requests return a `200` response with an empty array `[]` instea
 GET /api/mission-control/fleet/costs
 ```
 
-Returns per-agent cost attribution metrics grouped by spending category. Use this to understand how costs are distributed across your agent fleet.
+Returns a cost breakdown for your agent fleet. Uses session authentication — the user is resolved from the active session. Returns a default empty response for unauthenticated requests.
 
-### Query parameters
+### Authentication
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `userId` | number | Yes | The user ID to fetch cost metrics for |
+Requires session authentication.
 
 ### Response
 
 ```json
-[
-  {
-    "agent_id": "atlas",
-    "total_spend": "12.50",
-    "category": "ai_metric"
-  },
-  {
-    "agent_id": "djbot",
-    "total_spend": "8.30",
-    "category": "agent_message"
-  }
-]
+{
+  "costs": [],
+  "totalSpend": 0,
+  "managedAiCost": 0,
+  "coordinationRevenue": 0
+}
 ```
 
-### Cost object
+### Response fields
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `agent_id` | string | Agent identifier |
-| `total_spend` | string | Total spend in USDC for this agent and category |
-| `category` | string | Spending category, such as `ai_metric` or `agent_message` |
+| `costs` | array | List of cost line items. Currently returns an empty array while real data wiring is in progress |
+| `totalSpend` | number | Total spend across the fleet |
+| `managedAiCost` | number | AI model usage cost |
+| `coordinationRevenue` | number | Revenue from agent coordination |
 
 ### Errors
 
-| Code | Description |
-|------|-------------|
-| 401 | Unauthorized |
-| 500 | Failed to fetch cost metrics |
+Unauthenticated requests return a `200` response with `{ costs: [] }` instead of an error.
 
 ## Talent bookings
 
@@ -303,41 +293,26 @@ Returns per-agent cost attribution metrics grouped by spending category. Use thi
 GET /api/mission-control/fleet/bookings
 ```
 
-Returns talent bookings associated with your agent fleet. Each booking includes the linked event name and booking details.
+Returns active booking requests for your agent fleet. Uses session authentication — the user is resolved from the active session. Returns a default empty response for unauthenticated requests.
 
-### Query parameters
+### Authentication
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `userId` | number | Yes | The user ID to fetch bookings for |
+Requires session authentication.
 
 ### Response
 
 ```json
-[
-  {
-    "id": 1,
-    "event_id": 42,
-    "event_name": "Underground Rave",
-    "status": "confirmed",
-    "created_at": "2026-03-20T18:00:00.000Z"
-  }
-]
+{
+  "bookings": []
+}
 ```
 
-### Booking object
+### Response fields
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `id` | number | Booking identifier |
-| `event_id` | number | Associated event identifier |
-| `event_name` | string | Name of the associated event |
-| `status` | string | Booking status |
-| `created_at` | string | ISO 8601 timestamp when the booking was created |
+| `bookings` | array | List of booking objects. Currently returns an empty array while real data wiring is in progress |
 
 ### Errors
 
-| Code | Description |
-|------|-------------|
-| 401 | Unauthorized |
-| 500 | Failed to fetch bookings |
+Unauthenticated requests return a `200` response with `{ bookings: [] }` instead of an error.
