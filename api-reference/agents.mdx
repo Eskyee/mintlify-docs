@@ -266,7 +266,7 @@ Provisions a new agent. Requires an active subscription unless the caller is an 
 | `config` | object | No | Agent configuration |
 | `tier` | string | No | Subscription tier hint. Options: `starter`, `pro`, `enterprise`. This value is forwarded to the backend as the `plan` field (mapped to `solo`, `collective`, `label`, `network`). When omitted, the backend deployment defaults to `label`. |
 
-<Note>The web proxy enforces agent limits based on the subscription tier (`starter`: 1, `pro`: 3, `enterprise`: 100). The backend provisioning route (`POST /api/provision`) enforces its own limits (`solo`: 1, `collective`: 3, `label`: 10, `network`: unlimited). Each plan maps to a Render instance type: `solo` → `starter` (512 MB RAM), `collective` → `standard` (2 GB RAM), `label` → `pro` (4 GB RAM), `network` → `pro_plus` (8 GB RAM). The limit cannot be overridden in the request body.</Note>
+<Note>The web proxy enforces agent limits based on the subscription tier (`starter`: 1, `pro`: 3, `enterprise`: 100). The backend provisioning route (`POST /api/provision`) enforces its own limits (`solo`: 1, `collective`: 3, `label`: 10, `network`: unlimited). The plan middleware enforces a separate set of agent limits for AI model access (`label`: 1, `solo`: 3, `collective`: 10, `network`: 100). The provisioning limits and middleware limits apply independently. The limit cannot be overridden in the request body.</Note>
 
 ### Admin bypass
 
@@ -963,7 +963,7 @@ The request is proxied to the backend provisioning service. When `MUX_TOKEN_ID` 
 | `discordBotToken` | string | Conditional | Discord bot token. At least one channel token is required. |
 | `aiProvider` | string | No | AI provider (default: `openrouter`). Options: `openrouter`, `gemini`, `groq`, `anthropic`, `openai`. Each provider maps to a default model — see [AI provider defaults](#ai-provider-defaults) below. |
 | `apiKey` | string | No | API key for the AI provider |
-| `plan` | string | No | Plan tier. Options: `solo`, `collective`, `label`, `network`. Defaults to `solo` when omitted. The backend also accepts `free` as a value, but it is rejected with a `402` error — a paid plan must be specified when calling the backend directly. |
+| `plan` | string | No | Plan tier. Options: `solo`, `collective`, `label`, `network`. Defaults to `free` when omitted. Since `free` is not a valid plan, omitting this field returns a `400` validation error — you must explicitly specify a paid plan when calling the backend directly. |
 | `email` | string | No | User email address. When omitted, the email is automatically populated from the authenticated session. When a session email is available, it takes priority and the body email is not used for the admin check. This field is only checked against `ADMIN_EMAILS` when no session email is present (see [admin check](#admin-check) above). The resolved email is forwarded to the backend in the `X-User-Email` header. |
 | `stripeSubscriptionId` | string | No | Stripe subscription ID from checkout. This field is accepted by the backend provisioning service directly. The web proxy does not forward this field — it performs its own subscription check against the database instead. |
 
@@ -1036,32 +1036,32 @@ When calling the backend provisioning service directly, the response includes ad
     }
   },
   "container": {
-    "name": "agentbot-agent-a1b2c3d4e5",
+    "name": "openclaw-a1b2c3d4e5",
     "status": "running",
-    "serviceId": "srv-abc123def456",
-    "url": "https://agentbot-agent-a1b2c3d4e5.onrender.com"
+    "port": 10001,
+    "gatewayUrl": "http://127.0.0.1:10001"
   }
 }
 ```
 
-<Note>The `container` object is included when the backend successfully creates a Render service for the agent. It contains a `serviceId` (the Render service identifier) and `url` (the public URL). If service creation fails (for example, when the Render API is unavailable), provisioning still succeeds and the `container` field is omitted. The agent can operate using API-side processing until the service becomes available. You can check Render API availability using the [backend health endpoint](/api-reference/health#backend-health-check).</Note>
+<Note>The `container` object is included when the backend successfully creates a container for the agent. If container creation fails, provisioning still succeeds and the `container` field is omitted. The agent can operate using API-side processing until the container becomes available. You can check backend availability using the [backend health endpoint](/api-reference/health#backend-health-check).</Note>
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `container.name` | string | Render service name |
-| `container.status` | string | Service status (for example, `running`, `stopped`, `suspended`) |
-| `container.serviceId` | string | Render service ID |
-| `container.url` | string | Public URL for the agent service (for example, `https://agentbot-agent-a1b2c3d4e5.onrender.com`) |
+| `container.name` | string | Container name (format: `openclaw-{agentId}`) |
+| `container.status` | string | Container status (for example, `running`, `stopped`) |
+| `container.port` | number | Port the container is listening on |
+| `container.gatewayUrl` | string | Local gateway URL for the agent container (for example, `http://127.0.0.1:10001`) |
 
 ### Errors
 
 | Code | Description |
 |------|-------------|
 | 400 | At least one channel token required (Telegram, WhatsApp, or Discord), or invalid `aiProvider` value |
-| 400 | Invalid plan value (backend only). The `plan` field must be one of `solo`, `collective`, `label`, or `network`. The web proxy defaults to `solo` when the plan is omitted, so this error is only returned when calling the backend directly with an unrecognized value (including `free`). |
+| 400 | Invalid plan value (backend only). The `plan` field must be one of `solo`, `collective`, `label`, or `network`. The web proxy defaults to `label` when forwarding to the backend, so this error is only returned when calling the backend directly with an unrecognized value. Since the `plan` field defaults to `free` when omitted, callers must always specify an explicit paid plan. |
 | 401 | Authentication required. Returned when no session is present and the resolved email (session email or body `email`) does not match a configured admin email (or no email is available). |
-| 402 | Active subscription required (web proxy). <br /><br />**Temporarily disabled.** The server-side subscription check on this endpoint is currently bypassed while an environment configuration issue is resolved. The frontend continues to enforce payment before showing the deploy action. This check will be re-enabled in a future update. <br /><br />When active, this error is returned when the authenticated user does not have an active subscription and is not an admin. The response body includes a `code` field set to `SUBSCRIPTION_REQUIRED`. |
-| 402 | Active subscription required (backend). <br /><br />**Temporarily disabled.** The backend Stripe subscription check is currently bypassed while an environment configuration issue (`ADMIN_EMAILS` on Render) is resolved. The frontend continues to enforce payment before showing the deploy action. This check will be re-enabled in a future update. <br /><br />When active, this error is returned when a valid plan is specified but no Stripe subscription ID is provided and the caller is not an admin or tester. The response body includes a `code` field set to `PAYMENT_REQUIRED`. |
+| 402 | Active subscription required (web proxy). Returned when the authenticated user does not have an active subscription and is not an admin. The response body includes a `code` field set to `SUBSCRIPTION_REQUIRED`. |
+| 402 | Active subscription required (backend). Returned when a valid plan is specified but no Stripe subscription ID is provided and the caller is not an admin or tester. The response body includes a `code` field set to `PAYMENT_REQUIRED`. |
 | 402 | Agent limit reached for your plan. The response body includes a `code` field set to `AGENT_LIMIT_REACHED`, along with `current` (current agent count) and `limit` (maximum allowed) fields. Provisioning limits: `solo` 1, `collective` 3, `label` 10, `network` unlimited. |
 | 500 | Internal server error |
 | 502 | Provisioning service unavailable or returned an error. All backend URLs failed or returned non-success responses. |
