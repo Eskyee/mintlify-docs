@@ -74,7 +74,7 @@ Two webhook endpoints handle Stripe events:
 
 All plans are billed monthly in GBP. A paid subscription is required to provision and use agents — there is no free tier.
 
-<Warning>Attempting to provision an agent without an active paid subscription returns `402 Payment Required`. All users must subscribe to a plan before creating agents.</Warning>
+<Warning>Attempting to provision an agent without an active paid subscription returns `402 Payment Required`. All users must subscribe to a plan before creating agents. **Note:** The server-side subscription checks on both the web proxy and backend provision endpoints are temporarily bypassed while an environment configuration issue is resolved. The frontend continues to enforce payment before showing the deploy action. These checks will be re-enabled in a future update.</Warning>
 
 | Plan | Price | Specs | Key features |
 |------|-------|-------|--------------|
