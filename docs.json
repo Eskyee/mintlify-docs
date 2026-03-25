@@ -91,6 +91,7 @@
           "api-reference/overview",
           "api-reference/gateway",
           "api-reference/agents",
+          "api-reference/team-provisioning",
           "api-reference/auth",
           "api-reference/keys",
           "api-reference/wallet",
