@@ -124,10 +124,16 @@ When `provisioning` is `disabled`, any request to a container-dependent endpoint
 ## Get heartbeat settings
 
 ```http
-GET /api/heartbeat
+GET /api/heartbeat?agentId=agent_123
 ```
 
-Requires session authentication.
+Requires session authentication. Returns the heartbeat configuration for a specific agent.
+
+### Query parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `agentId` | string | Yes | The agent to retrieve heartbeat settings for |
 
 ### Response
 
@@ -138,10 +144,37 @@ Requires session authentication.
     "enabled": true,
     "lastHeartbeat": "2026-03-19T00:00:00Z",
     "nextHeartbeat": "2026-03-19T03:00:00Z"
-  },
-  "message": "Heartbeat scheduling database integration pending"
+  }
 }
 ```
+
+When no settings have been saved for the agent, the endpoint returns defaults:
+
+```json
+{
+  "heartbeat": {
+    "frequency": "3h",
+    "enabled": true,
+    "lastHeartbeat": null,
+    "nextHeartbeat": null
+  }
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `heartbeat.frequency` | string | Heartbeat interval (for example, `3h`, `30m`, `1d`) |
+| `heartbeat.enabled` | boolean | Whether heartbeats are enabled |
+| `heartbeat.lastHeartbeat` | string \| null | ISO 8601 timestamp of the last heartbeat, or `null` if never set |
+| `heartbeat.nextHeartbeat` | string \| null | ISO 8601 timestamp of the next scheduled heartbeat, or `null` if never set |
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | `agentId required` — the `agentId` query parameter is missing |
+| 401 | Unauthorized |
+| 500 | Failed to fetch heartbeat settings |
 
 ## Update heartbeat settings
 
@@ -149,27 +182,46 @@ Requires session authentication.
 POST /api/heartbeat
 ```
 
-Requires session authentication.
+Requires session authentication. Updates heartbeat settings for a specific agent. The agent must belong to the authenticated user.
 
 ### Request body
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `frequency` | string | No | Heartbeat interval (for example, `3h`) |
-| `enabled` | boolean | No | Enable or disable heartbeats |
+| `agentId` | string | Yes | The agent to update heartbeat settings for |
+| `frequency` | string | No | Heartbeat interval (for example, `3h`, `30m`, `1d`). Defaults to `3h`. Supported units: `m` (minutes), `h` (hours), `d` (days). |
+| `enabled` | boolean | No | Enable or disable heartbeats. Defaults to `true`. |
 
 ### Response
 
 ```json
 {
-  "frequency": "3h",
-  "enabled": true,
-  "lastUpdated": "2026-03-19T00:00:00Z",
-  "lastHeartbeat": "2026-03-19T00:00:00Z",
-  "nextHeartbeat": "2026-03-19T03:00:00Z",
-  "message": "Heartbeat settings will persist to database once integration is complete"
+  "heartbeat": {
+    "frequency": "3h",
+    "enabled": true,
+    "lastHeartbeat": "2026-03-19T00:00:00Z",
+    "nextHeartbeat": "2026-03-19T03:00:00Z",
+    "lastUpdated": "2026-03-19T00:00:00Z"
+  }
 }
 ```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `heartbeat.frequency` | string | Configured heartbeat interval |
+| `heartbeat.enabled` | boolean | Whether heartbeats are enabled |
+| `heartbeat.lastHeartbeat` | string | ISO 8601 timestamp when the settings were saved |
+| `heartbeat.nextHeartbeat` | string | ISO 8601 timestamp of the next scheduled heartbeat, calculated from the current time plus the frequency |
+| `heartbeat.lastUpdated` | string | ISO 8601 timestamp of the last settings update |
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | `agentId required` — the `agentId` field is missing from the request body |
+| 401 | Unauthorized |
+| 404 | Agent not found — the agent does not exist or is not owned by the authenticated user |
+| 500 | Heartbeat update failed |
 
 ## Delete heartbeat settings
 
@@ -177,16 +229,29 @@ Requires session authentication.
 DELETE /api/heartbeat
 ```
 
-Requires session authentication. Resets heartbeat configuration to defaults.
+Requires session authentication. Resets heartbeat configuration for a specific agent by removing saved settings.
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `agentId` | string | Yes | The agent to reset heartbeat settings for |
 
 ### Response
 
 ```json
 {
-  "success": true,
-  "message": "Heartbeat settings reset - database cleanup will occur once integration is complete"
+  "success": true
 }
 ```
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | `agentId required` — the `agentId` field is missing from the request body |
+| 401 | Unauthorized |
+| 500 | Heartbeat reset failed |
 
 ## Container health checks
 
