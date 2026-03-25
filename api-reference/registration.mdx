@@ -175,9 +175,13 @@ Returns all registered installations across all deployment modes. Requires beare
 POST /api/heartbeat
 ```
 
-Reports the status of a registered installation. When the `userId` matches a known registration, the `lastSeen` timestamp is updated and the status is set to `active`. No authentication is required.
+Reports the status of a registered installation. When the `userId` matches a known registration, the `last_seen` timestamp is updated and the status is set to `active`. Requires authentication.
 
 <Note>This is a backend registration heartbeat for Home and Link installations. It is separate from the [web heartbeat settings](/api-reference/health#get-heartbeat-settings) endpoint, which configures heartbeat scheduling for the web dashboard.</Note>
+
+### Authentication
+
+This endpoint requires the `authenticate` middleware. The request must include identity headers (`x-user-email`, `x-user-id`, `x-user-role`) set by the authentication layer. Unauthenticated requests receive a `401` or `403` response.
 
 ### Request body
 

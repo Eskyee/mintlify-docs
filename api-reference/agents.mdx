@@ -266,7 +266,7 @@ Provisions a new agent. Requires an active subscription unless the caller is an 
 | `config` | object | No | Agent configuration |
 | `tier` | string | No | Subscription tier hint. Options: `starter`, `pro`, `enterprise`. This value is forwarded to the backend as the `plan` field (mapped to `solo`, `collective`, `label`, `network`). When omitted, the backend deployment defaults to `label`. |
 
-<Note>The web proxy enforces agent limits based on the subscription tier (`starter`: 1, `pro`: 3, `enterprise`: 100). The backend provisioning route (`POST /api/provision`) enforces its own limits (`solo`: 1, `collective`: 3, `label`: 10, `network`: 999999). The plan middleware enforces a separate set of agent limits for AI model access (`label`: 1, `solo`: 3, `collective`: 10, `network`: 100). The provisioning limits and middleware limits apply independently. The limit cannot be overridden in the request body.</Note>
+<Note>The web proxy enforces agent limits based on the subscription tier (`starter`: 1, `pro`: 3, `enterprise`: 100). The backend provisioning route (`POST /api/provision`) enforces its own limits (`solo`: 1, `collective`: 3, `label`: 10, `network`: 999999). The plan middleware enforces a separate set of agent limits for AI model access (`solo`: 1, `collective`: 10, `label`: 3, `network`: 100). The provisioning limits and middleware limits apply independently. The limit cannot be overridden in the request body.</Note>
 
 <Note>The backend also accepts legacy plan aliases for resource allocation: `underground` (2 GB / 1 CPU), `starter` (2 GB / 1 CPU), `pro` (4 GB / 2 CPU), `scale` (8 GB / 4 CPU), `enterprise` (16 GB / 4 CPU), and `white_glove` (32 GB / 8 CPU). These are accepted in addition to the standard plan names (`solo`, `collective`, `label`, `network`) when determining container resource limits.</Note>
 
@@ -313,67 +313,25 @@ Admin status is determined by checking the session email against `ADMIN_EMAILS`.
 POST /api/agents/clone
 ```
 
-Creates a new agent by cloning an existing parent agent. Requires a verified payment proof on the Tempo chain (x402 protocol). The caller must pay 1.0 pathUSD to clone an agent.
+<Warning>**Not yet available.** Agent cloning is under development and this endpoint currently returns `501 Not Implemented`. No payment is processed. The request body is ignored.</Warning>
 
-<Note>This endpoint uses the [x402 Tempo protocol](/payments/x402#tempo-chain) for payment verification. The payment must be completed on the Tempo chain (chain ID `4217`) before calling this endpoint.</Note>
-
-### Request body
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `parentAgentId` | string | Yes | ID of the agent to clone |
-| `name` | string | Yes | Name for the new agent |
-| `specialization` | string | No | Agent specialization. Options: `general` (default), `ar`, `promo`, `booking`, `support`, `analytics` |
-| `paymentProof` | object | Yes | On-chain payment proof (see below) |
-| `generation` | number | No | Current generation depth of the parent agent (default: `1`). The cloned agent's generation is set to this value plus one. |
-
-#### Payment proof object
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `transactionHash` | string | Yes | Transaction hash on Tempo chain (must start with `0x`) |
-| `amount` | string | Yes | Payment amount (must be at least `1.0`) |
-| `currency` | string | Yes | Must be `pathUSD` |
-| `chainId` | number | Yes | Must be `4217` (Tempo chain) |
-| `from` | string | Yes | Sender wallet address |
-| `to` | string | Yes | Recipient wallet address |
-| `timestamp` | number | Yes | Unix timestamp of the payment |
-
-### Response (200)
+### Response (501 Not Implemented)
 
 ```json
 {
-  "success": true,
-  "agentId": "agent_1711234567890_a1b2c3d4e5f6a7b8",
-  "walletAddress": "0x1234...abcd",
-  "parentAgentId": "agent_789",
-  "generation": 2,
-  "transactionHash": "0xabc123...",
-  "specialization": "general",
-  "status": "provisioning",
-  "message": "Agent \"My Clone\" cloned successfully. Wallet funded with 0 pathUSD."
+  "error": "Agent cloning is not yet available",
+  "message": "This feature is under development. No payment has been charged.",
+  "status": "unavailable"
 }
 ```
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `success` | boolean | Whether the clone was created |
-| `agentId` | string | Unique identifier for the new agent (format: `agent_{timestamp}_{16-hex-chars}`, using cryptographically random bytes) |
-| `walletAddress` | string | Wallet address assigned to the new agent |
-| `parentAgentId` | string | ID of the parent agent |
-| `generation` | number | Generation depth (number of hops from the root agent) |
-| `transactionHash` | string | Transaction hash from the payment proof |
-| `specialization` | string | Agent specialization |
-| `status` | string | Always `provisioning` on success |
-| `message` | string | Human-readable confirmation message |
+All POST requests to this endpoint return `501` regardless of the request body. No payment flow is initiated.
 
 ### Errors
 
 | Code | Description |
 |------|-------------|
-| 400 | Missing required fields: `parentAgentId`, `name`, or `paymentProof` |
-| 402 | Invalid payment proof — transaction not verified on Tempo chain |
-| 500 | Clone failed |
+| 501 | Agent cloning is not yet available |
 
 ### Clone service health
 
