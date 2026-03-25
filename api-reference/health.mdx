@@ -94,8 +94,9 @@ No authentication required. Returns backend service status including Render API 
 {
   "status": "ok",
   "timestamp": "2026-03-19T00:00:00Z",
-  "render": "available",
-  "provisioning": "enabled"
+  "docker": "available",
+  "provisioning": "enabled",
+  "provider": "render"
 }
 ```
 
@@ -103,10 +104,9 @@ No authentication required. Returns backend service status including Render API 
 |-------|------|-------------|
 | `status` | string | Always `ok` when the backend is running |
 | `timestamp` | string | ISO 8601 timestamp of the health check |
-| `render` | string | Render API availability. `available` when the Render API is reachable, `unavailable` otherwise. |
+| `docker` | string | Provisioning infrastructure availability. `available` when the Render API is reachable, `unavailable` otherwise. Despite the field name, this checks the Render API — the name is a legacy artifact from when agents ran as local Docker containers. |
 | `provisioning` | string | Agent provisioning capability. `enabled` when the Render API is available, `disabled` otherwise. |
-
-<Warning>The `docker` field is deprecated and no longer returned. Use the `render` field instead to check provisioning infrastructure availability.</Warning>
+| `provider` | string | Infrastructure provider. Always `render`. |
 
 ### Response when Render API is unavailable
 
@@ -116,8 +116,9 @@ When the Render API is not reachable, the health endpoint still returns HTTP `20
 {
   "status": "ok",
   "timestamp": "2026-03-19T00:00:00Z",
-  "render": "unavailable",
-  "provisioning": "disabled"
+  "docker": "unavailable",
+  "provisioning": "disabled",
+  "provider": "render"
 }
 ```
 
