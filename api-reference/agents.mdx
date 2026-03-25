@@ -649,7 +649,7 @@ Resumes a suspended agent service on Render.
 ```json
 {
   "success": true,
-  "status": "running"
+  "status": "active"
 }
 ```
 
@@ -664,7 +664,7 @@ Suspends the agent's Render service. The service retains its data and can be res
 ```json
 {
   "success": true,
-  "status": "suspended"
+  "status": "stopped"
 }
 ```
 
@@ -1029,8 +1029,8 @@ When calling the backend provisioning service directly, the response includes ad
   "container": {
     "name": "agentbot-agent-a1b2c3d4e5",
     "status": "running",
-    "serviceId": "srv-abc123def456",
-    "url": "https://agentbot-agent-a1b2c3d4e5.onrender.com"
+    "port": 18789,
+    "gatewayUrl": "http://127.0.0.1:18789"
   }
 }
 ```
@@ -1039,12 +1039,10 @@ When calling the backend provisioning service directly, the response includes ad
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `container.name` | string | Render service name |
-| `container.status` | string | Service status (for example, `running`, `suspended`) |
-| `container.serviceId` | string | Render service identifier |
-| `container.url` | string | Public URL of the deployed Render service |
-
-<Warning>The following `container` response fields are deprecated and no longer returned: `port`, `gatewayUrl`. Agents are now provisioned as Render web services with a public URL instead of local Docker containers with mapped ports.</Warning>
+| `container.name` | string | Container name |
+| `container.status` | string | Container status (for example, `running`, `stopped`) |
+| `container.port` | number | Mapped port on the host for the agent gateway |
+| `container.gatewayUrl` | string | Local URL to reach the agent gateway (for example, `http://127.0.0.1:18789`) |
 
 ### Errors
 

@@ -94,8 +94,9 @@ No authentication required. Returns backend service status including Render API 
 {
   "status": "ok",
   "timestamp": "2026-03-19T00:00:00Z",
-  "render": "available",
-  "provisioning": "enabled"
+  "docker": "available",
+  "provisioning": "enabled",
+  "provider": "render"
 }
 ```
 
@@ -103,25 +104,27 @@ No authentication required. Returns backend service status including Render API 
 |-------|------|-------------|
 | `status` | string | Always `ok` when the backend is running |
 | `timestamp` | string | ISO 8601 timestamp of the health check |
-| `render` | string | Render API availability. `available` when the Render API is reachable, `unavailable` otherwise. |
-| `provisioning` | string | Agent provisioning capability. `enabled` when the Render API is available, `disabled` otherwise. |
+| `docker` | string | Docker availability. `available` when the Docker daemon is reachable, `unavailable` otherwise. |
+| `provisioning` | string | Agent provisioning capability. `enabled` when Docker is available, `disabled` otherwise. |
+| `provider` | string | Provisioning infrastructure provider. Currently always `render`. |
 
-<Warning>The `docker` field is deprecated and no longer returned. Use the `render` field instead to check provisioning infrastructure availability.</Warning>
+### Response when Docker is unavailable
 
-### Response when Render API is unavailable
-
-When the Render API is not reachable, the health endpoint still returns HTTP `200` but reports degraded capabilities:
+When the Docker daemon is not reachable, the health endpoint still returns HTTP `200` but reports degraded capabilities:
 
 ```json
 {
   "status": "ok",
   "timestamp": "2026-03-19T00:00:00Z",
-  "render": "unavailable",
-  "provisioning": "disabled"
+  "docker": "unavailable",
+  "provisioning": "disabled",
+  "provider": "render"
 }
 ```
 
 When `provisioning` is `disabled`, any request to a provisioning-dependent endpoint (such as deploying, starting, stopping, or restarting an agent) returns a `500` error. Non-provisioning endpoints continue to operate normally.
+
+<Note>The `provider` field indicates which infrastructure provider is used for agent deployments. This is currently always `render` but may change in future releases.</Note>
 
 ## Get heartbeat settings
 
