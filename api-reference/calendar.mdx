@@ -7,11 +7,9 @@ description: "Google Calendar integration endpoints for OAuth, event management,
 
 Connect a Google Calendar account and manage events, check availability, and schedule directly through the API.
 
-<Note>All calendar endpoints require an authenticated session. Use the [connect flow](#connect-calendar) to authorize Google Calendar access before calling event endpoints.</Note>
+<Note>All calendar endpoints require an authenticated session. The user is identified from the session automatically — you do not pass a `userId` parameter.</Note>
 
-## Authentication
-
-All calendar endpoints require a valid NextAuth session. The user identity is derived from your session — you never pass a `userId` directly. Unauthenticated requests receive a `401` response.
+<Note>Most calendar endpoints also require a connected Google Calendar account. Use the [connect flow](#connect-calendar) to authorize access before calling event endpoints.</Note>
 
 ## Base URL
 
@@ -19,13 +17,23 @@ All calendar endpoints require a valid NextAuth session. The user identity is de
 https://agentbot.raveculture.xyz/api/calendar
 ```
 
+## Authentication
+
+All calendar endpoints require a valid NextAuth session. Requests without an active session receive a `401 Unauthorized` response (or a redirect to `/login` for browser-based flows).
+
+The authenticated user's identity is derived from the session. You do not need to include a `userId` parameter in any request.
+
+## Token storage
+
+Calendar tokens (access and refresh tokens) are encrypted at rest using AES-256-GCM before being persisted to the database. Tokens are never stored in plaintext.
+
 ## Connect calendar
 
 ```http
 POST /api/calendar
 ```
 
-Initiates the Google Calendar OAuth flow. Returns an authorization URL that the user must visit to grant calendar access. The OAuth state parameter is cryptographically signed (HMAC) to bind the callback to the authenticated session.
+Initiates the Google Calendar OAuth flow. Returns an authorization URL that the user must visit to grant calendar access.
 
 ### Request body
 
@@ -47,7 +55,7 @@ Redirect the user to `authUrl` to begin the OAuth consent flow. After granting a
 
 | Code | Description |
 |------|-------------|
-| 401 | Not authenticated |
+| 401 | Not authenticated (no active session) |
 | 400 | Invalid action |
 
 ## OAuth callback
@@ -63,17 +71,17 @@ Handles the OAuth authorization code exchange after Google redirects the user ba
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `code` | string | Authorization code provided by Google |
-| `state` | string | HMAC-signed state token that encodes the authenticated user and a timestamp. The server verifies this signature before accepting the callback. |
+| `state` | string | HMAC-signed state token generated during the connect flow. Contains the user ID and a timestamp, verified on callback. Expires after 10 minutes. |
 | `error` | string | Error code if the user denied access or an error occurred |
 
 ### Behavior
 
 On success, this endpoint:
 
-1. Verifies the HMAC signature on the `state` parameter and checks that it has not expired (10-minute window).
+1. Verifies the HMAC-signed state parameter and checks it has not expired.
 2. Exchanges the authorization code for access and refresh tokens.
 3. Retrieves the user's primary calendar ID and timezone.
-4. Stores the connection for future API calls, keyed to the verified user from the signed state.
+4. Encrypts and persists the tokens to the database (AES-256-GCM).
 5. Redirects to `/dashboard/calendar?connected=true`.
 
 ### Error redirects
@@ -84,8 +92,6 @@ If an error occurs, the endpoint redirects to `/dashboard/calendar` with an `err
 |----------------|-------------|
 | `error=<google_error>` | The user denied access or Google returned an error |
 | `error=no_code` | No authorization code was present in the callback |
-| `error=missing_state` | The state parameter was not included in the callback |
-| `error=invalid_state` | The state signature is invalid or the state has expired |
 | `error=token_failed` | The authorization code could not be exchanged for tokens |
 | `error=unknown` | An unexpected error occurred during the callback |
 
@@ -95,7 +101,9 @@ If an error occurs, the endpoint redirects to `/dashboard/calendar` with an `err
 GET /api/calendar?action=auth
 ```
 
-Redirects the browser directly to the Google OAuth consent screen. This is an alternative to the POST-based connect flow — use it when you want a simple link-based authorization. Requires an authenticated session; unauthenticated users are redirected to the login page.
+Redirects the browser directly to the Google OAuth consent screen. This is an alternative to the POST-based connect flow — use it when you want a simple link-based authorization.
+
+Requires an active session. If the user is not authenticated, this endpoint redirects to `/login`.
 
 ### Query parameters
 
@@ -109,7 +117,7 @@ Redirects the browser directly to the Google OAuth consent screen. This is an al
 GET /api/calendar?action=list
 ```
 
-Returns calendar events within a date range.
+Returns calendar events within a date range. The user is identified from the session.
 
 ### Query parameters
 
@@ -148,7 +156,7 @@ Returns calendar events within a date range.
 GET /api/calendar?action=availability
 ```
 
-Returns available and busy time slots for a given date. Slots are one hour each, from 09:00 to 23:00.
+Returns available and busy time slots for a given date. Slots are one hour each, from 09:00 to 23:00. The user is identified from the session.
 
 ### Query parameters
 
@@ -184,7 +192,7 @@ Returns available and busy time slots for a given date. Slots are one hour each,
 POST /api/calendar
 ```
 
-Creates a new calendar event.
+Creates a new calendar event. The user is identified from the session.
 
 ### Request body
 
@@ -239,7 +247,7 @@ Creates a new calendar event.
 POST /api/calendar
 ```
 
-Updates an existing calendar event. Only the fields you include are changed.
+Updates an existing calendar event. Only the fields you include are changed. The user is identified from the session.
 
 ### Request body
 
@@ -275,7 +283,7 @@ Updates an existing calendar event. Only the fields you include are changed.
 POST /api/calendar
 ```
 
-Deletes a calendar event.
+Deletes a calendar event. The user is identified from the session.
 
 ### Request body
 
@@ -305,7 +313,7 @@ Deletes a calendar event.
 POST /api/calendar
 ```
 
-Creates an event from a natural language string using Google Calendar's quick-add feature.
+Creates an event from a natural language string using Google Calendar's quick-add feature. The user is identified from the session.
 
 ### Request body
 
