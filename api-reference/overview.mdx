@@ -249,7 +249,7 @@ curl -X POST https://agentbot.raveculture.xyz/api/ai/chat \
 | `/api/basefm/streams` | POST | Create a Mux live stream (RAVE token-gated) |
 | `/api/generate-video` | POST | Generate and upload a video (requires session) |
 | `/api/webhooks/mux` | POST | Mux webhook receiver (signature-verified) |
-| `/api/webhooks/resend` | POST | Resend inbound email webhook (signature-verified, sender allowlist) |
+| `/api/webhooks/resend` | POST | Resend email webhook — inbound email processing and outbound event tracking (sent, delivered, bounced, opened, clicked, complained) |
 | `/api/mission-control/fleet/graph` | GET | Get agent fleet constellation graph |
 | `/api/mission-control/fleet/traces` | GET | Get real-time execution traces |
 | `/api/mission-control/fleet/costs` | GET | Get per-agent cost attribution |
