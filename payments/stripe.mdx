@@ -78,12 +78,12 @@ All plans are billed monthly in GBP. A paid subscription is required to provisio
 
 | Plan | Price | Specs | Key features |
 |------|-------|-------|--------------|
-| Underground | £29/mo | 1 Agent · Mistral 7B | Telegram, BYOK, A2A Bus Access, Basic Analytics |
-| Collective | £69/mo | 3 Agents · Llama 3.3 | Everything in Underground + Royalty Split Engine, Mission Control Graph, WhatsApp, Priority support |
+| Solo | £29/mo | 1 Agent · Mistral 7B | Telegram, BYOK, A2A Bus Access, Basic Analytics |
+| Collective | £69/mo | 3 Agents · Llama 3.3 | Everything in Solo + Royalty Split Engine, Mission Control Graph, WhatsApp, Priority support |
 | Label | £149/mo | Unlimited · DeepSeek R1 | Everything in Collective + Priority A2A Routing, 24/7 Signal Guard, White-glove staging, Custom integrations, Dedicated account manager |
 | Network | £499/mo | Unlimited | Everything in Label + white-label reselling, 16GB RAM |
 
-<Note>The billing page displays the Underground, Collective, and Label plans as upgrade options. The Network plan is available by contacting sales.</Note>
+<Note>The billing page displays the Solo, Collective, and Label plans as upgrade options. The Network plan is available by contacting sales.</Note>
 
 ## Enterprise add-ons
 
@@ -143,7 +143,7 @@ GET /api/stripe/checkout?plan={plan_id}
 |-----------|------|----------|-------------|
 | `plan` | string | Yes | One of `solo`, `collective`, `label`, or `network` |
 
-<Note>The `plan` parameter uses internal plan IDs. The billing page maps these to display names: `solo` is shown as "Underground", `collective` as "Collective", and `label` as "Label".</Note>
+<Note>The `plan` parameter uses internal plan IDs. The billing page maps these to display names: `solo` is shown as "Solo", `collective` as "Collective", and `label` as "Label".</Note>
 
 The endpoint redirects the user to Stripe's hosted checkout page. On success, the user is redirected to the onboarding page. On cancellation, the user returns to the pricing page.
 
