@@ -67,7 +67,7 @@ POST /api/webhooks/resend
 
 Receives email events from Resend. This endpoint handles both inbound email delivery and outbound email lifecycle tracking. For inbound emails, it verifies the webhook signature using Svix headers and enforces a sender allowlist. For outbound events, it logs event data and handles bounce/complaint cases.
 
-<Warning>This endpoint is intended to be called by Resend only. You must configure the `RESEND_WEBHOOK_SECRET` environment variable for signature verification on inbound emails. When the secret is not configured, inbound email processing returns `500`.</Warning>
+<Warning>This endpoint is intended to be called by Resend only. You should configure the `RESEND_WEBHOOK_SECRET` environment variable for signature verification. When the secret is not configured, requests are processed without signature verification and a warning is logged. Always configure the secret in production.</Warning>
 
 ### Headers
 
@@ -98,7 +98,9 @@ For bounce events, the `data` object also includes:
 
 ### Signature verification
 
-The endpoint verifies the webhook payload using the Resend SDK's built-in signature verification. Requests with invalid or missing signatures are acknowledged with `200` to prevent Resend from retrying.
+When `RESEND_WEBHOOK_SECRET` is configured, the endpoint verifies the webhook payload using [Svix](https://www.svix.com/) signature verification. Three headers are required: `svix-id`, `svix-timestamp`, and `svix-signature`. Requests with missing headers return `401` with `{ "error": "Missing signature headers" }`. Requests with an invalid signature return `401` with `{ "error": "Invalid signature" }`.
+
+When `RESEND_WEBHOOK_SECRET` is not configured, requests are processed without verification (a warning is logged).
 
 ### Handled event types
 

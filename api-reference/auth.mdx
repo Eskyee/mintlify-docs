@@ -664,13 +664,27 @@ The `GET` method returns endpoint metadata. The `POST` method verifies a Farcast
 ```json
 {
   "success": true,
-  "sessionToken": "base64-encoded-session",
+  "sessionToken": "eyJmaWRUb2tlbiI6Ii4uLiIsImFkZHJlc3MiOiIweC4uLiIsInZlcmlmaWVkIjp0cnVlLCJpYXQiOjE3MTA4MDY0MDAsImV4cCI6MTcxMDg5MjgwMH0.HMAC_SIGNATURE",
   "address": "0x...",
   "message": "Farcaster verification successful",
   "tokenGated": true,
   "accessLevel": "premium"
 }
 ```
+
+The `sessionToken` is an HMAC-SHA256 signed token in the format `{base64url-data}.{base64url-signature}`. The data payload contains the following claims:
+
+| Claim | Type | Description |
+|-------|------|-------------|
+| `fidToken` | string | Farcaster ID token (truncated to 64 characters) |
+| `address` | string | Ethereum address from the request |
+| `verified` | boolean | Always `true` on success |
+| `iat` | number | Issued-at timestamp (Unix seconds) |
+| `exp` | number | Expiry timestamp (24 hours after issuance) |
+
+The token is signed using the `FARCASTER_SESSION_SECRET` environment variable. If not set, the signing key falls back to `NEXTAUTH_SECRET`.
+
+<Warning>Session tokens are no longer plain base64-encoded JSON. Tokens issued before this change are not compatible with the new HMAC verification and must be refreshed.</Warning>
 
 #### Errors
 
