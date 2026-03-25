@@ -1041,8 +1041,8 @@ When calling the backend provisioning service directly, the response includes ad
   "container": {
     "name": "agentbot-agent-a1b2c3d4e5",
     "status": "running",
-    "port": null,
-    "gatewayUrl": "http://127.0.0.1:undefined"
+    "serviceId": "srv-abc123def456",
+    "renderUrl": "https://agentbot-agent-a1b2c3d4e5.onrender.com"
   }
 }
 ```
@@ -1053,8 +1053,10 @@ When calling the backend provisioning service directly, the response includes ad
 |-------|------|-------------|
 | `container.name` | string | Container name (format: `agentbot-agent-{userId}`) |
 | `container.status` | string | Container status (for example, `running`, `stopped`) |
-| `container.port` | number \| null | Port the container is listening on. Currently `null` when provisioned via the Render API path because the Render service does not expose a local port. |
-| `container.gatewayUrl` | string | Local gateway URL for the agent container. Currently set to `http://127.0.0.1:undefined` when provisioned via the Render API path because `port` is not populated. This field is only meaningful for local Docker deployments. |
+| `container.serviceId` | string | Render service ID for the agent container. |
+| `container.renderUrl` | string | Public Render service URL for the agent container (for example, `https://agentbot-agent-{userId}.onrender.com`). |
+| `container.port` | number \| null | **Deprecated.** Previously held the container's local listening port. Removed in favor of `container.renderUrl` because Docker-backed services on Render do not expose a local port. |
+| `container.gatewayUrl` | string | **Deprecated.** Previously held the local gateway URL. Replaced by `container.renderUrl`, which points to the Render service URL instead. |
 
 ### Errors
 
