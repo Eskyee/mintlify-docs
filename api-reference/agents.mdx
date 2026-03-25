@@ -117,7 +117,7 @@ Creates a new agent with an auto-generated ID and stores its metadata on disk. R
 | 401 | Unauthorized |
 | 500 | Failed to create agent |
 
-<Note>For provisioning an agent with messaging channel tokens and a live container deployment, use [`POST /api/agents/provision`](#provision-agent) or [`POST /api/provision`](#provision-with-channel-tokens) instead.</Note>
+<Note>For provisioning an agent with messaging channel tokens and a live Render service deployment, use [`POST /api/agents/provision`](#provision-agent) or [`POST /api/provision`](#provision-with-channel-tokens) instead.</Note>
 
 ## Get agent
 
@@ -139,7 +139,7 @@ The backend returns the agent object directly without a wrapper:
   "plan": "solo",
   "subdomain": "agent_123.agents.localhost",
   "url": "https://agent_123.agents.localhost",
-  "openclawVersion": "2026.3.13",
+  "openclawVersion": "2026.3.22",
   "verified": false,
   "verificationType": null,
   "attestationUid": null,
@@ -160,7 +160,7 @@ The web proxy wraps the agent in an object:
     "plan": "solo",
     "subdomain": "agent_123.agents.localhost",
     "url": "https://agent_123.agents.localhost",
-    "openclawVersion": "2026.3.13",
+    "openclawVersion": "2026.3.22",
     "verified": false,
     "verificationType": null,
     "attestationUid": null,
@@ -225,7 +225,7 @@ Updates an agent's metadata including plan, AI provider, and configuration. Requ
 DELETE /api/agents/:id
 ```
 
-Stops the agent's container, releases its port, and removes its metadata. Requires bearer token authentication (backend).
+Destroys the agent's Render service and removes its metadata. Requires bearer token authentication (backend).
 
 ### Response
 
@@ -243,7 +243,7 @@ Stops the agent's container, releases its port, and removes its metadata. Requir
 | 401 | Unauthorized |
 | 500 | Failed to delete agent |
 
-<Note>The backend uses best-effort cleanup (container stop, port release, metadata removal). If the agent does not exist, the operation succeeds silently and returns `deleted: true`.</Note>
+<Note>The backend uses best-effort cleanup (service destruction and metadata removal). If the agent does not exist, the operation succeeds silently and returns `deleted: true`.</Note>
 
 ## Provision agent
 
@@ -255,7 +255,7 @@ Provisions a new agent. Requires an active subscription unless the caller is an 
 
 <Note>Provisioning requests may be processed asynchronously through the background task queue. The agent is created immediately with a `provisioning` status and transitions to `running` once the backend deployment endpoint confirms the deployment. If deployment fails, the status changes to `error`.</Note>
 
-<Note>The provisioning endpoint calls `POST /api/deployments` on the backend to deploy the agent container. The request includes a 15-second timeout. When the model is set to `claude-opus-4-6`, the AI provider is automatically set to `anthropic`; otherwise it falls back to the provider specified in the agent configuration (default: `openrouter`). The plan sent to the backend defaults to `label` when no tier is specified.</Note>
+<Note>The provisioning endpoint calls `POST /api/deployments` on the backend to deploy the agent as a Render service. The request includes a 15-second timeout. When the model is set to `claude-opus-4-6`, the AI provider is automatically set to `anthropic`; otherwise it falls back to the provider specified in the agent configuration (default: `openrouter`). The plan sent to the backend defaults to `label` when no tier is specified.</Note>
 
 ### Request body
 
@@ -266,7 +266,7 @@ Provisions a new agent. Requires an active subscription unless the caller is an 
 | `config` | object | No | Agent configuration |
 | `tier` | string | No | Subscription tier hint. Options: `starter`, `pro`, `enterprise`. This value is forwarded to the backend as the `plan` field (mapped to `solo`, `collective`, `label`, `network`). When omitted, the backend deployment defaults to `label`. |
 
-<Note>The web proxy enforces agent limits based on the subscription tier (`starter`: 1, `pro`: 3, `enterprise`: 100). The backend provisioning route (`POST /api/provision`) enforces its own limits (`solo`: 1, `collective`: 3, `label`: 10, `network`: unlimited). These are the primary enforcement points for agent provisioning. The limit cannot be overridden in the request body.</Note>
+<Note>The web proxy enforces agent limits based on the subscription tier (`starter`: 1, `pro`: 3, `enterprise`: 100). The backend provisioning route (`POST /api/provision`) enforces its own limits (`solo`: 1, `collective`: 3, `label`: 10, `network`: unlimited). Each plan maps to a Render instance type: `solo` → `starter` (512 MB RAM), `collective` → `standard` (2 GB RAM), `label` → `pro` (4 GB RAM), `network` → `pro_plus` (8 GB RAM). The limit cannot be overridden in the request body.</Note>
 
 ### Admin bypass
 
@@ -581,7 +581,7 @@ Returns paginated messages for an agent. Requires authentication and ownership.
 GET /api/agents/:id/stats
 ```
 
-Returns live container metrics when available, with a mock fallback.
+Returns live service metrics when available, with a mock fallback.
 
 ### Response (live)
 
@@ -636,7 +636,7 @@ Lifecycle operations are available at two endpoint patterns depending on which s
 
 Both patterns support the same actions. The examples below use the backend pattern.
 
-<Note>All lifecycle operations require Docker to be available on the backend server. When Docker is unavailable, these endpoints return `500` with an error message describing the failure. You can check Docker availability using the [backend health endpoint](/api-reference/health#backend-health-check) — when the `docker` field is `unavailable`, lifecycle operations will fail. The API itself continues to serve non-Docker endpoints normally.</Note>
+<Note>All lifecycle operations require the Render API to be available. When the Render API is unreachable, these endpoints return `500` with an error message describing the failure. You can check availability using the [backend health endpoint](/api-reference/health#backend-health-check) — when the `render` field is `unavailable`, lifecycle operations will fail. The API itself continues to serve non-lifecycle endpoints normally.</Note>
 
 ### Start agent
 
@@ -644,10 +644,12 @@ Both patterns support the same actions. The examples below use the backend patte
 POST /api/agents/:id/start
 ```
 
+Resumes a suspended agent service on Render.
+
 ```json
 {
   "success": true,
-  "status": "active"
+  "status": "running"
 }
 ```
 
@@ -657,10 +659,12 @@ POST /api/agents/:id/start
 POST /api/agents/:id/stop
 ```
 
+Suspends the agent's Render service. The service retains its data and can be resumed later.
+
 ```json
 {
   "success": true,
-  "status": "stopped"
+  "status": "suspended"
 }
 ```
 
@@ -676,7 +680,7 @@ POST /api/agents/:id/restart
   "status": "active",
   "healedLegacyModel": false,
   "healMessage": "",
-  "openclawVersion": "2026.3.13"
+  "openclawVersion": "2026.3.22"
 }
 ```
 
@@ -692,13 +696,13 @@ POST /api/agents/:id/restart
 POST /api/agents/:id/update
 ```
 
-Triggers an image update on the backend. Before replacing the container, the endpoint creates a compressed backup of the agent's data volume. If the new image fails to start, the endpoint automatically rolls back to the previous image.
+Triggers an image update on the backend. Before replacing the service, the endpoint creates a backup of the agent's data. If the new image fails to start, the endpoint automatically rolls back to the previous image.
 
 #### Request body
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `image` | string | No | Custom container image to deploy. When omitted, the platform default image is used. |
+| `image` | string | No | Custom image to deploy. When omitted, the platform default image is used. |
 
 #### Response
 
@@ -706,27 +710,27 @@ Triggers an image update on the backend. Before replacing the container, the end
 {
   "success": true,
   "status": "active",
-  "image": "ghcr.io/openclaw/openclaw:2026.3.13",
+  "image": "ghcr.io/openclaw/openclaw:2026.3.22",
   "previousImage": "ghcr.io/openclaw/openclaw:2026.3.12",
   "backupPath": "/backups/agent_123_2026-03-20",
-  "openclawVersion": "2026.3.13"
+  "openclawVersion": "2026.3.22"
 }
 ```
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `image` | string | New container image. The platform default is `ghcr.io/openclaw/openclaw:2026.3.13`. |
-| `previousImage` | string | Previous container image before the update |
+| `image` | string | New service image. The platform default is `ghcr.io/openclaw/openclaw:2026.3.22`. |
+| `previousImage` | string | Previous service image before the update |
 | `backupPath` | string \| null | Path to the pre-update backup archive |
 | `openclawVersion` | string | Current OpenClaw runtime version |
 
-<Note>When the new container fails to start, the endpoint removes the failed container and recreates it using `previousImage`. The caller still receives a `500` error, but the agent is restored to its prior working state. The pre-update backup remains available at `backupPath` for manual recovery if needed.</Note>
+<Note>When the new service fails to start, the endpoint reverts to `previousImage`. The caller still receives a `500` error, but the agent is restored to its prior working state. The pre-update backup remains available at `backupPath` for manual recovery if needed.</Note>
 
 #### Errors
 
 | Code | Description |
 |------|-------------|
-| 400 | Invalid Docker image name |
+| 400 | Invalid image name |
 | 500 | Update failed. When automatic rollback succeeds, the agent continues running on the previous image. |
 
 ### Repair agent
@@ -782,7 +786,7 @@ Web proxy lifecycle endpoints return a different error shape:
 |------|--------|-------------|
 | 401 | Both | Unauthorized — missing or invalid authentication |
 | 403 | Web proxy | Forbidden — authenticated user does not own this agent instance |
-| 500 | Backend | Internal server error (for example, Docker unavailable or container operation failed) |
+| 500 | Backend | Internal server error (for example, Render API unavailable or service operation failed) |
 | 502 | Web proxy | Backend service unavailable |
 
 ## Get instance details
@@ -824,7 +828,7 @@ Returns resource usage statistics for an agent instance.
   "memory": "128MiB",
   "status": "running",
     "plan": "solo",
-    "openclawVersion": "2026.3.13"
+    "openclawVersion": "2026.3.22"
 }
 ```
 
@@ -834,7 +838,7 @@ Returns resource usage statistics for an agent instance.
 GET /api/agents/:id/token
 ```
 
-Returns the gateway token for the agent. If no token exists, a new cryptographically random token is generated using 32 bytes of entropy (returned as a 64-character hex string). Tokens generated by the container entrypoint (when the `OPENCLAW_GATEWAY_TOKEN` environment variable is not set) use 16 bytes (32 hex characters).
+Returns the gateway token for the agent. If no token exists, a new cryptographically random token is generated using 32 bytes of entropy (returned as a 64-character hex string). Tokens generated by the service entrypoint (when the `OPENCLAW_GATEWAY_TOKEN` environment variable is not set) use 16 bytes (32 hex characters).
 
 ```json
 {
@@ -1019,24 +1023,24 @@ When calling the backend provisioning service directly, the response includes ad
     }
   },
   "container": {
-    "name": "openclaw-a1b2c3d4e5",
+    "name": "agentbot-agent-a1b2c3d4e5",
     "status": "running",
-    "port": 19000,
-    "gatewayUrl": "http://127.0.0.1:19000"
+    "serviceId": "srv-abc123def456",
+    "url": "https://agentbot-agent-a1b2c3d4e5.onrender.com"
   }
 }
 ```
 
-<Note>The `container` object is included when the backend successfully creates a Docker container for the agent. If container creation fails (for example, when Docker is unavailable), provisioning still succeeds and the `container` field is omitted. The agent can operate using API-side processing until a container becomes available. You can check Docker availability using the [backend health endpoint](/api-reference/health#backend-health-check).</Note>
+<Note>The `container` object is included when the backend successfully creates a Render service for the agent. If service creation fails (for example, when the Render API is unavailable), provisioning still succeeds and the `container` field is omitted. The agent can operate using API-side processing until the service becomes available. You can check Render API availability using the [backend health endpoint](/api-reference/health#backend-health-check).</Note>
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `container.name` | string | Docker container name |
-| `container.status` | string | Container status (for example, `running`) |
-| `container.port` | number | Host port mapped to the container gateway (maps to internal port `18789`) |
-| `container.gatewayUrl` | string | Local URL for the container gateway |
+| `container.name` | string | Render service name |
+| `container.status` | string | Service status (for example, `running`, `suspended`) |
+| `container.serviceId` | string | Render service identifier |
+| `container.url` | string | Public URL of the deployed Render service |
 
-<Note>Each agent container exposes multiple ports. The deployment maps host port `container.port` to internal port `18789` (gateway) and `container.port + 2` to internal port `18791`. The official OpenClaw image also exposes port `18790` (bridge) which can be mapped separately if needed.</Note>
+<Warning>The following `container` response fields are deprecated and no longer returned: `port`, `gatewayUrl`. Agents are now provisioned as Render web services with a public URL instead of local Docker containers with mapped ports.</Warning>
 
 ### Errors
 
@@ -1056,7 +1060,7 @@ Each `aiProvider` value maps to a default model and base URL. There are two mode
 
 #### Container config models
 
-These models are configured inside the agent container at provisioning time and are used by the gateway's model fallback chain:
+These models are configured inside the agent service at provisioning time and are used by the gateway's model fallback chain:
 
 | Provider | Primary model | Fallback model | Base URL |
 |----------|--------------|----------------|----------|
@@ -1080,7 +1084,7 @@ The `aiProviderConfig` object returned in the provision response uses different 
 | `openai` | `openai/gpt-4o` | `https://api.openai.com/v1` |
 | `minimax` | `MiniMax/MiniMax-Text-01` | `https://api.minimax.chat/v1` |
 
-Each provider includes a fallback model in the container config that is used automatically when the primary model is unavailable or returns an error.
+Each provider includes a fallback model in the service config that is used automatically when the primary model is unavailable or returns an error.
 
 <Note>`minimax` is available as a fallback in the provider configuration map but is not currently accepted as a value for the `aiProvider` request parameter. Passing `minimax` as `aiProvider` returns a `400` validation error. This provider may be enabled in a future release.</Note>
 
@@ -1148,9 +1152,9 @@ Each agent is assigned a tool profile at provisioning time based on its plan tie
 | `label` | `coding` | Full development tools including code execution |
 | `network` | `coding` | Full development tools including code execution |
 
-<Note>The tool profile is set once at container creation and persists for the lifetime of the agent. Upgrading your plan does not automatically change the tool profile of existing agents — you need to reprovision the agent or use the [repair endpoint](#repair-agent) to apply the new profile.</Note>
+<Note>The tool profile is set once at service creation and persists for the lifetime of the agent. Upgrading your plan does not automatically change the tool profile of existing agents — you need to reprovision the agent or use the [repair endpoint](#repair-agent) to apply the new profile.</Note>
 
-All tool profiles deny `browser` and `canvas` tools inside containers. The `coding` profile includes shell commands (`ls`, `cat`, `grep`, `curl`, `git`, `node`, `python3`, and others) while the `messaging` profile restricts the agent to chat-oriented capabilities.
+All tool profiles deny `browser` and `canvas` tools inside agent services. The `coding` profile includes shell commands (`ls`, `cat`, `grep`, `curl`, `git`, `node`, `python3`, and others) while the `messaging` profile restricts the agent to chat-oriented capabilities.
 
 ## Deploy agent (backend)
 
@@ -1158,7 +1162,7 @@ All tool profiles deny `browser` and `canvas` tools inside containers. The `codi
 POST /api/deployments
 ```
 
-<Note>This is a backend-only endpoint. It deploys an agent container directly and requires a `Content-Type: application/json` header. Requires bearer token authentication. Rate limited to 5 requests per minute per IP.</Note>
+<Note>This is a backend-only endpoint. It deploys an agent as a Render web service and requires a `Content-Type: application/json` header. Requires bearer token authentication. Rate limited to 5 requests per minute per IP.</Note>
 
 ### Request body
 
@@ -1181,13 +1185,13 @@ POST /api/deployments
   "subdomain": "agent_123.agents.localhost",
   "url": "https://agent_123.agents.localhost",
   "status": "active",
-  "openclawVersion": "2026.3.13"
+  "openclawVersion": "2026.3.22"
 }
 ```
 
 ### Response (200 Already Active)
 
-If the agent container is already running, returns the existing deployment details with the same shape as the 201 response.
+If the agent service is already running, returns the existing deployment details with the same shape as the 201 response.
 
 ### Errors
 
@@ -1195,7 +1199,7 @@ If the agent container is already running, returns the existing deployment detai
 |------|-------------|
 | 400 | `agentId is required`, `Invalid agentId`, or `telegramToken is required` |
 | 401 | Unauthorized |
-| 500 | Deployment failed. When Docker is not available on the server, the error message indicates that container provisioning requires Docker. Check the [backend health endpoint](/api-reference/health#backend-health-check) to verify Docker availability before deploying. |
+| 500 | Deployment failed. When the Render API is not reachable, the error message indicates that provisioning is unavailable. Check the [backend health endpoint](/api-reference/health#backend-health-check) to verify Render API availability before deploying. |
 
 ## OpenClaw version (backend)
 
@@ -1209,8 +1213,8 @@ Returns the current OpenClaw runtime version. Requires bearer token authenticati
 
 ```json
 {
-  "openclawVersion": "2026.3.13",
-  "image": "ghcr.io/openclaw/openclaw:2026.3.13",
+  "openclawVersion": "2026.3.22",
+  "image": "ghcr.io/openclaw/openclaw:2026.3.22",
   "deployedAt": "2026-03-20T00:00:00Z"
 }
 ```
@@ -1221,7 +1225,7 @@ Returns the current OpenClaw runtime version. Requires bearer token authenticati
 GET /api/openclaw/instances
 ```
 
-Returns all running agent instances. Requires bearer token authentication.
+Returns all running agent services. Requires bearer token authentication.
 
 ### Response
 
@@ -1231,7 +1235,7 @@ Returns all running agent instances. Requires bearer token authentication.
     {
       "agentId": "agent_123",
       "name": "openclaw-agent_123",
-      "image": "ghcr.io/openclaw/openclaw:2026.3.13",
+      "image": "ghcr.io/openclaw/openclaw:2026.3.22",
       "status": "running",
       "createdAt": "2026-03-01T00:00:00Z",
       "version": "2026.3.13",
@@ -1249,13 +1253,13 @@ Returns all running agent instances. Requires bearer token authentication.
 | 401 | Unauthorized |
 | 500 | Failed to list instances |
 
-## Get instance container stats (backend)
+## Get instance service stats (backend)
 
 ```http
 GET /api/openclaw/instances/:id/stats
 ```
 
-Returns container resource usage for a specific agent. Requires bearer token authentication.
+Returns resource usage for a specific agent service. Requires bearer token authentication.
 
 ### Path parameters
 

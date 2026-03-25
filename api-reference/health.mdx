@@ -84,9 +84,9 @@ An HTTP `500` is returned only when an unexpected error occurs while collecting 
 GET /health
 ```
 
-No authentication required. Returns backend service status including Docker availability. This endpoint is served by the backend API service (without the `/api` prefix).
+No authentication required. Returns backend service status including Render API availability. This endpoint is served by the backend API service (without the `/api` prefix).
 
-<Note>The backend API continues to serve non-Docker endpoints (health, metrics, auth, AI, registration) even when Docker is not available. Container provisioning and lifecycle operations are disabled until Docker becomes available.</Note>
+<Note>The backend API continues to serve non-provisioning endpoints (health, metrics, auth, AI, registration) even when the Render API is not reachable. Agent provisioning and lifecycle operations are disabled until the Render API becomes available.</Note>
 
 ### Response
 
@@ -94,7 +94,7 @@ No authentication required. Returns backend service status including Docker avai
 {
   "status": "ok",
   "timestamp": "2026-03-19T00:00:00Z",
-  "docker": "available",
+  "render": "available",
   "provisioning": "enabled"
 }
 ```
@@ -103,23 +103,25 @@ No authentication required. Returns backend service status including Docker avai
 |-------|------|-------------|
 | `status` | string | Always `ok` when the backend is running |
 | `timestamp` | string | ISO 8601 timestamp of the health check |
-| `docker` | string | Docker daemon availability. `available` when Docker is reachable, `unavailable` otherwise. |
-| `provisioning` | string | Container provisioning capability. `enabled` when Docker is available, `disabled` otherwise. |
+| `render` | string | Render API availability. `available` when the Render API is reachable, `unavailable` otherwise. |
+| `provisioning` | string | Agent provisioning capability. `enabled` when the Render API is available, `disabled` otherwise. |
 
-### Response when Docker is unavailable
+<Warning>The `docker` field is deprecated and no longer returned. Use the `render` field instead to check provisioning infrastructure availability.</Warning>
 
-When Docker is not available on the host, the health endpoint still returns HTTP `200` but reports degraded capabilities:
+### Response when Render API is unavailable
+
+When the Render API is not reachable, the health endpoint still returns HTTP `200` but reports degraded capabilities:
 
 ```json
 {
   "status": "ok",
   "timestamp": "2026-03-19T00:00:00Z",
-  "docker": "unavailable",
+  "render": "unavailable",
   "provisioning": "disabled"
 }
 ```
 
-When `provisioning` is `disabled`, any request to a container-dependent endpoint (such as deploying, starting, stopping, or restarting an agent) returns a `500` error. Non-container endpoints continue to operate normally.
+When `provisioning` is `disabled`, any request to a provisioning-dependent endpoint (such as deploying, starting, stopping, or restarting an agent) returns a `500` error. Non-provisioning endpoints continue to operate normally.
 
 ## Get heartbeat settings
 
@@ -255,18 +257,18 @@ Requires session authentication. Resets heartbeat configuration for a specific a
 
 ## Container health checks
 
-Agent containers run the official OpenClaw image, which exposes built-in health endpoints on port `18789`. The backend uses these to determine container readiness during provisioning and ongoing monitoring.
+Agent services run the official OpenClaw image, which exposes built-in health endpoints on port `18789`. The backend uses these to determine service readiness during provisioning and ongoing monitoring.
 
 ### Built-in health endpoints
 
-The OpenClaw image (`ghcr.io/openclaw/openclaw:2026.3.13`) provides two health endpoints on each agent container:
+The OpenClaw image (`ghcr.io/openclaw/openclaw:2026.3.22`) provides two health endpoints on each agent service:
 
 | Endpoint | Purpose | Description |
 |----------|---------|-------------|
-| `GET /healthz` | Liveness | Returns `200` when the gateway process is running. Used by Docker's `HEALTHCHECK` to detect crashed or hung containers. |
-| `GET /readyz` | Readiness | Returns `200` when the gateway is ready to accept requests. Use this to verify the container has completed startup before routing traffic. |
+| `GET /healthz` | Liveness | Returns `200` when the gateway process is running. Used by the health check to detect crashed or hung services. |
+| `GET /readyz` | Readiness | Returns `200` when the gateway is ready to accept requests. Use this to verify the service has completed startup before routing traffic. |
 
-Both endpoints are unauthenticated and bind to the container's internal port (`18789`).
+Both endpoints are unauthenticated and bind to the service's internal port (`18789`).
 
 #### `/healthz` response
 
@@ -298,25 +300,26 @@ Both endpoints are unauthenticated and bind to the container's internal port (`1
 | `failing` | array | List of failing readiness checks. Empty when all checks pass. |
 | `uptimeMs` | number | Gateway uptime in milliseconds since startup |
 
-<Note>The backend also probes `/health` on port `18789` for application-level health checks. The `/healthz` and `/readyz` endpoints are provided by the OpenClaw image itself and are available on all agent containers.</Note>
+<Note>The backend also probes `/health` on port `18789` for application-level health checks. The `/healthz` and `/readyz` endpoints are provided by the OpenClaw image itself and are available on all agent services.</Note>
 
 ### Container health statuses
 
 | Status | Condition |
 |--------|-----------|
-| `healthy` | Container is running and the internal health endpoint responds successfully |
-| `starting` | Container is running but the health endpoint is not yet responding after all retries |
-| `stopped` | Container has exited |
-| `unhealthy` | Container is in an unexpected state or cannot be inspected |
+| `healthy` | Service is running and the internal health endpoint responds successfully |
+| `starting` | Service is running but the health endpoint is not yet responding after all retries |
+| `stopped` | Service has exited |
+| `suspended` | Service has been suspended (paused to save resources) |
+| `unhealthy` | Service is in an unexpected state or cannot be inspected |
 
 ### Health check behavior
 
-- Docker runs a `HEALTHCHECK` against `http://127.0.0.1:18789/healthz` every 30 seconds with a 5-second timeout, a 20-second start period, and 5 retries before marking the container as unhealthy. The health probe uses `node -e "fetch(...)"` instead of `curl` because the official OpenClaw image does not include `curl`.
-- The `waitForHealthy` function polls container health every 2 seconds, with a default overall timeout of 60 seconds.
+- The backend probes each agent's `/healthz` endpoint to determine service health. The health check uses a 5-second timeout per request.
+- The `waitForHealthy` function polls service health every 2 seconds, with a default overall timeout of 60 seconds.
 
 ## Watchdog monitoring
 
-The backend runs a per-agent watchdog service that continuously monitors agent health, detects crash loops, and performs automatic recovery. The watchdog operates internally and does not expose dedicated API endpoints. Status information is surfaced through the existing agent status and lifecycle endpoints.
+The backend runs a per-agent watchdog that continuously monitors agent health, detects crash loops, and performs automatic recovery. The watchdog operates internally and does not expose dedicated API endpoints. Status information is surfaced through the existing agent status and lifecycle endpoints.
 
 ### Health check cycle
 
@@ -338,7 +341,7 @@ The watchdog tracks the following lifecycle states for each agent:
 | State | Description |
 |-------|-------------|
 | `stopped` | Agent is not running |
-| `starting` | Agent container has started; waiting for the first successful health check |
+| `starting` | Agent service has started; waiting for the first successful health check |
 | `running` | Agent is healthy and serving requests |
 | `degraded` | Health checks are failing after a previous healthy state |
 | `crash_loop` | Multiple crashes detected within the crash loop window |
