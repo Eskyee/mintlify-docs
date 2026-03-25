@@ -374,3 +374,88 @@ The watchdog sends notifications for critical events (degraded, crash loop, repa
 
 - **Telegram** — when `TELEGRAM_BOT_TOKEN` and `TELEGRAM_ADMIN_CHAT_ID` are set
 - **Discord** — when `DISCORD_WEBHOOK_URL` is set
+
+## Railway status webhook
+
+```http
+POST /api/webhooks/railway-status
+```
+
+Receives platform status notifications from Railway's status page. This endpoint processes incident, component, and page status updates and logs them for monitoring. No authentication is required.
+
+<Note>This endpoint is designed to receive webhooks from [status.railway.com](https://status.railway.com). Configure a webhook subscription in Railway's status page settings to point to this URL.</Note>
+
+### Request body
+
+The payload follows the [Railway status page webhook format](https://docs.railway.com/reference/status-page). The endpoint accepts incident updates, component status changes, and page-level notifications.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `incident` | object | No | Incident details including `name`, `status`, and `incident_updates` |
+| `incident.name` | string | No | Name of the incident |
+| `incident.status` | string | No | Current incident status (for example, `investigating`, `identified`, `monitoring`, `resolved`) |
+| `incident.incident_updates` | array | No | List of update objects. The first entry's `body` field contains the latest update message. |
+| `component` | object | No | Component status change details |
+| `component.name` | string | No | Name of the affected component |
+| `component.status` | string | No | Current component status (for example, `operational`, `degraded_performance`, `partial_outage`, `major_outage`) |
+| `page` | object | No | Page-level status information |
+
+### Response
+
+```json
+{
+  "received": true
+}
+```
+
+### Error response
+
+Returned when the request body is not valid JSON:
+
+```json
+{
+  "error": "Invalid payload"
+}
+```
+
+| Code | Description |
+|------|-------------|
+| 200 | Webhook payload received and processed |
+| 400 | Invalid JSON payload |
+
+### Example payload
+
+```json
+{
+  "incident": {
+    "name": "Elevated error rates on US-West deployments",
+    "status": "investigating",
+    "incident_updates": [
+      {
+        "body": "We are investigating elevated error rates affecting deployments in the US-West region."
+      }
+    ]
+  }
+}
+```
+
+## Railway status webhook health check
+
+```http
+GET /api/webhooks/railway-status
+```
+
+Returns a simple health check confirming the webhook endpoint is active. No authentication required.
+
+### Response
+
+```json
+{
+  "status": "ok",
+  "endpoint": "railway-status-webhook"
+}
+```
+
+| Code | Description |
+|------|-------------|
+| 200 | Webhook endpoint is active |
