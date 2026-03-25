@@ -13,9 +13,11 @@ Monitor system health and configure heartbeat schedules.
 GET /api/health
 ```
 
-No authentication required. Returns system health metrics including CPU and memory usage.
+No authentication required. Returns system health status.
 
 <Note>The backend service exposes its own health check at `GET /health` (without the `/api` prefix). The web and backend health endpoints are independent — the web endpoint reports on the web application process while the backend endpoint reports on the API service. See [backend health check](#backend-health-check) below for details.</Note>
+
+<Warning>**Breaking change:** The health endpoint no longer returns `cpu`, `memory`, or `uptime` fields. These hardware details are now restricted to the admin-only endpoint at `/api/admin/health`. If you were consuming CPU, memory, or uptime data from this endpoint, update your integration to use the admin endpoint instead.</Warning>
 
 ### Response
 
@@ -23,22 +25,17 @@ No authentication required. Returns system health metrics including CPU and memo
 {
   "status": "ok",
   "health": "healthy",
-  "timestamp": "2026-03-19T00:00:00Z",
-  "cpu": {
-    "usage": 15.3,
-    "cores": 4
-  },
-  "memory": {
-    "usage": 42.1,
-    "total": 8589934592,
-    "used": 3617054720,
-    "free": 4972879872
-  },
-  "uptime": 86400
+  "timestamp": "2026-03-19T00:00:00Z"
 }
 ```
 
-The `health` field reflects overall system status:
+| Field | Type | Description |
+|-------|------|-------------|
+| `status` | string | `ok` when the health check completed successfully |
+| `health` | string | Overall system health: `healthy`, `degraded`, or `unhealthy` |
+| `timestamp` | string | ISO 8601 timestamp of the health check |
+
+The `health` field reflects overall system status based on internal CPU and memory thresholds:
 
 | Value | Condition |
 |-------|-----------|
@@ -54,10 +51,7 @@ When the system is degraded or unhealthy, the endpoint still returns HTTP `200` 
 {
   "status": "ok",
   "health": "unhealthy",
-  "timestamp": "2026-03-19T00:00:00Z",
-  "cpu": { "usage": 92.5, "cores": 4 },
-  "memory": { "usage": 88.0, "total": 8589934592, "used": 7558529024, "free": 1031405568 },
-  "uptime": 86400
+  "timestamp": "2026-03-19T00:00:00Z"
 }
 ```
 
@@ -383,9 +377,22 @@ The watchdog sends notifications for critical events (degraded, crash loop, repa
 POST /api/webhooks/railway-status
 ```
 
-Receives platform status notifications from Railway's status page. This endpoint processes incident, component, and page status updates and logs them for monitoring. No authentication is required.
+Receives platform status notifications from Railway's status page. This endpoint processes incident, component, and page status updates and logs them for monitoring.
 
 <Note>This endpoint is designed to receive webhooks from [status.railway.com](https://status.railway.com). Configure a webhook subscription in Railway's status page settings to point to this URL.</Note>
+
+### Authentication
+
+When the `RAILWAY_WEBHOOK_SECRET` environment variable is configured, requests must include a valid secret via one of the following methods:
+
+| Method | Location | Description |
+|--------|----------|-------------|
+| Header | `x-railway-secret` | Shared secret in a custom request header |
+| Query parameter | `?secret=` | Shared secret as a URL query parameter |
+
+The secret is verified using a constant-time comparison to prevent timing attacks. When `RAILWAY_WEBHOOK_SECRET` is not configured, requests are accepted without verification (development mode only).
+
+<Warning>You should always configure `RAILWAY_WEBHOOK_SECRET` in production to prevent unauthorized parties from injecting fake status notifications.</Warning>
 
 ### Request body
 
@@ -424,6 +431,7 @@ Returned when the request body is not valid JSON:
 |------|-------------|
 | 200 | Webhook payload received and processed |
 | 400 | Invalid JSON payload |
+| 401 | Unauthorized — missing or invalid secret when `RAILWAY_WEBHOOK_SECRET` is configured |
 
 ### Example payload
 

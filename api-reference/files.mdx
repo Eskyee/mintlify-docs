@@ -102,7 +102,18 @@ Upload a file for an agent. The request must use `multipart/form-data` encoding.
 | `file.url` | string | Download URL for the file |
 | `file.uploaded` | string | ISO 8601 timestamp when the file was uploaded |
 
-<Note>The GET endpoint returns `filename` while the POST response returns `name`. Both refer to the original filename of the uploaded file.</Note>
+<Note>The GET endpoint returns `filename` while the POST response returns `name`. Both refer to the sanitized filename of the uploaded file.</Note>
+
+### Filename validation
+
+Uploaded filenames are sanitized before storage:
+
+1. **Leading dots are stripped** — files like `.env` become `env`. A filename consisting entirely of dots (e.g., `...`) becomes empty after stripping.
+2. **Unsafe characters are replaced** — characters outside `a-zA-Z0-9._-` are replaced with underscores.
+3. **Length is limited to 128 characters** — filenames longer than 128 characters are truncated.
+4. **Fallback naming** — if the sanitized filename is empty, a fallback name of `upload_{timestamp}` is used.
+
+<Note>The stored filename may differ from the original filename you provided. Dotfiles (files starting with `.`) cannot be uploaded — the leading dots are always removed.</Note>
 
 ### Errors
 

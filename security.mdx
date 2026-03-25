@@ -22,6 +22,10 @@ Agentbot is committed to keeping your data safe. Here's our security posture.
 | A2A Authentication | ✅ | Message verification enforced before delivery |
 | Audit Logging | ✅ | All actions logged, including per-payment audit trail |
 | Payment Validation | ✅ | Amount limits ($100 max), recipient address format verification (EVM/Solana) |
+| Webhook Signatures | ✅ | Svix verification (Resend), timing-safe secret (Railway), `constructEvent` (Stripe) |
+| CSPRNG Tokens | ✅ | Invite codes and agent IDs use `crypto.randomBytes` |
+| Session Signing | ✅ | Farcaster session tokens are HMAC-SHA256 signed with expiry |
+| File Upload Safety | ✅ | Dotfile rejection, filename sanitization, 128-character limit |
 
 ## Skill Security Matrix
 
