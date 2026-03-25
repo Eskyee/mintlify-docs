@@ -856,10 +856,10 @@ Agents can be verified using multiple verification types: `eas` (Ethereum Attest
 ### Get verification status
 
 ```http
-GET /api/agents/:id/verify
+GET /api/agents/:id/verification
 ```
 
-<Note>On the backend, the GET endpoint uses `/api/agents/:id/verification` while POST and DELETE use `/api/agents/:id/verify`. The web API uses `/api/agents/:id/verify` for all three methods (GET, POST, DELETE).</Note>
+<Note>The backend GET endpoint uses `/api/agents/:id/verification` while POST and DELETE use `/api/agents/:id/verify`. The web API proxies all three methods through `/api/agents/:id/verify`.</Note>
 
 ```json
 {
@@ -885,11 +885,12 @@ POST /api/agents/:id/verify
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `verificationType` | string | Yes | One of: `eas`, `coinbase`, `ens`, `webauthn` |
+| `verified` | boolean | No | Whether the agent is verified (defaults to `true` via web API) |
 | `attestationUid` | string | No | Attestation UID from EAS |
-| `walletAddress` | string | No | Address of the verifying wallet (web API) |
-| `signature` | string | No | Wallet signature for verification (web API) |
+| `verifierAddress` | string | No | Address of the verifying wallet |
+| `metadata` | object | No | Additional verification metadata |
 
-<Note>The web API always sets `verified: true` on success. The backend accepts an additional `verified` boolean, `verifierAddress`, and `metadata` object directly.</Note>
+<Note>The web API always sets `verified: true` on success. When calling the backend directly, you can pass `verified`, `verifierAddress`, and `metadata` explicitly.</Note>
 
 #### Response
 
@@ -1059,7 +1060,7 @@ These models are configured inside the agent container at provisioning time and 
 
 | Provider | Primary model | Fallback model | Base URL |
 |----------|--------------|----------------|----------|
-| `openrouter` | `xiaomi/mimo-v2-pro` | `openrouter/anthropic/claude-sonnet-4`, `openrouter/google/gemini-2.5-flash` | `https://openrouter.ai/api/v1` |
+| `openrouter` | `moonshotai/kimi-k2.5` | `openrouter/openai/gpt-4o-mini` | `https://openrouter.ai/api/v1` |
 | `gemini` | `google/gemini-2.0-flash` | `openrouter/anthropic/claude-sonnet-4-5` | `https://generativelanguage.googleapis.com/v1beta/models` |
 | `groq` | `groq/gemma2-9b-it` | `openai/gpt-4o-mini` | `https://api.groq.com/openai/v1` |
 | `anthropic` | `anthropic/claude-sonnet-4-5` | `openai/gpt-4o` | `https://api.anthropic.com/v1` |

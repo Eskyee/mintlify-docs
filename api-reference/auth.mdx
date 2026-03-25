@@ -519,7 +519,29 @@ PATCH /api/settings
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `name` | string | No | New display name |
-| `notifications` | object | No | Notification preferences |
+| `notifications` | object | No | Notification preferences (accepted but not yet persisted) |
+
+### Response (POST and PATCH)
+
+```json
+{
+  "id": "user-a1b2c3d4",
+  "email": "user@example.com",
+  "name": "Updated Name",
+  "plan": "solo",
+  "credits": 100,
+  "twoFactorEnabled": false
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | User identifier |
+| `email` | string | User email address |
+| `name` | string | Display name |
+| `plan` | string | Current subscription plan |
+| `credits` | number | Remaining credits balance |
+| `twoFactorEnabled` | boolean | Whether two-factor authentication is enabled |
 
 ## Change password
 
