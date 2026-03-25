@@ -283,8 +283,9 @@ The `/api/security/risc` endpoint validates incoming SET JWTs by:
 
 1. Verifying the issuer is `https://accounts.google.com/`
 2. Checking the audience matches a configured `GOOGLE_CLIENT_ID`
-3. Fetching Google's RISC signing keys from the well-known configuration endpoint (cached for 24 hours)
+3. Fetching Google's RISC signing keys from the JWKS endpoint discovered via `https://accounts.google.com/.well-known/risc-configuration` (keys are cached for 24 hours)
 4. Matching the signing key by `kid` header claim
+5. Verifying the RS256 signature using the Web Crypto API (`crypto.subtle`) with the matched RSA public key
 
 ### Security response
 

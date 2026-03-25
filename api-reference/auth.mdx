@@ -282,8 +282,9 @@ The endpoint validates the incoming JWT before processing:
 
 1. Checks the issuer is `https://accounts.google.com/`
 2. Checks the audience matches one of the configured Google client IDs
-3. Fetches Google's signing keys from the RISC well-known configuration endpoint (keys are cached for 24 hours)
+3. Fetches Google's signing keys from the JWKS endpoint discovered via `https://accounts.google.com/.well-known/risc-configuration` (keys are cached for 24 hours)
 4. Matches the signing key by the `kid` header claim
+5. Verifies the RS256 signature using the Web Crypto API (`crypto.subtle`) with the matched RSA public key
 
 If validation fails, the endpoint returns `400`.
 
