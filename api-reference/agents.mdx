@@ -268,7 +268,7 @@ Provisions a new agent. Requires an active subscription unless the caller is an 
 
 <Note>The web proxy enforces agent limits based on the subscription tier (`starter`: 1, `pro`: 3, `enterprise`: 100). The backend provisioning route (`POST /api/provision`) enforces its own limits (`solo`: 1, `collective`: 3, `label`: 10, `network`: 999999). The plan middleware enforces a separate set of agent limits for AI model access (`label`: 1, `solo`: 3, `collective`: 10, `network`: 100). The provisioning limits and middleware limits apply independently. The limit cannot be overridden in the request body.</Note>
 
-<Note>The backend also accepts legacy plan aliases for resource allocation: `underground` (2 GB / 1 CPU), `starter` (2 GB / 1 CPU), `scale` (8 GB / 4 CPU), and `white_glove` (32 GB / 8 CPU). These are accepted in addition to the standard plan names (`solo`, `collective`, `label`, `network`) when determining container resource limits.</Note>
+<Note>The backend also accepts legacy plan aliases for resource allocation: `underground` (2 GB / 1 CPU), `starter` (2 GB / 1 CPU), `pro` (4 GB / 2 CPU), `scale` (8 GB / 4 CPU), `enterprise` (16 GB / 4 CPU), and `white_glove` (32 GB / 8 CPU). These are accepted in addition to the standard plan names (`solo`, `collective`, `label`, `network`) when determining container resource limits.</Note>
 
 ### Admin bypass
 
@@ -1099,7 +1099,7 @@ The `aiProviderConfig` object returned in the provision response uses different 
 | `gemini` | `gemini-2.0-flash` | `https://generativelanguage.googleapis.com/v1beta/models` |
 | `groq` | `mixtral-8x7b-32768` | `https://api.groq.com/openai/v1` |
 | `anthropic` | `claude-3-sonnet-20240229` | `https://api.anthropic.com/v1` |
-| `openai` | `openai/gpt-4o` | `https://api.openai.com/v1` |
+| `openai` | `gpt-4o` | `https://api.openai.com/v1` |
 | `minimax` | `MiniMax/MiniMax-Text-01` | `https://api.minimax.chat/v1` |
 
 Each provider includes a fallback model in the service config that is used automatically when the primary model is unavailable or returns an error.

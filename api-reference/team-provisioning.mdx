@@ -95,7 +95,7 @@ Each object in the `customAgents` array has the following fields:
 
 | Code | Description |
 |------|-------------|
-| 400 | Invalid or missing `plan`. Must be `collective`, `label`, or `network`. Response includes `available_templates` listing valid template keys. |
+| 400 | Invalid or missing `plan`. The error message reads `"Team provisioning requires collect, label, or network plan"`. Response includes `available_templates` listing valid template keys. |
 | 401 | Unauthorized — missing or invalid session |
 | 500 | Team provisioning failed |
 
