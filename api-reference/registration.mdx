@@ -9,6 +9,34 @@ Register self-hosted (Home) and linked (Link) agent installations. These endpoin
 
 <Note>Home mode runs the agent container on your own hardware via Docker. Link mode connects an existing OpenClaw instance to the Agentbot platform. Cloud mode (the default) runs the agent on Agentbot infrastructure.</Note>
 
+## Install script
+
+```http
+GET /install
+```
+
+Returns the Home mode installation shell script. No authentication required. The response content type is `text/plain`.
+
+This script automates the setup of a self-hosted agent container. Pipe it to your shell to begin the Home mode installation:
+
+```bash
+curl -sSL https://api.agentbot.raveculture.xyz/install | bash
+```
+
+## Link script
+
+```http
+GET /link
+```
+
+Returns the Link mode setup shell script. No authentication required. The response content type is `text/plain`.
+
+This script connects an existing OpenClaw instance to the Agentbot platform. Pipe it to your shell to begin the Link mode setup:
+
+```bash
+curl -sSL https://api.agentbot.raveculture.xyz/link | bash
+```
+
 ## Validate API key
 
 ```http

@@ -7,7 +7,7 @@ description: "Monitor your agent fleet with real-time graphs, execution traces, 
 
 Mission control provides a real-time view of your agent fleet. Use these endpoints to visualize agent relationships, trace execution activity, attribute costs per agent, and track talent bookings.
 
-<Note>All four mission control endpoints require bearer token (API key) authentication and accept a `userId` query parameter. The web proxy uses session authentication and resolves the user ID from the session before forwarding to these backend endpoints. The fleet graph and traces endpoints return safe default responses for unauthenticated requests instead of an error.</Note>
+<Note>All four mission control endpoints require bearer token (API key) authentication and accept a `userId` query parameter. The backend returns `401` for unauthenticated requests. The web proxy uses session authentication and resolves the user ID from the session before forwarding to these backend endpoints — the web proxy layer returns safe default responses (empty data with a `200` status) for unauthenticated requests instead of forwarding the `401`.</Note>
 
 ## Fleet graph
 
@@ -99,7 +99,7 @@ When no souls are reachable, the response uses the fallback shape with minimal n
 }
 ```
 
-When the request is unauthenticated (no valid session), the endpoint returns a default response instead of an error:
+When the request is unauthenticated (no valid session), the web proxy returns a default response instead of forwarding the backend `401` error:
 
 ```json
 {
@@ -165,7 +165,12 @@ When the request is unauthenticated (no valid session), the endpoint returns a d
 
 ### Errors
 
-Unauthenticated requests return a `200` response with default empty data (see above) instead of an error.
+| Code | Source | Description |
+|------|--------|-------------|
+| 401 | Backend | Unauthorized — missing or invalid bearer token |
+| 500 | Backend | Internal server error |
+
+The web proxy returns a `200` response with default empty data (see above) for unauthenticated requests instead of forwarding the backend `401`.
 
 ## Execution traces
 
@@ -249,7 +254,12 @@ Requires bearer token authentication.
 
 ### Errors
 
-Unauthenticated requests return a `200` response with an empty array `[]` instead of an error.
+| Code | Source | Description |
+|------|--------|-------------|
+| 401 | Backend | Unauthorized — missing or invalid bearer token |
+| 500 | Backend | Internal server error |
+
+The web proxy returns a `200` response with an empty array `[]` for unauthenticated requests instead of forwarding the backend `401`.
 
 ## Cost attribution
 
@@ -291,7 +301,12 @@ Requires bearer token authentication.
 
 ### Errors
 
-Unauthenticated requests return a `200` response with `{ costs: [] }` instead of an error.
+| Code | Source | Description |
+|------|--------|-------------|
+| 401 | Backend | Unauthorized — missing or invalid bearer token |
+| 500 | Backend | Internal server error |
+
+The web proxy returns a `200` response with `{ costs: [] }` for unauthenticated requests instead of forwarding the backend `401`.
 
 ## Talent bookings
 
@@ -327,4 +342,9 @@ Requires bearer token authentication.
 
 ### Errors
 
-Unauthenticated requests return a `200` response with `{ bookings: [] }` instead of an error.
+| Code | Source | Description |
+|------|--------|-------------|
+| 401 | Backend | Unauthorized — missing or invalid bearer token |
+| 500 | Backend | Internal server error |
+
+The web proxy returns a `200` response with `{ bookings: [] }` for unauthenticated requests instead of forwarding the backend `401`.

@@ -175,7 +175,7 @@ Returns the USDC balance for an agent wallet. Requires bearer token authenticati
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `userId` | string | Yes | User identifier for authorization |
+| `userId` | number | Yes | User identifier for authorization. The value is cast to a number before being passed to the wallet service. |
 
 ### Response
 
