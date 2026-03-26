@@ -56,9 +56,9 @@ Validates a bearer token by computing a SHA-256 hash of the raw key and looking 
 POST /api/register-home
 ```
 
-Registers a Home mode installation. Requires bearer token (API key) authentication.
+Registers a Home mode installation. Requires identity headers (`x-user-email`, `x-user-id`, `x-user-role`) set by the authenticated frontend. The backend middleware extracts these headers but does not independently verify a bearer token on this route.
 
-<Note>The web proxy forwards identity headers (`x-user-email`, `x-user-id`, `x-user-role`) from the active session, but the backend authenticates the request using the bearer token, not these headers.</Note>
+<Note>The web proxy forwards identity headers from the active session. The backend `authenticate` middleware reads these headers and attaches them to the request context. If no headers are provided, `userId` defaults to `anonymous`.</Note>
 
 ### Request body
 
@@ -83,7 +83,6 @@ Registers a Home mode installation. Requires bearer token (API key) authenticati
 | Code | Description |
 |------|-------------|
 | 400 | `userId` is required |
-| 401 | Unauthorized — missing or invalid bearer token |
 | 500 | Internal server error |
 
 ## Register Link installation
@@ -92,9 +91,9 @@ Registers a Home mode installation. Requires bearer token (API key) authenticati
 POST /api/register-link
 ```
 
-Registers a Link mode installation that connects an existing OpenClaw instance. Requires bearer token (API key) authentication.
+Registers a Link mode installation that connects an existing OpenClaw instance. Requires identity headers (`x-user-email`, `x-user-id`, `x-user-role`) set by the authenticated frontend.
 
-<Note>The web proxy forwards identity headers (`x-user-email`, `x-user-id`, `x-user-role`) from the active session, but the backend authenticates the request using the bearer token, not these headers.</Note>
+<Note>The web proxy forwards identity headers from the active session. The backend `authenticate` middleware reads these headers and attaches them to the request context. If no headers are provided, `userId` defaults to `anonymous`.</Note>
 
 ### Request body
 
@@ -118,7 +117,6 @@ Registers a Link mode installation that connects an existing OpenClaw instance. 
 | Code | Description |
 |------|-------------|
 | 400 | `userId` is required |
-| 401 | Unauthorized — missing or invalid bearer token |
 | 500 | Internal server error |
 
 ## List installations
@@ -127,7 +125,7 @@ Registers a Link mode installation that connects an existing OpenClaw instance. 
 GET /api/installations
 ```
 
-Returns all registered installations across all deployment modes. Requires bearer token (API key) authentication.
+Returns all registered installations across all deployment modes. Requires identity headers (`x-user-email`, `x-user-id`, `x-user-role`) set by the authenticated frontend.
 
 ### Response
 
@@ -166,7 +164,6 @@ Returns all registered installations across all deployment modes. Requires beare
 
 | Code | Description |
 |------|-------------|
-| 401 | Unauthorized — missing or invalid bearer token |
 | 500 | Internal server error |
 
 ## Registration heartbeat
@@ -181,7 +178,7 @@ Reports the status of a registered installation. When the `userId` matches a kno
 
 ### Authentication
 
-This endpoint requires the `authenticate` middleware. The request must include identity headers (`x-user-email`, `x-user-id`, `x-user-role`) set by the authentication layer. Unauthenticated requests receive a `401` or `403` response.
+This endpoint uses the `authenticate` middleware which reads identity headers (`x-user-email`, `x-user-id`, `x-user-role`) from the request. If no headers are provided, the middleware assigns default values (`userId` defaults to `anonymous`) and the request proceeds. The middleware does not reject unauthenticated requests.
 
 ### Request body
 
