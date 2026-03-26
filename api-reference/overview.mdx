@@ -146,7 +146,7 @@ curl -X POST https://agentbot.raveculture.xyz/api/ai/chat \
 | `/api/agents/:id/config` | PUT | Update agent configuration |
 | `/api/agents/:id/messages` | GET | Get agent messages |
 | `/api/agents/:id/stats` | GET | Get agent stats |
-| `/api/agents/:id/verify` | GET | Get verification status |
+| `/api/agents/:id/verification` | GET | Get verification status |
 | `/api/agents/:id/verify` | POST | Verify an agent |
 | `/api/agents/:id/verify` | DELETE | Remove verification |
 | `/api/agents/:id/start` | POST | Start an agent |
@@ -291,6 +291,12 @@ curl -X POST https://agentbot.raveculture.xyz/api/ai/chat \
 | `/api/summarize` | POST | Summarize a URL — returns title, description, headings, paragraphs, word count (web summarizer service) |
 | `/api/extract` | POST | Extract links, images, and Open Graph metadata from a URL (web summarizer service) |
 | `/api/clawmerchants` | GET | List available ClawMerchants data feeds, or fetch a specific feed by `feed` query parameter |
+| `/v1/models` | GET | List all available models (OpenAI-compatible, no auth required) |
+| `/v1/models/:model` | GET | Get a single model by ID (OpenAI-compatible, no auth required) |
+| `/v1/embeddings` | POST | Generate embeddings (OpenAI-compatible, proxied to OpenRouter, requires auth) |
+| `/health` | GET | Backend health check (no auth required) |
+| `/install` | GET | Download the Home mode installation shell script |
+| `/link` | GET | Download the Link mode installation shell script |
 
 ## SDK
 
