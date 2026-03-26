@@ -1149,7 +1149,7 @@ POST /api/deployments
 | `config.ownerIds` | string[] | No | Telegram owner user IDs |
 | `config.aiProvider` | string | No | AI provider (default: `openrouter`) |
 | `config.apiKey` | string | No | API key for the AI provider |
-| `config.plan` | string | No | Plan tier. Options: `label`, `solo`, `collective`, `network`. |
+| `config.plan` | string | No | Plan tier. Options: `label`, `solo`, `collective`, `network`. When omitted, defaults to `free` which resolves to `starter` resource limits (2 GB memory, 1 CPU). |
 
 ### Response (201 Created)
 
