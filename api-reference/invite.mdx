@@ -76,7 +76,6 @@ Verifies an invite token and returns invite details. No authentication required.
 ```json
 {
   "valid": true,
-  "email": "invitee@example.com",
   "plan": "solo"
 }
 ```
@@ -84,8 +83,10 @@ Verifies an invite token and returns invite details. No authentication required.
 | Field | Type | Description |
 |-------|------|-------------|
 | `valid` | boolean | Whether the token is valid |
-| `email` | string | Email associated with the invite |
-| `plan` | string | Plan tier for the invite (defaults to `solo`) |
+| `plan` | string | Plan tier assigned to the invite. Currently always `"solo"`. |
+| `note` | string \| undefined | Present only when the invite was verified by token format alone (database model pending). Omitted when the invite was verified against the database. |
+
+<Note>The `email` field was removed from the verify response. The invite codes table does not store an email column. If you previously relied on this field, use a separate user lookup after verification.</Note>
 
 ### Errors
 
@@ -200,4 +201,4 @@ Previously generated a 12-character hex invite code. Replaced by `POST /api/invi
 POST /api/invite/validate
 ```
 
-Previously validated and consumed a 12-character invite code. Replaced by `POST /api/invites/verify`, which accepts 64-character hex tokens and returns richer response data including `email` and `plan`.
+Previously validated and consumed a 12-character invite code. Replaced by `POST /api/invites/verify`, which accepts 64-character hex tokens and returns `valid` and `plan` fields.
