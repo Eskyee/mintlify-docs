@@ -1,11 +1,44 @@
 ---
 title: Files API
-description: "Upload, list, and delete files for your agents"
+description: "Upload, download, list, and delete files for your agents"
 ---
 
 # Files API
 
-Manage files attached to your agents. You can upload files for an agent to access, list existing files, and delete them. All endpoints require session authentication.
+Manage files attached to your agents. You can upload files for an agent to access, download them securely, list existing files, and delete them. All endpoints require session authentication.
+
+## Download a file
+
+```http
+GET /api/files?download={id}
+```
+
+Downloads a file by its ID. The server validates that the resolved file path is within the configured upload directory to prevent path traversal attacks. Returns the raw file content as a binary download.
+
+### Query parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `download` | string | Yes | The file ID to download |
+
+### Response headers
+
+| Header | Description |
+|--------|-------------|
+| `Content-Type` | MIME type of the file (falls back to `application/octet-stream`) |
+| `Content-Disposition` | `attachment; filename="{encoded filename}"` |
+| `Content-Length` | File size in bytes |
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | Unauthorized |
+| 403 | Invalid file path — the resolved path is outside the upload directory |
+| 404 | File not found |
+| 500 | File path missing from record, or download failed |
+
+<Note>The download URL format is `/api/files?download={id}`. Files are only accessible to the user who uploaded them.</Note>
 
 ## List files
 
@@ -29,7 +62,7 @@ Returns all files for the authenticated user, optionally filtered by agent.
     {
       "id": "clx1abc123",
       "filename": "training-data.csv",
-      "url": "/api/files/download?id=clx1abc123",
+      "url": "/api/files?download=clx1abc123",
       "size": 24576,
       "mimeType": "text/csv",
       "agentId": "default",
@@ -85,7 +118,7 @@ Upload a file for an agent. The request must use `multipart/form-data` encoding.
     "name": "training-data.csv",
     "size": 24576,
     "type": "text/csv",
-    "url": "/api/files/download?id=clx1abc123",
+    "url": "/api/files?download=clx1abc123",
     "uploaded": "2026-03-25T10:00:00.000Z"
   }
 }

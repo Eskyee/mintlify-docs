@@ -264,11 +264,149 @@ The gateway supports CORS preflight via `OPTIONS /api/v1/gateway`. Allowed metho
 
 <Warning>The `X-Payment-Method`, `X-Session-Id`, and `X-Wallet-Address` headers are read server-side but are not included in the CORS `Access-Control-Allow-Headers` response. Cross-origin requests that include these headers may be rejected by the browser preflight check. Same-origin requests are unaffected. If you need to send these headers from a different origin, configure the `GATEWAY_CORS_ORIGIN` environment variable or proxy the request through a same-origin endpoint.</Warning>
 
+## OpenAI-compatible endpoints
+
+The gateway exposes a set of endpoints that follow the [OpenAI API format](https://platform.openai.com/docs/api-reference). These allow you to use Agentbot as a drop-in replacement for the OpenAI SDK or any tool that supports the OpenAI API shape.
+
+### List models
+
+```http
+GET /v1/models
+```
+
+Returns all available models in OpenAI-compatible format. This endpoint is public and does not require authentication.
+
+#### Response (200)
+
+```json
+{
+  "object": "list",
+  "data": [
+    {
+      "id": "openrouter/openai/gpt-4o-mini",
+      "object": "model",
+      "created": 1742472000,
+      "owned_by": "openrouter"
+    }
+  ]
+}
+```
+
+#### Model object
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Model identifier (provider-prefixed) |
+| `object` | string | Always `model` |
+| `created` | number | Unix timestamp of when the response was generated |
+| `owned_by` | string | Provider that serves the model (e.g., `openrouter`, `agentbot`) |
+
+#### Errors
+
+| Status | Description |
+|--------|-------------|
+| 500 | `Failed to fetch models` — an internal error occurred while retrieving the model list |
+
+### Retrieve a model
+
+```http
+GET /v1/models/:model
+```
+
+Returns details for a single model by its ID. This endpoint is public and does not require authentication.
+
+#### Path parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `model` | string | Yes | The model ID to look up (e.g., `openrouter/openai/gpt-4o-mini`) |
+
+#### Response (200)
+
+```json
+{
+  "id": "openrouter/openai/gpt-4o-mini",
+  "object": "model",
+  "created": 1742472000,
+  "owned_by": "openrouter"
+}
+```
+
+#### Errors
+
+| Status | Description |
+|--------|-------------|
+| 404 | `Model {model} not found` — no model matches the provided ID |
+| 500 | `Failed to fetch model` — an internal error occurred |
+
+### Create embeddings
+
+```http
+POST /v1/embeddings
+```
+
+Generates embeddings for the given input. Proxies the request to OpenRouter. Requires authentication.
+
+#### Headers
+
+| Header | Type | Required | Description |
+|--------|------|----------|-------------|
+| `Authorization` | string | Yes | Bearer token or session cookie |
+| `Content-Type` | string | Yes | Must be `application/json` |
+
+#### Request body
+
+```json
+{
+  "input": "The quick brown fox jumps over the lazy dog",
+  "model": "openai/text-embedding-3-small"
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `input` | string or string[] | Yes | Text to generate embeddings for. Can be a single string or an array of strings. |
+| `model` | string | No | Embedding model to use. Defaults to `openai/text-embedding-3-small`. |
+
+#### Response (200)
+
+The response follows the OpenAI embeddings format. The exact shape depends on the upstream provider.
+
+```json
+{
+  "object": "list",
+  "data": [
+    {
+      "object": "embedding",
+      "index": 0,
+      "embedding": [0.0023064255, -0.009327292, ...]
+    }
+  ],
+  "model": "openai/text-embedding-3-small",
+  "usage": {
+    "prompt_tokens": 9,
+    "total_tokens": 9
+  }
+}
+```
+
+#### Errors
+
+| Status | Description |
+|--------|-------------|
+| 400 | `input is required` — the `input` field is missing from the request body |
+| 401 | Unauthorized — valid authentication is required |
+| 503 | `Embeddings not configured` — the server does not have an OpenRouter API key configured |
+| 500 | `Embeddings request failed` — the upstream provider returned an error |
+
 ## Rate limits
 
 | Endpoint | Limit |
 |----------|-------|
 | `/api/v1/gateway` | 100/min |
+| `/v1/models` | 120/min (general) |
+| `/v1/models/:model` | 120/min (general) |
+| `/v1/embeddings` | 120/min (general) |
 
 ## Examples
 
@@ -309,4 +447,25 @@ The response includes the remaining session balance:
 ```
 Payment-Receipt: session:ses_a1b2c3d4e5f6...:v_abc123def456
 X-Session-Remaining: 9.95
+```
+
+### List available models (OpenAI-compatible)
+
+```bash
+curl https://agentbot.raveculture.xyz/v1/models
+```
+
+### Retrieve a specific model
+
+```bash
+curl https://agentbot.raveculture.xyz/v1/models/openrouter/openai/gpt-4o-mini
+```
+
+### Generate embeddings
+
+```bash
+curl -X POST https://agentbot.raveculture.xyz/v1/embeddings \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -d '{"input": "Hello world", "model": "openai/text-embedding-3-small"}'
 ```
