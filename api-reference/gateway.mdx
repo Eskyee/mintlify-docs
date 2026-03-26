@@ -31,14 +31,14 @@ POST /api/v1/gateway
 
 ```json
 {
-  "plugin": "generate-text",
+  "plugin": "agent",
   "messages": [{ "role": "user", "content": "Hello" }]
 }
 ```
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `plugin` | string | No | Plugin ID to route to. The `X-Plugin-Id` header takes priority if both are provided. Defaults to `generate-text`. |
+| `plugin` | string | No | Plugin ID to route to. The `X-Plugin-Id` header takes priority if both are provided. Defaults to `agent`. |
 
 Additional body fields are forwarded to the target plugin.
 
@@ -48,16 +48,16 @@ The gateway routes to the following plugins:
 
 | Plugin ID | Name | Description | Auth required | Streaming |
 |-----------|------|-------------|---------------|-----------|
-| `agent` | Agent | Agent orchestrator for multi-step tasks | Yes | Yes |
-| `generate-text` | Text Generation | LLM text generation | Yes | Yes |
-| `tts` | Text-to-Speech | Speech synthesis | Yes | No |
-| `stt` | Speech-to-Text | Speech transcription | Yes | No |
+| `agent` | Agent | Agent orchestrator for multi-step tasks | No | Yes |
+| `generate-text` | Text Generation | LLM text generation | No | Yes |
+| `tts` | Text-to-Speech | Speech synthesis | No | No |
+| `stt` | Speech-to-Text | Speech transcription | No | No |
 
-<Note>`generate-text` is the default plugin when no plugin ID is specified.</Note>
+<Note>`agent` is the default plugin when no plugin ID is specified.</Note>
 
 ## Authentication
 
-Protected plugins require either a valid session (cookie-based via NextAuth), a verified MPP payment credential, or an active payment session. If you pay with MPP or use session-based billing, cookie-based authentication is not required.
+No plugins currently require authentication. The gateway checks whether a plugin has its `auth` flag enabled — since no built-in plugin sets this flag, all requests are processed without requiring a session, MPP credential, or payment session. If a custom plugin is registered with `auth: true`, the gateway enforces either a valid session (cookie-based via NextAuth), a verified MPP payment credential, or an active payment session. If you pay with MPP or use session-based billing, cookie-based authentication is not required for auth-enabled plugins.
 
 ## Payment flow
 
@@ -123,8 +123,8 @@ If the session is missing, expired, or has insufficient balance, the gateway ret
 
 ```json
 {
-  "plugin": "generate-text",
-  "message": "Request processed by generate-text plugin",
+  "plugin": "agent",
+  "message": "Request processed by agent plugin",
   "timestamp": "2026-03-20T03:33:15.000Z",
   "payment": {
     "method": "stripe",
@@ -260,7 +260,9 @@ The gateway monitors channel health for each agent container. When a channel bec
 
 ## CORS
 
-The gateway supports CORS preflight via `OPTIONS /api/v1/gateway`. Allowed methods are `POST` and `OPTIONS`. The `Authorization`, `Content-Type`, `X-Plugin-Id`, `X-Payment-Method`, `X-Session-Id`, and `X-Wallet-Address` headers are permitted.
+The gateway supports CORS preflight via `OPTIONS /api/v1/gateway`. Allowed methods are `GET`, `POST`, and `OPTIONS`. The `Content-Type`, `Authorization`, `X-Plugin-Id`, and `Payment` headers are permitted in the CORS configuration.
+
+<Warning>The `X-Payment-Method`, `X-Session-Id`, and `X-Wallet-Address` headers are read server-side but are not included in the CORS `Access-Control-Allow-Headers` response. Cross-origin requests that include these headers may be rejected by the browser preflight check. Same-origin requests are unaffected. If you need to send these headers from a different origin, configure the `GATEWAY_CORS_ORIGIN` environment variable or proxy the request through a same-origin endpoint.</Warning>
 
 ## Rate limits
 
