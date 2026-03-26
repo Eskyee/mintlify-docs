@@ -223,9 +223,9 @@ Redirects to GitHub OAuth flow. Requires `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_S
 GET /api/auth/google
 ```
 
-Redirects to Google OAuth consent screen. Requires `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` to be configured.
+Redirects to the Google account selector. Requires `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` to be configured.
 
-The flow requests the `openid`, `email`, and `profile` scopes with offline access. After the user grants consent, Google redirects back to the callback endpoint below.
+The flow requests the `openid`, `email`, and `profile` scopes with offline access and uses the `select_account` prompt, which lets the user pick a Google account without forcing re-consent. After the user selects an account, Google redirects back to the callback endpoint below.
 
 If `GOOGLE_CLIENT_ID` is not set, the endpoint redirects to `/login?error=GoogleNotConfigured`.
 
@@ -235,14 +235,17 @@ If `GOOGLE_CLIENT_ID` is not set, the endpoint redirects to `/login?error=Google
 GET /api/auth/google/callback
 ```
 
-Handles the OAuth authorization code exchange. This endpoint is called by Google after the user grants consent — you do not call it directly.
+Handles the OAuth authorization code exchange. This endpoint is called by Google after the user selects an account — you do not call it directly.
+
+If Google returns an `error` query parameter (for example, when the user cancels the sign-in), the callback redirects to `/login` with an appropriate error code without attempting a token exchange.
 
 On success the endpoint:
 1. Exchanges the authorization code for an access token.
 2. Fetches the user's email and name from the Google userinfo API.
 3. Creates a new user if no account with that email exists (automatic account linking applies when a matching email is found).
-4. Creates a session and sets the `agentbot-session` cookie.
-5. Redirects to `/dashboard`.
+4. Links a Google `Account` record to the user for dual-auth compatibility. If the user already has a linked Google account, this step is skipped. The Account record stores the OAuth access token, refresh token, and token metadata so the user can sign in with either email/password or Google.
+5. Creates a session and sets the `agentbot-session` cookie.
+6. Redirects to `/dashboard`.
 
 #### Errors
 
@@ -250,7 +253,9 @@ The callback redirects to `/login` with an `error` query parameter instead of re
 
 | Error value | Description |
 |-------------|-------------|
-| `GoogleAuthFailed` | No authorization code received from Google |
+| `AccessDenied` | The user cancelled the Google sign-in or denied access |
+| `GoogleAuthFailed` | No authorization code received from Google, or Google returned an unrecognized error |
+| `GoogleNotConfigured` | `GOOGLE_CLIENT_ID` or `GOOGLE_CLIENT_SECRET` is not set |
 | `GoogleTokenFailed` | Code-to-token exchange failed |
 | `GoogleNoEmail` | Google account has no email address |
 | `GoogleAuthError` | Unexpected server error during authentication |
