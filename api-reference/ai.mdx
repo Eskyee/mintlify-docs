@@ -269,9 +269,7 @@ Each subscription plan grants access to a specific set of AI models. The chat en
 
 <Note>Admin users are automatically granted `network`-level access regardless of their subscription plan.</Note>
 
-<Note>The plan middleware (`x-user-plan` header) enforces model access, skill limits, and A2A message quotas. The provisioning endpoint enforces separate agent limits: `solo` 1, `collective` 3, `label` 10, `network` unlimited. When the two systems reference the same plan name, the provisioning limits apply to agent creation and the middleware limits apply to AI model access and skill usage.</Note>
-
-<Warning>The `label` plan has the largest model set (7 models) and the highest skill limit (25), but its middleware agent limit is 3 while the provisioning endpoint allows up to 10 agents on `label`. When the two limits differ, the provisioning limit governs agent creation and the middleware limit governs per-request enforcement.</Warning>
+<Note>The plan middleware (`x-user-plan` header) enforces model access, skill limits, and A2A message quotas. The provisioning endpoint enforces separate agent creation limits: `solo` 1, `collective` 3, `label` 10, `network` unlimited. The provisioning limits determine how many agents you can create, while the middleware limits in the table above apply to per-request AI model access and skill usage.</Note>
 
 ## Model fallbacks
 
