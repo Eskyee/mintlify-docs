@@ -255,8 +255,8 @@ curl -X POST https://agentbot.raveculture.xyz/api/ai/chat \
 | `/api/generate-video` | POST | Generate and upload a video (requires session) |
 | `/api/webhooks/mux` | POST | Mux webhook receiver (signature-verified) |
 | `/api/webhooks/resend` | POST | Resend email webhook — inbound email processing and outbound event tracking (sent, delivered, bounced, opened, clicked, complained) |
-| `/api/webhooks/railway-status` | POST | Railway platform status webhook receiver |
-| `/api/webhooks/railway-status` | GET | Railway status webhook health check |
+| `/api/webhooks/railway-status` | POST | Railway platform status and deployment webhook receiver (persists to Redis) |
+| `/api/webhooks/railway-status` | GET | Poll last-known Railway status from Redis |
 | `/api/mission-control/fleet/graph` | GET | Get agent fleet constellation graph |
 | `/api/mission-control/fleet/traces` | GET | Get real-time execution traces |
 | `/api/mission-control/fleet/costs` | GET | Get per-agent cost attribution |

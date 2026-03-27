@@ -23,7 +23,7 @@ GET /api/metrics
 
 Returns platform-wide metrics including agent counts, message volumes, deployment stats, uptime, performance, and storage usage. Requires session authentication.
 
-<Warning>The `messages`, `performance`, and `storage.used` fields currently return randomized mock data. Agent and deployment counts are retrieved from the database. A future release will connect all fields to real telemetry.</Warning>
+Agent and deployment counts are sourced from the database. Performance data (`averageResponseTime`, `successRate`, `errorRate`, `cpu`, `memory`) is fetched from the backend metrics service when at least one active agent exists; otherwise these fields fall back to computed defaults or `0`. The `messages` fields are not tracked in the frontend database and always return `0`.
 
 ### Response
 
@@ -37,9 +37,9 @@ Returns platform-wide metrics including agent counts, message volumes, deploymen
       "failed": 0
     },
     "messages": {
-      "today": 12500,
-      "thisWeek": 87000,
-      "thisMonth": 350000
+      "today": 0,
+      "thisWeek": 0,
+      "thisMonth": 0
     },
     "deployments": {
       "total": 4,
@@ -52,17 +52,20 @@ Returns platform-wide metrics including agent counts, message volumes, deploymen
     },
     "performance": {
       "averageResponseTime": 450,
-      "successRate": "98.50",
-      "errorRate": "1.50"
+      "successRate": 99.1,
+      "errorRate": 0,
+      "cpu": 15.3,
+      "memory": 42.1
     },
     "storage": {
-      "used": 180,
+      "used": 0,
       "total": 1024,
-      "percentUsed": 35
+      "percentUsed": 0
     }
   },
-  "timestamp": "2026-03-19T12:00:00Z",
-  "status": "ok"
+  "timestamp": "2026-03-27T12:00:00Z",
+  "status": "ok",
+  "plan": "solo"
 }
 ```
 
@@ -74,20 +77,23 @@ Returns platform-wide metrics including agent counts, message volumes, deploymen
 | `metrics.agents.active` | number | Currently running agents |
 | `metrics.agents.inactive` | number | Stopped agents |
 | `metrics.agents.failed` | number | Agents in a failed state |
-| `metrics.messages.today` | number | Messages processed today |
-| `metrics.messages.thisWeek` | number | Messages processed this week |
-| `metrics.messages.thisMonth` | number | Messages processed this month |
+| `metrics.messages.today` | number | Messages processed today. Not currently tracked; always returns `0`. |
+| `metrics.messages.thisWeek` | number | Messages processed this week. Not currently tracked; always returns `0`. |
+| `metrics.messages.thisMonth` | number | Messages processed this month. Not currently tracked; always returns `0`. |
 | `metrics.deployments.total` | number | Total deployments |
 | `metrics.deployments.successful` | number | Successful deployments |
 | `metrics.deployments.failed` | number | Failed deployments |
 | `metrics.uptime.platformUptime` | number | Platform uptime percentage |
 | `metrics.uptime.averageAgentUptime` | number | Average agent uptime percentage |
-| `metrics.performance.averageResponseTime` | number | Average response time in milliseconds |
-| `metrics.performance.successRate` | string | Success rate percentage |
-| `metrics.performance.errorRate` | string | Error rate percentage |
-| `metrics.storage.used` | number | Storage used in MB |
+| `metrics.performance.averageResponseTime` | number | Average response time in milliseconds. Returns `0` when no backend data is available. |
+| `metrics.performance.successRate` | number | Success rate percentage. Defaults to `99.1` when active agents exist but no backend data is available, or `0` when no active agents exist. |
+| `metrics.performance.errorRate` | number | Error rate percentage. Calculated from the ratio of failed agents when no backend data is available. |
+| `metrics.performance.cpu` | number | Current CPU usage percentage (0–100). Returns `0` when no backend data is available. |
+| `metrics.performance.memory` | number | Current memory usage percentage (0–100). Returns `0` when no backend data is available. |
+| `metrics.storage.used` | number | Storage used in MB. Currently always returns `0`. |
 | `metrics.storage.total` | number | Total storage in MB |
-| `metrics.storage.percentUsed` | number | Storage usage percentage |
+| `metrics.storage.percentUsed` | number | Storage usage percentage. Currently always returns `0`. |
+| `plan` | string \| null | User's current subscription plan (for example `solo`, `collective`, `label`, `network`), or `null` if not set. |
 
 ### Errors
 

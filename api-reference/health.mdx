@@ -377,9 +377,9 @@ The watchdog sends notifications for critical events (degraded, crash loop, repa
 POST /api/webhooks/railway-status
 ```
 
-Receives platform status notifications from Railway's status page. This endpoint processes incident, component, and page status updates and logs them for monitoring.
+Receives platform status notifications from Railway's status page and deployment events from the Railway dashboard. This endpoint processes deployment events, incident updates, component status changes, and page-level notifications. Events are persisted to Redis so the dashboard can display real-time Railway status.
 
-<Note>This endpoint is designed to receive webhooks from [status.railway.com](https://status.railway.com). Configure a webhook subscription in Railway's status page settings to point to this URL.</Note>
+<Note>This endpoint accepts webhooks from both [status.railway.com](https://status.railway.com) (incident and component updates) and the Railway dashboard (deployment events). Configure webhook subscriptions in both locations to point to this URL.</Note>
 
 ### Authentication
 
@@ -396,7 +396,25 @@ The secret is verified using a constant-time comparison to prevent timing attack
 
 ### Request body
 
-The payload follows the [Railway status page webhook format](https://docs.railway.com/reference/status-page). The endpoint accepts incident updates, component status changes, and page-level notifications.
+The endpoint accepts two payload formats: deployment events from the Railway dashboard and status-page events from Railway's status page.
+
+#### Deployment event
+
+Sent by Railway when a deployment status changes.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `type` | string | No | Event type identifier |
+| `deployment` | object | No | Deployment details |
+| `deployment.id` | string | No | Deployment identifier |
+| `deployment.status` | string | No | Current deployment status (for example, `SUCCESS`, `FAILED`, `BUILDING`, `DEPLOYING`) |
+| `deployment.url` | string | No | Deployment URL |
+| `deployment.service` | object | No | Service metadata |
+| `deployment.service.name` | string | No | Name of the deployed service |
+
+#### Status-page event
+
+Sent by Railway's status page for incident and component updates. The payload follows the [Railway status page webhook format](https://docs.railway.com/reference/status-page).
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
@@ -411,11 +429,32 @@ The payload follows the [Railway status page webhook format](https://docs.railwa
 
 ### Response
 
+On success, the endpoint returns the received event along with the persisted record:
+
 ```json
 {
-  "received": true
+  "received": true,
+  "record": {
+    "status": "SUCCESS",
+    "name": "my-service",
+    "message": "https://my-service.up.railway.app",
+    "eventType": "deployment",
+    "receivedAt": "2026-03-27T12:00:00.000Z"
+  }
 }
 ```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `received` | boolean | Always `true` on success |
+| `record` | object | The status record persisted to Redis |
+| `record.status` | string | Normalized status value from the event |
+| `record.name` | string | Service or incident name. Defaults to `"Railway"` for status-page events. |
+| `record.message` | string | Deployment URL or latest incident update body |
+| `record.eventType` | string | One of `deployment`, `incident`, `component`, or the `type` field from the payload |
+| `record.receivedAt` | string | ISO 8601 timestamp when the event was received |
+
+<Note>The record is stored in Redis under the key `railway:status:latest` with a 7-day TTL. When Redis is not configured (`KV_REST_API_URL` and `KV_REST_API_TOKEN` not set), the endpoint still processes the event and returns the record but does not persist it.</Note>
 
 ### Error response
 
@@ -433,7 +472,25 @@ Returned when the request body is not valid JSON:
 | 400 | Invalid JSON payload |
 | 401 | Unauthorized — missing or invalid secret when `RAILWAY_WEBHOOK_SECRET` is configured |
 
-### Example payload
+### Example payloads
+
+#### Deployment event
+
+```json
+{
+  "type": "deployment.completed",
+  "deployment": {
+    "id": "dep_abc123",
+    "status": "SUCCESS",
+    "url": "https://my-service.up.railway.app",
+    "service": {
+      "name": "my-service"
+    }
+  }
+}
+```
+
+#### Incident event
 
 ```json
 {
@@ -449,23 +506,58 @@ Returned when the request body is not valid JSON:
 }
 ```
 
-## Railway status webhook health check
+## Railway status polling
 
 ```http
 GET /api/webhooks/railway-status
 ```
 
-Returns a simple health check confirming the webhook endpoint is active. No authentication required.
+Returns the last-known Railway status from Redis. No authentication required. Use this endpoint to display Railway platform status on your dashboard.
 
 ### Response
 
+When a status event has been received and persisted:
+
 ```json
 {
-  "status": "ok",
+  "status": "SUCCESS",
+  "lastEvent": {
+    "status": "SUCCESS",
+    "name": "my-service",
+    "message": "https://my-service.up.railway.app",
+    "eventType": "deployment",
+    "receivedAt": "2026-03-27T12:00:00.000Z"
+  },
+  "endpoint": "railway-status-webhook"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `status` | string | Status from the most recent event, or `no-events` if no events have been received |
+| `lastEvent` | object \| null | The full status record from the last webhook event, or `null` if no events exist |
+| `endpoint` | string | Always `railway-status-webhook` |
+
+When no events have been received:
+
+```json
+{
+  "status": "no-events",
+  "lastEvent": null,
+  "endpoint": "railway-status-webhook"
+}
+```
+
+When Redis is not configured (`KV_REST_API_URL` and `KV_REST_API_TOKEN` not set):
+
+```json
+{
+  "status": "unknown",
+  "message": "Redis not configured",
   "endpoint": "railway-status-webhook"
 }
 ```
 
 | Code | Description |
 |------|-------------|
-| 200 | Webhook endpoint is active |
+| 200 | Status retrieved (or fallback returned when Redis is unavailable) |
