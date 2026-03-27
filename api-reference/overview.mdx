@@ -127,8 +127,8 @@ curl -X POST https://agentbot.raveculture.xyz/api/ai/chat \
 | 201 | Resource created |
 | 400 | Bad request or validation error |
 | 401 | Unauthorized (missing or invalid authentication) |
-| 402 | Payment required — a paid subscription is mandatory for all agent provisioning and usage. The minimum plan is `solo`. Also returned when an [MPP](/payments/mpp) credential is missing for gateway requests. Requests using the deprecated `free` plan value receive this status. **Note:** The subscription checks on the provision endpoints (both web proxy and backend) are temporarily bypassed while an environment configuration issue is resolved. The frontend continues to enforce payment. |
-| 403 | Forbidden (insufficient permissions, token gating failure, bot detection, or missing CSRF token) |
+| 402 | Payment required — a paid subscription is mandatory for all agent provisioning and usage. The minimum plan is `solo`. Also returned when an [MPP](/payments/mpp) credential is missing for gateway requests. Requests using the deprecated `free` plan value receive this status. |
+| 403 | Forbidden (insufficient permissions, token gating failure, bot detection, missing CSRF token, or missing active subscription). Non-admin users without an active subscription who attempt to provision an agent receive a `403` with the message `Active subscription required`. |
 | 404 | Resource not found |
 | 429 | Too many requests or tier limit reached |
 | 500 | Internal server error |
@@ -224,6 +224,7 @@ curl -X POST https://agentbot.raveculture.xyz/api/ai/chat \
 | `/api/scheduled-tasks` | POST | Create a scheduled task |
 | `/api/scheduled-tasks` | PUT | Update a scheduled task |
 | `/api/scheduled-tasks` | DELETE | Delete a scheduled task |
+| `/api/checkout/verify` | GET | Verify a Stripe checkout session and activate subscription |
 | `/api/stripe/checkout` | GET | Redirect to Stripe checkout (accepts `plan` query param: `solo`, `collective`, `label`, `network`). Prices are in GBP. |
 | `/api/stripe/credits` | GET | Redirect to Stripe credit purchase (accepts `price` query param) |
 | `/api/stripe/storage-upgrade` | POST | Upgrade storage plan |
