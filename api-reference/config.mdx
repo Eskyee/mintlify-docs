@@ -1,0 +1,160 @@
+---
+title: Config API
+description: "Read, update, and restore agent configuration with versioned backups"
+---
+
+# Config API
+
+Manage agent configuration with automatic versioned backups. The system keeps the last 10 configuration backups and allows restoring to any previous version.
+
+## Get current configuration
+
+```http
+GET /api/config
+```
+
+Returns the current agent configuration and a list of available backups.
+
+### Response
+
+```json
+{
+  "config": {
+    "version": "2026.3.23",
+    "model": {
+      "default": "openrouter/auto",
+      "fallbacks": ["openrouter/anthropic/claude-3.5-sonnet"]
+    },
+    "channels": {
+      "telegram": { "enabled": true },
+      "discord": { "enabled": false },
+      "webchat": { "enabled": true }
+    },
+    "memory": { "maxEntries": 1000, "ttlDays": 90 },
+    "cron": { "heartbeatIntervalMinutes": 30 },
+    "safety": { "maxTokensPerDay": 100000, "allowedDomains": [] }
+  },
+  "backups": [
+    {
+      "id": "bkp_initial",
+      "timestamp": "2026-03-27T10:00:00Z"
+    }
+  ]
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `config` | object | The current agent configuration |
+| `backups` | array | List of available backups (id and timestamp only) |
+| `backups[].id` | string | Unique backup identifier |
+| `backups[].timestamp` | string | ISO 8601 timestamp when the backup was created |
+
+## Save configuration
+
+```http
+POST /api/config
+```
+
+Saves a new configuration. The current configuration is automatically backed up before the new one is applied. The system retains the 10 most recent backups.
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `config` | object | Yes | The new configuration object to save. Must be a valid JSON object. |
+
+### Response
+
+```json
+{
+  "success": true,
+  "config": { ... },
+  "backupId": "bkp_1711540800000",
+  "backups": [
+    { "id": "bkp_1711540800000", "timestamp": "2026-03-27T12:00:00Z" },
+    { "id": "bkp_initial", "timestamp": "2026-03-27T10:00:00Z" }
+  ]
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `success` | boolean | `true` when the configuration was saved |
+| `config` | object | The newly saved configuration |
+| `backupId` | string | Identifier of the backup created from the previous configuration |
+| `backups` | array | Updated list of available backups (id and timestamp only) |
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | `Invalid config object` — the `config` field is missing or is not an object |
+| 400 | `Config is not valid JSON` — the config object cannot be serialized as valid JSON |
+| 400 | `Invalid request body` — the request body is not valid JSON |
+
+## Restore a backup
+
+```http
+PUT /api/config
+```
+
+Restores a previous configuration from a backup. The current configuration is automatically backed up before the restore is applied.
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `backupId` | string | Yes | The identifier of the backup to restore |
+
+### Response
+
+```json
+{
+  "success": true,
+  "config": { ... },
+  "restoredFrom": "bkp_initial",
+  "backups": [
+    { "id": "bkp_1711540800001", "timestamp": "2026-03-27T12:05:00Z" },
+    { "id": "bkp_initial", "timestamp": "2026-03-27T10:00:00Z" }
+  ]
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `success` | boolean | `true` when the configuration was restored |
+| `config` | object | The restored configuration |
+| `restoredFrom` | string | Identifier of the backup that was restored |
+| `backups` | array | Updated list of available backups (id and timestamp only) |
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | `Missing backupId` — the `backupId` field is missing from the request body |
+| 400 | `Invalid request body` — the request body is not valid JSON |
+| 404 | `Backup not found` — no backup exists with the given identifier |
+
+### Example: save and restore
+
+```bash
+# Save a new configuration
+curl -X POST https://agentbot.raveculture.xyz/api/config \
+  -H "Content-Type: application/json" \
+  -d '{
+    "config": {
+      "version": "2026.3.23",
+      "model": { "default": "openrouter/auto", "fallbacks": [] },
+      "channels": { "telegram": { "enabled": true } },
+      "memory": { "maxEntries": 500, "ttlDays": 30 },
+      "cron": { "heartbeatIntervalMinutes": 15 },
+      "safety": { "maxTokensPerDay": 50000, "allowedDomains": [] }
+    }
+  }'
+
+# Restore from a backup
+curl -X PUT https://agentbot.raveculture.xyz/api/config \
+  -H "Content-Type: application/json" \
+  -d '{ "backupId": "bkp_initial" }'
+```
