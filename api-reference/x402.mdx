@@ -19,7 +19,7 @@ No authentication required. Returns the current status of the x402 gateway.
 
 ```json
 {
-  "gateway": "https://x402-gw-v2-production.up.railway.app",
+  "gateway": "https://tempo-x402-production.up.railway.app",
   "status": "healthy",
   "service": "x402-gateway",
   "agents": 5,
@@ -43,7 +43,7 @@ Returned when the upstream gateway is unreachable.
 
 ```json
 {
-  "gateway": "https://x402-gw-v2-production.up.railway.app",
+  "gateway": "https://tempo-x402-production.up.railway.app",
   "status": "unreachable",
   "error": "Connection failed"
 }
@@ -82,6 +82,8 @@ Additional fields are required depending on the action — see below.
 
 Register an agent with the x402 colony.
 
+**Request:**
+
 ```json
 {
   "agentId": "inst_abc123",
@@ -89,6 +91,20 @@ Register an agent with the x402 colony.
   "action": "join-colony"
 }
 ```
+
+**Response (200):**
+
+Returns the response from the upstream colony gateway on success.
+
+**Error responses:**
+
+| Status | Body | Description |
+|--------|------|-------------|
+| 402 | `{ "success": false, "error": "Colony join failed: 402 ..." }` | The upstream gateway returned a 402 Payment Required response |
+| 502 | `{ "success": false, "error": "Colony join failed: {status} ..." }` | The upstream gateway returned a non-OK response (other than 402) |
+| 503 | `{ "success": false, "error": "Colony gateway unreachable" }` | The upstream colony gateway could not be reached (network error or timeout) |
+
+<Note>The `join-colony` action has a 10-second timeout. If the gateway does not respond within that window, a `503` is returned.</Note>
 
 #### `fitness`
 
@@ -265,7 +281,10 @@ All other actions (`join-colony`, `fitness`, `pricing`, `pay`) require a valid N
 | 400 | `Invalid recipient address` | The `recipient` does not match a valid EVM or Solana address format (applies to the `pay` action) |
 | 400 | `Invalid action. Use: join-colony, fitness, pricing, endpoints, or pay` | The `action` field is missing or not one of the supported values |
 | 401 | `Authentication required` | No valid session. Returned for all actions except `endpoints` and the `GET` health check. |
+| 402 | `Colony join failed: 402 ...` | The upstream gateway requires payment for the `join-colony` action |
 | 500 | `x402 gateway error` | An unexpected error occurred while communicating with the upstream gateway |
+| 502 | `Colony join failed: {status} ...` | The upstream gateway returned an error for the `join-colony` action |
+| 503 | `Colony gateway unreachable` | The upstream colony gateway could not be reached (applies to `join-colony`) |
 
 ## Examples
 
