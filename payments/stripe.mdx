@@ -145,7 +145,7 @@ GET /api/stripe/checkout?plan={plan_id}
 
 <Note>The `plan` parameter uses internal plan IDs. The billing page maps these to display names: `solo` is shown as "Solo", `collective` as "Collective", and `label` as "Label".</Note>
 
-The endpoint redirects the user to Stripe's hosted checkout page. On success, the user is redirected to the onboarding page. On cancellation, the user returns to the pricing page.
+The endpoint redirects the user to Stripe's hosted checkout page. On successful payment, the user is redirected to `/checkout/success` with the Stripe session ID and plan as query parameters. On cancellation, the user returns to the pricing page.
 
 <Note>
 Admin users (configured via `ADMIN_EMAILS`) skip the Stripe checkout flow entirely and are redirected straight to onboarding. No payment is required for admin accounts.

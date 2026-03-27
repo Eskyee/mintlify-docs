@@ -245,11 +245,13 @@ Redirects to a Stripe checkout session for subscribing to a plan. This endpoint 
 
 ### Response
 
-On success, redirects (303) to the Stripe checkout URL. On error, redirects to the pricing page with an error query parameter.
+On success, redirects (303) to the Stripe checkout URL. After payment completes, Stripe redirects the user to `/checkout/success?session_id={CHECKOUT_SESSION_ID}&plan={plan}`. On error, redirects to the pricing page with an error query parameter.
 
 | Redirect | Description |
 |----------|-------------|
-| Stripe checkout URL | Successful session creation |
+| Stripe checkout URL | Successful session creation — user completes payment on Stripe |
+| `/checkout/success?session_id=...&plan=...` | Post-payment redirect from Stripe after successful checkout |
+| `/pricing?cancelled=1` | User cancelled the Stripe checkout |
 | `/pricing?error=invalid_plan` | Unrecognized plan name |
 | `/pricing?error=stripe_not_configured` | Stripe secret key not set |
 | `/pricing?error=checkout_failed` | Stripe API error |
