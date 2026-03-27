@@ -1,0 +1,142 @@
+---
+title: Daily brief API
+description: "Aggregated daily service health brief with real-time status checks"
+---
+
+# Daily brief API
+
+Retrieve an aggregated daily briefing that checks the health of all Agentbot platform services in real time.
+
+## Get daily brief
+
+```http
+GET /api/daily-brief
+```
+
+No authentication required. Returns a structured briefing with live health checks for each monitored service, recent activity context, focus items, market pulse, security alerts, and upcoming milestones.
+
+The endpoint probes each service concurrently using an 8-second per-service timeout. Services that do not respond within the timeout are reported as `down`.
+
+### Monitored services
+
+| Service | Health endpoint |
+|---------|----------------|
+| Agentbot API | `https://agentbot-api.onrender.com/health` |
+| Agentbot Web | `https://agentbot.raveculture.xyz` |
+| x402 Gateway | `https://x402-gateway-production.up.railway.app/health` |
+| Tempo Soul | `https://tempo-x402-production.up.railway.app/health` |
+| Borg-0 | `https://borg-0-production.up.railway.app/health` |
+
+### Response
+
+```json
+{
+  "date": "2026-03-27",
+  "generatedAt": "2026-03-27T15:06:42.000Z",
+  "brief": [
+    {
+      "id": "system",
+      "title": "System Status",
+      "color": "text-green-400",
+      "items": [
+        "Agentbot API — healthy (v1.2.0)",
+        "Agentbot Web — healthy",
+        "x402 Gateway — healthy (v0.9.1)",
+        "Tempo Soul — healthy",
+        "Borg-0 — healthy"
+      ]
+    },
+    {
+      "id": "tasks",
+      "title": "Recent Activity",
+      "color": "text-blue-400",
+      "items": [
+        "See git log for latest commits and deployments",
+        "Dashboard pages are live with real data",
+        "Infrastructure monitoring active"
+      ]
+    },
+    {
+      "id": "focus",
+      "title": "Today's Focus",
+      "color": "text-yellow-400",
+      "items": [
+        "Monitor all services for stability",
+        "Continue feature development",
+        "Beta launch preparation"
+      ]
+    },
+    {
+      "id": "intel",
+      "title": "Market Pulse",
+      "color": "text-emerald-400",
+      "items": [
+        "Agentbot active on Render + Railway infrastructure",
+        "x402 protocol integration live",
+        "Onchain payment settlement operational"
+      ]
+    },
+    {
+      "id": "security",
+      "title": "Security & Alerts",
+      "color": "text-red-400",
+      "items": [
+        "All infrastructure healthy — no anomalies detected in last check"
+      ]
+    },
+    {
+      "id": "calendar",
+      "title": "Upcoming",
+      "color": "text-blue-400",
+      "items": [
+        "Beta launch: March 31, 2026 (v0.1.0-beta.1)",
+        "Render services: 3 active (api, web, worker)",
+        "Railway services: 3 active (x402 gateway, tempo soul, borg-0)"
+      ]
+    }
+  ]
+}
+```
+
+### Top-level fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `date` | string | Current date in `YYYY-MM-DD` format |
+| `generatedAt` | string | ISO 8601 timestamp when the brief was generated |
+| `brief` | array | List of briefing sections |
+
+### Brief section fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Section identifier. One of `system`, `tasks`, `focus`, `intel`, `security`, `calendar`. |
+| `title` | string | Display title for the section |
+| `color` | string | Tailwind CSS color class for the section icon |
+| `items` | array of strings | Content items for the section |
+
+### System status item format
+
+Each item in the `system` section follows one of these formats based on the service health:
+
+| Status | Format | Example |
+|--------|--------|---------|
+| Healthy | `{name} — healthy` or `{name} — healthy ({version})` | `Agentbot API — healthy (v1.2.0)` |
+| Degraded | `⚠️ {name} — degraded: {detail}` | `⚠️ x402 Gateway — degraded: HTTP 503` |
+| Down | `🔴 {name} — DOWN` | `🔴 Tempo Soul — DOWN` |
+
+When a service returns a JSON response with a `version` or `build` field, the version is included in the healthy status message.
+
+### Security section behavior
+
+The `security` section items are derived from the health check results:
+
+- When all services are healthy: `"All infrastructure healthy — no anomalies detected in last check"`
+- When services are down: `"{count} service(s) DOWN: {names}"`
+- When services are degraded: `"{count} service(s) degraded: {names}"`
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 200 | Brief generated successfully |
