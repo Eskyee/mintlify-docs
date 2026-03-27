@@ -165,11 +165,12 @@ The web proxy wraps the agent in an object:
     "verificationType": null,
     "attestationUid": null,
     "verifiedAt": null
-  }
+  },
+  "status": "ok"
 }
 ```
 
-<Note>The backend returns the agent object directly. The web proxy wraps it in an `agent` key and adds a top-level `status` field.</Note>
+<Note>The backend returns the agent object directly. The web proxy wraps it in an `agent` key and adds a top-level `status` field set to `"ok"`.</Note>
 
 ### Errors
 
@@ -178,6 +179,52 @@ The web proxy wraps the agent in an object:
 | 401 | Unauthorized |
 | 404 | Agent not found or not owned by user |
 | 500 | Failed to fetch agent |
+
+## Rename agent
+
+```http
+PATCH /api/agents/:id
+```
+
+Renames an agent. Requires session authentication and ownership of the agent. The name is updated in the database immediately. The endpoint also makes a best-effort attempt to sync the new name to the backend — if the backend is unreachable, the rename still succeeds (the database is the source of truth for agent names).
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | string | Yes | New agent name. Must be between 1 and 64 characters after trimming whitespace. |
+
+### Response
+
+```json
+{
+  "success": true,
+  "agent": {
+    "id": "agent_123",
+    "name": "New Agent Name",
+    "status": "running",
+    "updatedAt": "2026-03-27T12:00:00Z"
+  }
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `success` | boolean | Whether the rename succeeded |
+| `agent.id` | string | Agent identifier |
+| `agent.name` | string | Updated agent name |
+| `agent.status` | string | Current agent status |
+| `agent.updatedAt` | string | ISO 8601 timestamp of the update |
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | Name is required (empty or whitespace-only string) |
+| 400 | Name too long (max 64 chars) |
+| 401 | Unauthorized |
+| 404 | Agent not found or not owned by user |
+| 500 | Failed to rename agent |
 
 ## Update agent
 
@@ -260,12 +307,12 @@ Provisions a new agent. Requires an active subscription unless the caller is an 
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `name` | string | Yes | Agent name |
+| `name` | string | Yes | Agent name. Must be between 1 and 64 characters after trimming whitespace. |
 | `model` | string | No | AI model (default: `claude-opus-4-6`). Options: `claude-opus-4-6`, `gpt-4`, `custom` |
 | `config` | object | No | Agent configuration |
 | `tier` | string | No | Subscription tier hint. Options: `starter`, `pro`, `enterprise`. This value is forwarded to the backend as the `plan` field (mapped to `solo`, `collective`, `label`, `network`). When omitted, the backend deployment defaults to `label`. |
 
-<Note>The web proxy enforces agent limits based on the subscription tier (`starter`: 1, `pro`: 3, `enterprise`: 100). The backend provisioning route (`POST /api/provision`) enforces its own limits (`solo`: 1, `collective`: 3, `label`: 10, `network`: 999999). The plan middleware enforces a separate set of agent limits for AI model access (`solo`: 1, `collective`: 10, `label`: 3, `network`: 100). The provisioning limits and middleware limits apply independently. The limit cannot be overridden in the request body.</Note>
+<Note>The web proxy enforces agent limits based on the subscription tier (`starter`: 1, `pro`: 3, `enterprise`: 100). The backend provisioning route (`POST /api/provision`) enforces its own limits (`solo`: 1, `collective`: 3, `label`: 10, `network`: unlimited). These provisioning limits determine how many agents you can create. The plan middleware enforces separate per-request limits for AI model access and skill usage. The limit cannot be overridden in the request body.</Note>
 
 <Note>The backend also accepts legacy plan aliases for resource allocation: `underground` (2 GB / 1 CPU), `starter` (2 GB / 1 CPU), `pro` (4 GB / 2 CPU), `scale` (8 GB / 4 CPU), `enterprise` (16 GB / 4 CPU), and `white_glove` (32 GB / 8 CPU). These are accepted in addition to the standard plan names (`solo`, `collective`, `label`, `network`) when determining container resource limits.</Note>
 
