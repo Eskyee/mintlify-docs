@@ -119,10 +119,10 @@
           "api-reference/web-summarizer",
           "api-reference/x402",
           "api-reference/demo-chat",
+          "api-reference/signals",
           "api-reference/scheduled-tasks",
           "api-reference/billing",
-          "api-reference/clawmerchants",
-          "api-reference/market-intel"
+          "api-reference/clawmerchants"
         ]
       },
       {
