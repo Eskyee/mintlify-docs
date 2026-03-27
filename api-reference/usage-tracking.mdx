@@ -7,9 +7,7 @@ description: "Track and query token usage, costs, and tool execution metrics per
 
 The usage tracking system records per-event token consumption and tool execution metrics. You can query aggregated data by agent, model, or time period.
 
-<Note>The usage tracker records events to a PostgreSQL database whenever an AI completion or tool call is made. The endpoints below are read-only query APIs for retrieving aggregated usage data. When no real usage data exists yet, the cost dashboard returns sample data with a `isMockData: true` flag.</Note>
-
-<Warning>The `UsageLog` Prisma model is not yet added to the database schema. Until it is available, the cost dashboard endpoint always returns mock data with `isMockData: true`. Real usage aggregation will be enabled in a future release once the model is added.</Warning>
+<Note>The usage tracker records events to a PostgreSQL database whenever an AI completion or tool call is made. The endpoints below are read-only query APIs for retrieving aggregated usage data.</Note>
 
 ## Test usage logging (deprecated)
 
@@ -29,9 +27,7 @@ POST /api/test-usage
 GET /api/dashboard/cost
 ```
 
-Requires session authentication. Returns aggregated cost, token, and call data for the cost dashboard. Breaks down spending by agent, model, and day.
-
-<Warning>The `UsageLog` Prisma model has not yet been added to the schema. This endpoint currently always returns sample data with `isMockData` set to `true` and a `message` field explaining that usage tracking is not yet configured. Real data aggregation will be enabled once the model is added.</Warning>
+Requires session authentication. Returns aggregated cost, token, and call data for the cost dashboard. Breaks down spending by agent, model, and day. Plan subscription costs are sourced from the database. AI token usage is fetched from the backend metrics service when available.
 
 ### Query parameters
 
@@ -74,7 +70,11 @@ Requires session authentication. Returns aggregated cost, token, and call data f
       "cost": 9.30
     }
   ],
-  "isMockData": false
+  "isMockData": false,
+  "plan": "solo",
+  "planMonthlyCost": 29,
+  "agentCount": 4,
+  "activeAgents": 3
 }
 ```
 
@@ -102,8 +102,11 @@ Requires session authentication. Returns aggregated cost, token, and call data f
 | `modelBreakdown[].model` | string | Model identifier |
 | `modelBreakdown[].percent` | number | Percentage of total cost attributed to this model |
 | `modelBreakdown[].cost` | number | Cost in USD for this model |
-| `isMockData` | boolean | `true` when the response contains sample data because no real usage data is available |
-| `message` | string \| undefined | Present only when `isMockData` is `true`. Explains that sample data is being returned. |
+| `isMockData` | boolean | Always `false`. Retained for backward compatibility. |
+| `plan` | string | User's current subscription plan (for example `solo`, `collective`, `label`, `network`). |
+| `planMonthlyCost` | number | Monthly cost in USD for the user's current plan. |
+| `agentCount` | number | Total number of agents owned by the user. |
+| `activeAgents` | number | Number of agents in `active` or `running` status. |
 
 ### Errors
 
@@ -385,7 +388,7 @@ For example:
 [Cost API] Found 0 usage logs
 ```
 
-<Note>Because the `UsageLog` Prisma model is not yet in the schema, the log count is currently always `0` and the endpoint returns mock data. Once the model is added and real usage data is available, this log line will reflect the actual number of records queried.</Note>
+<Note>The cost dashboard now sources plan subscription costs from the database and AI token usage from the backend metrics service. If the backend is unavailable, plan-based cost data is still returned.</Note>
 
 If the entire handler fails, a general error is logged and a `500` response is returned:
 
