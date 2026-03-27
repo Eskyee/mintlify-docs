@@ -405,6 +405,83 @@ Returns the clone service status and protocol configuration. No authentication r
 | `clonePrice` | string | Current price to clone an agent |
 | `chainId` | number | Blockchain chain ID for payments |
 
+## Preflight checks
+
+```http
+GET /api/agents/preflight?action={action}&agentId={agentId}
+```
+
+Validates all requirements before performing an operation on an agent. Returns a step-by-step checklist with the status of each prerequisite and the next recommended action.
+
+### Query parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `agentId` | string | Yes | Agent identifier to run preflight checks against |
+| `action` | string | No | The operation to validate prerequisites for. Defaults to `setup`. Options: `setup`, `sponsorship`, `token`, `full`. |
+
+The `action` parameter controls which checks are included in the response:
+
+| Action | Checks included |
+|--------|-----------------|
+| `setup` | Agent existence, pipeline status |
+| `token` | Agent existence, wallet registration, gas availability, pipeline status |
+| `sponsorship` | Agent existence, wallet registration, gas availability, ERC-8004 identity, token deployment, pipeline status |
+| `full` | Same as `sponsorship` — all checks are included |
+
+### Response
+
+```json
+{
+  "ready": false,
+  "action": "sponsorship",
+  "agentId": "agent_123",
+  "checks": [
+    {
+      "step": 1,
+      "action": "Agent exists and is registered",
+      "status": "ready",
+      "detail": "Agent: My Agent"
+    },
+    {
+      "step": 2,
+      "action": "Wallet registered",
+      "status": "required",
+      "detail": "Register a wallet address first"
+    }
+  ],
+  "pipeline": {
+    "currentStep": "wallet",
+    "stepsCompleted": ["agent"],
+    "status": "in_progress"
+  },
+  "nextAction": "Register a wallet address first"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `ready` | boolean | `true` when all checks pass (`ready` or `auto` status) |
+| `action` | string | The action that was validated |
+| `agentId` | string | The agent identifier checked |
+| `checks` | array | Ordered list of check results |
+| `checks[].step` | number | Step number in the checklist |
+| `checks[].action` | string | Description of the check |
+| `checks[].status` | string | Check status: `ready`, `required`, `blocked`, or `auto` |
+| `checks[].detail` | string | Human-readable detail about the check result |
+| `pipeline` | object \| null | Current pipeline state, or `null` if no pipeline exists |
+| `pipeline.currentStep` | string | Current step in the pipeline |
+| `pipeline.stepsCompleted` | string[] | List of completed step identifiers |
+| `pipeline.status` | string | Pipeline status |
+| `nextAction` | string | Recommended next action. When `ready` is `true`, confirms all checks passed. Otherwise, describes the first unresolved requirement. |
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | `agentId` query parameter is required |
+| 500 | Internal server error |
+
 ## List provisioned agents
 
 ```http
