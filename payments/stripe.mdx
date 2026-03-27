@@ -74,7 +74,7 @@ Two webhook endpoints handle Stripe events:
 
 All plans are billed monthly in GBP. A paid subscription is required to provision and use agents — there is no free tier.
 
-<Warning>Attempting to provision an agent without an active paid subscription returns `402 Payment Required`. All users must subscribe to a plan before creating agents. **Note:** The server-side subscription checks on both the web proxy and backend provision endpoints are temporarily bypassed while an environment configuration issue is resolved. The frontend continues to enforce payment before showing the deploy action. These checks will be re-enabled in a future update.</Warning>
+<Warning>Attempting to provision an agent without an active paid subscription returns an error. The web proxy returns `403 Forbidden` with the message `Active subscription required. Please purchase a plan to deploy.` Admin users bypass this check. All non-admin users must subscribe to a plan before creating agents.</Warning>
 
 | Plan | Price | Specs | Key features |
 |------|-------|-------|--------------|
@@ -165,6 +165,51 @@ window.location.href = '/api/stripe/checkout?plan=collective'
 <Warning>
 The legacy `POST /api/checkout` endpoint is deprecated and returns a `410 Gone` status. Use `GET /api/stripe/checkout` instead.
 </Warning>
+
+### Verify a checkout session
+
+After a successful checkout, you can verify the session and retrieve the resulting plan:
+
+```http
+GET /api/checkout/verify?session_id={session_id}
+```
+
+**Parameters**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `session_id` | string | Yes | The Stripe checkout session ID returned after payment |
+
+This endpoint verifies that the checkout session has been paid and returns the subscription details. When the session metadata includes a `userId`, the endpoint also eagerly marks the user's subscription as active in the database. This ensures the user can provision agents immediately without waiting for the Stripe webhook to arrive.
+
+<Note>The subscription activation performed by this endpoint is idempotent. The Stripe webhook will also set the same values when it arrives — whichever runs first wins, and the second update is a no-op.</Note>
+
+**Response**
+
+```json
+{
+  "plan": "collective",
+  "status": "active",
+  "nextBilling": "2026-04-27T00:00:00.000Z",
+  "customerId": "cus_abc123"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `plan` | string | The plan from session metadata (defaults to `solo` if not set) |
+| `status` | string | Always `active` when payment is confirmed |
+| `nextBilling` | string \| null | ISO 8601 date of the next billing cycle, if available from the subscription |
+| `customerId` | string | Stripe customer ID |
+
+**Errors**
+
+| Code | Description |
+|------|-------------|
+| 400 | Missing `session_id` parameter |
+| 402 | Payment not completed |
+| 500 | Verification failed |
+| 503 | Stripe not configured |
 
 ### Buy credits
 
