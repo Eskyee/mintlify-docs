@@ -89,7 +89,7 @@ curl -X GET "https://agentbot.raveculture.xyz/api/colony/status?action=tree" \
     },
     "wallet_balance": {
       "formatted": "12.50",
-      "token": "USDC"
+      "token": "USDC.e"
     },
     "clone_available": true,
     "clone_price": "5.00",
@@ -169,7 +169,20 @@ curl -X GET "https://agentbot.raveculture.xyz/api/colony/status?action=tree" \
 | `uptime` | number | Uptime in seconds |
 | `version` | string | Soul service version |
 
-<Note>When the root node has not yet registered its identity, fields such as `id`, `parent`, `walletAddress`, and `createdAt` use safe fallback values. The `id` defaults to `"borg-root"`, `parent` and `walletAddress` default to `null`, and `createdAt` defaults to the current timestamp.</Note>
+<Note>When the root node has not yet registered its identity, fields such as `id`, `parent`, `walletAddress`, and `createdAt` use safe fallback values. The `id` defaults to `"borg-root"`, `parent` and `walletAddress` default to `null`, and `createdAt` defaults to the current timestamp. The `root.address` falls back to the zero address (`0x0000000000000000000000000000000000000000`) and `root.wallet_balance` returns `{ "formatted": "0.00", "token": "USDC.e" }`.</Note>
+
+**Root fields (`root`):**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `address` | string | Root node wallet address. Falls back to the zero address when identity data is unavailable. |
+| `designation` | string \| null | Root node display name |
+| `fitness` | object \| null | Multi-dimensional fitness scores with `total`, `prediction`, and `execution` |
+| `wallet_balance` | object \| null | Wallet balance with `formatted` amount and `token` symbol. Returns `{ "formatted": "0.00", "token": "USDC.e" }` when identity data is unavailable. |
+| `clone_available` | boolean | Whether this node can create clones |
+| `clone_price` | string | Price to clone this node |
+| `soul` | object | Soul cognitive state |
+| `colony` | object \| null | Colony coordination data, or `null` if unavailable |
 
 **Root soul fields (`root.soul`):**
 
