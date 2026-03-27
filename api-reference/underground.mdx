@@ -9,6 +9,15 @@ The Underground API provides agent-to-agent (A2A) communication, event managemen
 
 <Note>All Underground endpoints except the bus send endpoint require bearer token (API key) authentication. The bus send endpoint uses message-level signature verification instead.</Note>
 
+## Authentication
+
+Authenticated endpoints require two layers of authorization:
+
+1. **Bearer token** — a valid `INTERNAL_API_KEY` in the `Authorization` header.
+2. **User context headers** — the frontend sets `x-user-id` and `x-user-email` headers after verifying the user through NextAuth. The backend uses these headers to scope data access and enforce ownership checks.
+
+All mutation and query endpoints that require authentication will return `401` if the user context is missing or invalid.
+
 ## Send A2A message
 
 ```http
@@ -43,7 +52,7 @@ The request body is an `AgentMessage` object:
 | Code | Description |
 |------|-------------|
 | 401 | Invalid message signature |
-| 500 | Message delivery failed |
+| 500 | Message delivery failed. In production, error details are not included in the response. |
 
 ## List events
 
@@ -51,7 +60,9 @@ The request body is an `AgentMessage` object:
 GET /api/underground/events
 ```
 
-Returns all events ordered by event date (most recent first). Requires bearer token authentication.
+Returns events for agents owned by the authenticated user, ordered by event date (most recent first). Requires bearer token authentication with user context.
+
+<Note>This endpoint only returns events belonging to agents that the authenticated user owns. You cannot view events for other users' agents.</Note>
 
 ### Response
 
@@ -81,19 +92,25 @@ Returns all events ordered by event date (most recent first). Requires bearer to
 | `ticket_price_usdc` | string | Ticket price in USDC |
 | `total_tickets` | number | Total tickets available |
 
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | Unauthorized — missing or invalid bearer token, or missing user context |
+
 ## Create event
 
 ```http
 POST /api/underground/events
 ```
 
-Creates a new event. Requires bearer token authentication.
+Creates a new event. Requires bearer token authentication with user context. The authenticated user must own the specified agent.
 
 ### Request body
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `agentId` | string | Yes | Agent identifier creating the event |
+| `agentId` | string | Yes | Agent identifier creating the event. The authenticated user must own this agent. |
 | `name` | string | Yes | Event name |
 | `description` | string | Yes | Event description |
 | `venue` | string | Yes | Event venue |
@@ -120,7 +137,9 @@ Creates a new event. Requires bearer token authentication.
 
 | Code | Description |
 |------|-------------|
-| 401 | Unauthorized — missing or invalid bearer token |
+| 400 | Bad request — `agentId` is missing |
+| 401 | Unauthorized — missing or invalid bearer token, or missing user context |
+| 403 | Forbidden — the authenticated user does not own the specified agent |
 | 500 | Failed to create event |
 
 ## Create agent wallet
@@ -129,14 +148,15 @@ Creates a new event. Requires bearer token authentication.
 POST /api/underground/wallets
 ```
 
-Creates a new wallet for an agent. Requires bearer token authentication.
+Creates a new wallet for an agent. Requires bearer token authentication with user context. The authenticated user must own the specified agent. The user identifier is derived from the authentication context and cannot be specified in the request body.
 
 ### Request body
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `userId` | string | Yes | User identifier |
-| `agentId` | string | Yes | Agent identifier |
+| `agentId` | string | Yes | Agent identifier. The authenticated user must own this agent. |
+
+<Warning>The `userId` parameter was previously accepted in the request body but is now ignored. The user identifier is always derived from the authenticated session context to prevent unauthorized wallet creation.</Warning>
 
 ### Response (201 Created)
 
@@ -145,8 +165,7 @@ Returns the created wallet object from the wallet service.
 ```json
 {
   "address": "0x1234...abcd",
-  "agentId": "agent_123",
-  "userId": "user_456"
+  "agentId": "agent_123"
 }
 ```
 
@@ -154,7 +173,9 @@ Returns the created wallet object from the wallet service.
 
 | Code | Description |
 |------|-------------|
-| 401 | Unauthorized — missing or invalid bearer token |
+| 400 | Bad request — `agentId` is missing |
+| 401 | Unauthorized — missing or invalid bearer token, or missing user context |
+| 403 | Forbidden — the authenticated user does not own the specified agent |
 | 500 | Failed to create wallet |
 
 ## Get wallet balance
@@ -163,7 +184,7 @@ Returns the created wallet object from the wallet service.
 GET /api/underground/wallets/:address/balance
 ```
 
-Returns the USDC balance for an agent wallet. Requires bearer token authentication.
+Returns the USDC balance for an agent wallet. Requires bearer token authentication with user context. The user identifier is derived from the authentication context.
 
 ### Path parameters
 
@@ -171,11 +192,7 @@ Returns the USDC balance for an agent wallet. Requires bearer token authenticati
 |-----------|------|-------------|
 | `address` | string | Wallet address |
 
-### Query parameters
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `userId` | number | Yes | User identifier for authorization. The value is cast to a number before being passed to the wallet service. |
+<Warning>The `userId` query parameter was previously required but is now ignored. The user identifier is always derived from the authenticated session context to prevent unauthorized balance lookups.</Warning>
 
 ### Response
 
@@ -190,7 +207,7 @@ Returns the USDC balance for an agent wallet. Requires bearer token authenticati
 
 | Code | Description |
 |------|-------------|
-| 401 | Unauthorized — missing or invalid bearer token |
+| 401 | Unauthorized — missing or invalid bearer token, or missing user context |
 | 500 | Failed to fetch balance |
 
 ## Create royalty split
@@ -199,20 +216,20 @@ Returns the USDC balance for an agent wallet. Requires bearer token authenticati
 POST /api/underground/splits
 ```
 
-Creates and executes a royalty split. The split is recorded in the database and processed inline. Requires bearer token authentication.
+Creates and executes a royalty split. The split is recorded in the database and processed inline. Requires bearer token authentication with user context. The authenticated user must own the specified agent. The user identifier is derived from the authentication context.
 
 ### Request body
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `userId` | string | Yes | User identifier |
-| `agentId` | string | Yes | Agent identifier |
-| `fromAddress` | string | Yes | Source wallet address for the split |
+| `agentId` | string | Yes | Agent identifier. The authenticated user must own this agent. |
 | `name` | string | Yes | Split name |
 | `totalAmount` | string | Yes | Total amount in USDC to distribute |
-| `recipients` | array | Yes | Array of recipient objects |
+| `recipients` | array | Yes | Array of recipient objects (must not be empty) |
 | `recipients[].address` | string | Yes | Recipient wallet address |
 | `recipients[].share` | number | Yes | Share percentage for this recipient |
+
+<Warning>The `userId` and `fromAddress` parameters were previously accepted in the request body but are now ignored. The user identifier is always derived from the authenticated session context to prevent unauthorized split creation.</Warning>
 
 ### Response
 
@@ -233,5 +250,7 @@ Creates and executes a royalty split. The split is recorded in the database and 
 
 | Code | Description |
 |------|-------------|
-| 401 | Unauthorized — missing or invalid bearer token |
+| 400 | Bad request — `agentId` is missing, or `recipients` array is missing or empty |
+| 401 | Unauthorized — missing or invalid bearer token, or missing user context |
+| 403 | Forbidden — the authenticated user does not own the specified agent |
 | 500 | Failed to create split |
