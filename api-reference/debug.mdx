@@ -1,0 +1,77 @@
+---
+title: Debug API
+description: "Execute allowlisted diagnostic commands against an agent"
+---
+
+# Debug API
+
+Run diagnostic commands against a running agent. Only a predefined set of commands is accepted.
+
+## Execute a debug command
+
+```http
+POST /api/debug
+```
+
+Runs one of the allowlisted commands and returns the command output.
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `command` | string | Yes | The command to execute. Must be one of the allowlisted values listed below. |
+| `agentId` | string | Yes | The agent to run the command against |
+
+### Allowlisted commands
+
+| Command | Description |
+|---------|-------------|
+| `gateway.restart` | Restart the agent gateway process |
+| `openclaw.doctor` | Run a full health diagnostic |
+| `openclaw.logs.tail` | Tail the most recent log entries |
+| `openclaw.status` | Show agent status summary |
+| `openclaw.config.show` | Display the current agent configuration |
+| `openclaw.memory.stats` | Show memory store statistics |
+| `openclaw.skills.list` | List installed skills |
+| `openclaw.channels.status` | Show channel connection status |
+| `openclaw.cron.list` | List scheduled cron jobs |
+| `openclaw.version` | Display version information |
+
+### Response
+
+```json
+{
+  "command": "openclaw.status",
+  "output": "OpenClaw Agent Status\n━━━━━━━━━━━━━━━━━━━━━━\nVersion:     2026.3.23\nUptime:      3d 14h 22m\nStatus:      ACTIVE\n...",
+  "exitCode": 0,
+  "duration": 342,
+  "timestamp": "2026-03-27T15:30:00.000Z"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `command` | string | The command that was executed |
+| `output` | string | The command output text |
+| `exitCode` | number | Exit code of the command. `0` indicates success. |
+| `duration` | number | Execution time in milliseconds |
+| `timestamp` | string | ISO 8601 timestamp when the command completed |
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | `Missing required fields: command, agentId` — one or both required fields are missing |
+| 400 | `Command "..." is not in the allowlist` — the command is not one of the ten allowlisted values |
+| 400 | `Invalid request body` — the request body is not valid JSON |
+
+### Example
+
+```bash
+curl -X POST https://agentbot.raveculture.xyz/api/debug \
+  -H "Content-Type: application/json" \
+  -d '{
+    "command": "openclaw.doctor",
+    "agentId": "agent_abc123"
+  }'
+```

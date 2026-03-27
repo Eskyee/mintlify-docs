@@ -294,6 +294,12 @@ curl -X POST https://agentbot.raveculture.xyz/api/ai/chat \
 | `/api/summarize` | POST | Summarize a URL — returns title, description, headings, paragraphs, word count (web summarizer service) |
 | `/api/extract` | POST | Extract links, images, and Open Graph metadata from a URL (web summarizer service) |
 | `/api/clawmerchants` | GET | List available ClawMerchants data feeds, or fetch a specific feed by `feed` query parameter |
+| `/api/debug` | POST | Execute an allowlisted diagnostic command against an agent |
+| `/api/config` | GET | Get current agent configuration and backup list |
+| `/api/config` | POST | Save a new agent configuration (auto-backs up the previous config) |
+| `/api/config` | PUT | Restore a previous configuration from a backup |
+| `/api/devices` | GET | List pending and approved paired devices |
+| `/api/devices` | POST | Approve, deny, or revoke a paired device |
 | `/api/market-intel` | GET | Live competitive landscape, infrastructure signals, and market opportunities |
 | `/v1/models` | GET | List all available models (OpenAI-compatible, no auth required) |
 | `/v1/models/:model` | GET | Get a single model by ID (OpenAI-compatible, no auth required) |
