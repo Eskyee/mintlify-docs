@@ -154,20 +154,22 @@ curl -X GET "https://agentbot.raveculture.xyz/api/colony/status?action=tree" \
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `id` | string | Instance identifier |
+| `id` | string | Instance identifier. Falls back to `"borg-root"` when the root node has no registered identity. |
 | `name` | string | Agent display name |
 | `generation` | number | Generation in the colony lineage (1 = root, 2 = child) |
 | `fitness` | number | Fitness score (0–100) |
 | `specialization` | string | Agent specialization niche |
 | `children` | number | Number of child agents |
-| `parent` | string \| null | Parent agent wallet address, or `null` for root agents |
-| `walletAddress` | string | Agent wallet address |
+| `parent` | string \| null | Parent agent wallet address, or `null` for root agents and when identity data is unavailable |
+| `walletAddress` | string \| null | Agent wallet address, or `null` when identity data is unavailable |
 | `status` | string | Agent status (`active` or `stale`) |
-| `createdAt` | string | ISO 8601 creation timestamp |
+| `createdAt` | string | ISO 8601 creation timestamp. Falls back to the current time when identity data is unavailable. |
 | `url` | string | Soul service URL for this agent |
 | `endpoints` | array | Available service endpoints with slug, description, and price |
 | `uptime` | number | Uptime in seconds |
 | `version` | string | Soul service version |
+
+<Note>When the root node has not yet registered its identity, fields such as `id`, `parent`, `walletAddress`, and `createdAt` use safe fallback values. The `id` defaults to `"borg-root"`, `parent` and `walletAddress` default to `null`, and `createdAt` defaults to the current timestamp.</Note>
 
 **Root soul fields (`root.soul`):**
 
@@ -361,7 +363,7 @@ When the soul service cannot be reached, the endpoint returns HTTP `503`:
 {
   "error": "Soul service unavailable",
   "detail": "Connection refused",
-  "soul_url": "http://localhost:4023"
+  "soul_url": "https://tempo-x402-production.up.railway.app"
 }
 ```
 
