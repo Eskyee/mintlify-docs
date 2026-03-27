@@ -193,7 +193,8 @@ curl -X POST https://agentbot.raveculture.xyz/api/ai/chat \
 | `/api/wallet/cdp` | POST | Create a CDP wallet client |
 | `/api/wallet/top-up` | GET | Create a Stripe checkout session for wallet top-up |
 | `/api/wallet/top-up` | POST | Stripe webhook for wallet top-up payment completion |
-| `/api/provision` | POST | Provision agent with channel tokens (requires auth) |
+| `/api/provision` | POST | Provision agent with channel tokens or as OpenClaw-only deployment (requires auth) |
+| `/api/user/openclaw` | GET | Get the authenticated user's OpenClaw URL and instance ID |
 | `/api/validate-key` | POST | Validate an API key (backend only) |
 | `/api/register-home` | POST | Register a Home mode installation (backend only, requires identity headers) |
 | `/api/register-link` | POST | Register a Link mode installation (backend only, requires identity headers) |

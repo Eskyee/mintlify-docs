@@ -897,7 +897,9 @@ DELETE /api/agents/:id/verify
 POST /api/provision
 ```
 
-Provisions a new agent with messaging channel tokens. Requires session authentication. When a session is active, the user's email is automatically resolved from it. At least one channel token is required.
+Provisions a new agent with messaging channel tokens. Requires session authentication. When a session is active, the user's email is automatically resolved from it.
+
+When `autoProvision` is `true` or `agentType` is `business`, channel tokens are not required and the agent is provisioned as an OpenClaw-only deployment. Otherwise, at least one channel token (Telegram, WhatsApp, or Discord) is required.
 
 ### Admin check
 
@@ -918,12 +920,16 @@ The request is proxied to the backend provisioning service. When `MUX_TOKEN_ID` 
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `telegramToken` | string | Conditional | Telegram bot token. At least one channel token is required. |
+| `telegramToken` | string | Conditional | Telegram bot token. At least one channel token is required unless `autoProvision` is `true` or `agentType` is `business`. |
 | `telegramUserId` | string | No | Telegram user ID for owner binding |
-| `whatsappToken` | string | Conditional | WhatsApp API token. At least one channel token is required. |
-| `discordBotToken` | string | Conditional | Discord bot token. At least one channel token is required. |
+| `whatsappToken` | string | Conditional | WhatsApp API token. At least one channel token is required unless `autoProvision` is `true` or `agentType` is `business`. |
+| `discordBotToken` | string | Conditional | Discord bot token. At least one channel token is required unless `autoProvision` is `true` or `agentType` is `business`. |
 | `aiProvider` | string | No | AI provider (default: `openrouter`). Options: `openrouter`, `gemini`, `groq`, `anthropic`, `openai`. Each provider maps to a default model — see [AI provider defaults](#ai-provider-defaults) below. |
 | `plan` | string | No | Plan tier. Options: `solo`, `collective`, `label`, `network`. Defaults to `free` when omitted. Since `free` is not a valid plan, omitting this field returns a `400` validation error — you must explicitly specify a paid plan when calling the backend directly. |
+| `model` | string | No | AI model identifier. When omitted, the default model for the selected `aiProvider` is used (see [AI provider defaults](#ai-provider-defaults)). |
+| `skills` | string[] | No | List of skill identifiers to enable on the agent. |
+| `agentType` | string | No | Agent type. When set to `business`, the agent is provisioned as an OpenClaw-only deployment and channel tokens are not required. |
+| `autoProvision` | boolean | No | When `true`, the agent is provisioned as an OpenClaw-only deployment and channel tokens are not required. The onboard flow sets this automatically in deploy mode. |
 | `email` | string | No | User email address. When omitted, the email is automatically populated from the authenticated session. When a session email is available, it takes priority and the body email is not used for the admin check. This field is only checked against `ADMIN_EMAILS` when no session email is present (see [admin check](#admin-check) above). The resolved email is forwarded to the backend in the `X-User-Email` header. |
 | `stripeSubscriptionId` | string | No | Stripe subscription ID from checkout. This field is accepted by the backend provisioning service directly. The web proxy does not forward this field — it performs its own subscription check against the database instead. |
 
@@ -947,6 +953,8 @@ The proxy returns a filtered subset of the backend response:
 ```
 
 <Note>The `/api/provision` proxy returns only `success`, `userId`, `subdomain`, `url`, `streamKey`, and `liveStreamId`. The full response shape from the backend provisioning service is shown below.</Note>
+
+<Note>When provisioning with `autoProvision: true` or `agentType: "business"` (OpenClaw-only deployment), the proxy also persists the `openclawUrl` and `openclawInstanceId` to the user record. You can retrieve these values later using [`GET /api/user/openclaw`](#get-user-openclaw-instance).</Note>
 
 ### Full backend response
 
@@ -1019,7 +1027,7 @@ When calling the backend provisioning service directly, the response includes ad
 
 | Code | Description |
 |------|-------------|
-| 400 | At least one channel token required (Telegram, WhatsApp, or Discord), or invalid `aiProvider` value |
+| 400 | At least one channel token required (Telegram, WhatsApp, or Discord) when `autoProvision` is not `true` and `agentType` is not `business`, or invalid `aiProvider` value |
 | 400 | Invalid plan value (backend only). The `plan` field must be one of `solo`, `collective`, `label`, or `network`. The web proxy defaults to `label` when forwarding to the backend, so this error is only returned when calling the backend directly with an unrecognized value. Since the `plan` field defaults to `free` when omitted, and `free` is not a valid plan, callers must always specify an explicit paid plan. The error message is: `Invalid plan. Supported: solo, collective, label, network`. |
 | 401 | Authentication required. Returned when no session is present and the resolved email (session email or body `email`) does not match a configured admin email (or no email is available). |
 | 402 | Active subscription required (web proxy). Returned when the authenticated user does not have an active subscription and is not an admin. The response body includes a `code` field set to `SUBSCRIPTION_REQUIRED`. |
@@ -1267,6 +1275,28 @@ Returns resource usage for a specific agent service. Requires bearer token authe
   "timestamp": "2026-03-20T00:00:00Z"
 }
 ```
+
+## Get user OpenClaw instance
+
+```http
+GET /api/user/openclaw
+```
+
+Returns the authenticated user's OpenClaw URL and instance ID. These values are set during provisioning when `autoProvision` is `true` or `agentType` is `business`. Requires session authentication.
+
+### Response
+
+```json
+{
+  "openclawUrl": "https://dj-a1b2c3d4e5.agentbot.raveculture.xyz",
+  "openclawInstanceId": "inst_a1b2c3d4e5"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `openclawUrl` | string \| null | The OpenClaw dashboard URL for this user. `null` when no OpenClaw instance has been provisioned. |
+| `openclawInstanceId` | string \| null | The OpenClaw instance identifier. `null` when no OpenClaw instance has been provisioned. |
 
 ## Agent interaction
 
