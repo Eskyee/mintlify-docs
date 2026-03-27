@@ -179,6 +179,7 @@ The following headers are required for plan enforcement:
 | `temperature` | number | No | Sampling temperature |
 | `top_p` | number | No | Nucleus sampling parameter |
 | `max_tokens` | number | No | Maximum tokens in the response |
+| `algorithmMode` | boolean | No | When `true`, injects the PAI Algorithm system prompt into the conversation. This enables a 7-phase structured problem-solving format (Observe, Think, Plan, Build, Execute, Verify, Learn) for the agent's responses. The system prompt is prepended to the messages array only if no existing system message already contains the Algorithm phases. Defaults to `false`. |
 
 ### Example request
 
@@ -190,6 +191,19 @@ The following headers are required for plan enforcement:
   ],
   "temperature": 0.7,
   "max_tokens": 1024
+}
+```
+
+### Example request with Algorithm mode
+
+When `algorithmMode` is enabled, the agent responds using a structured 7-phase format for non-trivial tasks:
+
+```json
+{
+  "messages": [
+    { "role": "user", "content": "Audit the authentication flow for security issues" }
+  ],
+  "algorithmMode": true
 }
 ```
 
@@ -300,6 +314,24 @@ In addition to provider-level fallbacks, the backend AI service uses tag-based m
 | `general` | `general`, `balanced` |
 
 When no model matches the requested task tags, the first available model from the OpenRouter catalog is used as a fallback. All task-based requests are routed through OpenRouter.
+
+## Algorithm mode
+
+The chat endpoint supports an optional structured problem-solving mode called **PAI Algorithm mode**. When enabled via the `algorithmMode` parameter, a system prompt is injected that instructs the model to process non-trivial tasks using a 7-phase format:
+
+| Phase | Name | Purpose |
+|-------|------|---------|
+| 1 | Observe | Reverse-engineer the request: what was asked, what was implied, and what is not wanted. Produce 3–5 Ideal State Criteria (ISC). |
+| 2 | Think | Select capabilities and a composition pattern (Pipeline, TDD Loop, Fan-out, or Gate). |
+| 3 | Plan | Define concrete numbered steps with clear handoffs. |
+| 4 | Build | Create artifacts such as files, configs, or code. |
+| 5 | Execute | Run the work using the selected capabilities. |
+| 6 | Verify | Test each ISC criterion with evidence, marking each as pass or fail. |
+| 7 | Learn | Summarize what worked, what didn't, and what to improve. |
+
+The Algorithm system prompt is prepended to the `messages` array as a `system` message. If the messages already contain a system message with Algorithm phase markers, the prompt is not duplicated. For simple greetings or acknowledgments, the model skips the 7-phase format and responds naturally.
+
+<Note>Algorithm mode is opt-in and does not affect billing or model selection. It only modifies the system prompt sent to the model. Based on Daniel Miessler's TheAlgorithm v0.2.24.</Note>
 
 ## Estimate cost
 
