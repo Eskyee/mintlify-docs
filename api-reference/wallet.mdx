@@ -270,7 +270,7 @@ If the failure is caused by a configuration error, the response includes `error`
 POST /api/wallet/create
 ```
 
-Creates a new wallet using the Coinbase Developer Platform SDK.
+Requires session authentication. Creates a new wallet using the Coinbase Developer Platform SDK.
 
 ### Request body
 
@@ -294,6 +294,7 @@ Creates a new wallet using the Coinbase Developer Platform SDK.
 | Code | Description |
 |------|-------------|
 | 400 | Email required |
+| 401 | Unauthorized — no valid session |
 | 500 | CDP not configured. Response includes a `setup` field with configuration instructions. Generic errors include a `details` field with the error message. |
 
 ## CDP wallet status

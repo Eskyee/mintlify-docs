@@ -29,7 +29,7 @@ POST /api/test-usage
 GET /api/dashboard/cost
 ```
 
-Returns aggregated cost, token, and call data for the cost dashboard. Breaks down spending by agent, model, and day.
+Requires session authentication. Returns aggregated cost, token, and call data for the cost dashboard. Breaks down spending by agent, model, and day.
 
 <Warning>The `UsageLog` Prisma model has not yet been added to the schema. This endpoint currently always returns sample data with `isMockData` set to `true` and a `message` field explaining that usage tracking is not yet configured. Real data aggregation will be enabled once the model is added.</Warning>
 
@@ -109,6 +109,7 @@ Returns aggregated cost, token, and call data for the cost dashboard. Breaks dow
 
 | Code | Description |
 |------|-------------|
+| 401 | Unauthorized — no valid session |
 | 500 | Failed to fetch cost data |
 
 ---
