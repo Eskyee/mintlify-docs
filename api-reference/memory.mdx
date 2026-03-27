@@ -40,6 +40,7 @@ GET /api/memory?agentId=agent_123
 | 400 | `agentId` query parameter required |
 | 401 | Unauthorized |
 | 404 | Agent not found |
+| 500 | Failed to fetch memory |
 
 ## Store memory (single key)
 
@@ -75,6 +76,7 @@ Write a single key-value pair to agent memory.
 | 400 | `agentId` required, memory data required, or value too large (max 100 KB) |
 | 401 | Unauthorized |
 | 404 | Agent not found |
+| 500 | Failed to save memory |
 
 ## Store memory (bulk)
 
@@ -119,3 +121,4 @@ Write multiple key-value pairs in a single request.
 | 400 | `agentId` required, memory data required, or too many keys (max 50) |
 | 401 | Unauthorized |
 | 404 | Agent not found |
+| 500 | Failed to save memory |
