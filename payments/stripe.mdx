@@ -143,7 +143,7 @@ GET /api/stripe/checkout?plan={plan_id}
 |-----------|------|----------|-------------|
 | `plan` | string | Yes | One of `solo`, `collective`, `label`, or `network` |
 
-<Note>The `plan` parameter uses internal plan IDs. The billing page maps these to display names: `solo` is shown as "Solo", `collective` as "Collective", and `label` as "Label".</Note>
+<Note>The `plan` parameter uses internal plan IDs. The billing page maps these to display names: `solo` is shown as "Solo", `collective` as "Collective", `label` as "Label", and `network` as "Network".</Note>
 
 The endpoint redirects the user to Stripe's hosted checkout page. On successful payment, the user is redirected to `/checkout/success` with the Stripe session ID and plan as query parameters. On cancellation, the user returns to the pricing page.
 
@@ -477,7 +477,7 @@ export async function POST(request) {
 }
 ```
 
-<Warning>The legacy endpoint at `/api/stripe/webhook` is deprecated. It logs a deprecation warning and forwards requests to `/api/webhooks/stripe`. Update your Stripe dashboard webhook URL to the canonical endpoint. A `GET` request to the legacy endpoint returns `{ "status": "deprecated", "message": "Use /api/webhooks/stripe instead" }`.</Warning>
+<Warning>The legacy endpoint at `/api/stripe/webhook` is deprecated. It logs a deprecation warning and forwards requests to `/api/webhooks/stripe`. Update your Stripe dashboard webhook URL to the canonical endpoint. If the forwarding request fails, the legacy endpoint returns a `502 Bad Gateway` response with `{ "error": "Forward failed" }`. A `GET` request to the legacy endpoint returns `{ "status": "deprecated", "message": "Use /api/webhooks/stripe instead" }`.</Warning>
 
 ### Plan mapping
 
