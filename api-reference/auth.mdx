@@ -15,6 +15,8 @@ The backend uses two authentication patterns depending on the endpoint.
 
 Endpoints such as `/api/deployments`, `/api/openclaw/instances`, and per-agent lifecycle routes require a shared API key passed as a bearer token. The key is compared against the configured `INTERNAL_API_KEY` using a timing-safe comparison.
 
+<Note>The `/api/openclaw/proxy/*` route is exempt from bearer token authentication. OpenClaw's own token and password authentication handles access control on the proxied service. See the [OpenClaw proxy](/api-reference/agents#openclaw-proxy-backend) endpoint for details.</Note>
+
 ```bash
 curl -X GET https://backend.example.com/api/openclaw/instances \
   -H "Authorization: Bearer YOUR_INTERNAL_API_KEY"

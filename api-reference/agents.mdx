@@ -1289,6 +1289,32 @@ If the agent service is already running, returns the existing deployment details
 | 401 | Unauthorized |
 | 500 | Deployment failed. When the Railway API is not reachable, the error message indicates that provisioning is unavailable. Check the [backend health endpoint](/api-reference/health#backend-health-check) to verify Railway API availability before deploying. |
 
+## OpenClaw proxy (backend)
+
+```http
+ALL /api/openclaw/proxy/:agentId/*
+```
+
+Transparently proxies HTTP and WebSocket requests to an agent's OpenClaw Control UI running on the internal network. The proxy forwards requests to the agent's internal address and rewrites the path so the OpenClaw UI receives requests at its expected root.
+
+**No bearer token authentication is required.** This route is exempt from the backend API key middleware. OpenClaw handles its own token and password authentication on the proxied service, so users can access the Control UI directly.
+
+WebSocket connections to this path are also proxied, allowing real-time communication with the OpenClaw instance.
+
+### Path parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `agentId` | string | Agent identifier (alphanumeric, hyphens, and underscores only) |
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 502 | The OpenClaw instance is unreachable |
+
+<Note>The `agentId` parameter is sanitized to alphanumeric characters, hyphens, and underscores. Any other characters are stripped before the proxy target is resolved.</Note>
+
 ## OpenClaw version (backend)
 
 ```http
