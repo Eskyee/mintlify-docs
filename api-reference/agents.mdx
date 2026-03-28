@@ -323,7 +323,7 @@ Admin users (configured via `ADMIN_EMAILS`) are exempt from the following restri
 - **Subscription requirement** — admins can provision agents without an active subscription (the `402` error is not returned).
 - **Agent limit** — admins receive an elevated agent slot limit instead of the plan-based cap.
 
-Admin status is determined by checking the session email against `ADMIN_EMAILS`. This endpoint does not accept an `email` field in the request body — only the authenticated session email is used for the admin check. See [admin check](#admin-check) in the `POST /api/provision` section for the legacy endpoint's resolution order, which also supports a body email fallback when no session is present.
+Admin status is determined by checking the session email against `ADMIN_EMAILS`. This endpoint does not accept an `email` field in the request body — only the authenticated session email is used for the admin check. The `POST /api/provision` endpoint uses the same session-only admin check (see [admin check](#admin-check)).
 
 <Note>The backend also supports a `TESTER_EMAILS` environment variable. When backend payment enforcement is re-enabled, emails listed in `TESTER_EMAILS` will bypass the Stripe subscription check, similar to admin emails. This feature is currently inactive because backend payment enforcement is disabled (see the `402` error note below).</Note>
 
@@ -973,18 +973,26 @@ When `autoProvision` is `true` or `agentType` is `business`, channel tokens are 
 
 ### Admin check
 
-Admin status is determined by resolving a single email and checking it against the configured `ADMIN_EMAILS`:
+Admin status is determined using the session email only. The `email` field in the request body is **not** used for admin resolution.
 
-1. **Session email** — if an authenticated session exists, the session email is used.
-2. **Body email fallback** — if no session email is available (for example, the session is missing or the session user has no email), the `email` field in the request body is used instead.
+1. **Session email** — the email from the authenticated session is checked against the configured `ADMIN_EMAILS`.
 
-The first available email is checked against `ADMIN_EMAILS`. If it matches, the caller is treated as an admin. When the session is missing entirely (for example, after a Stripe checkout redirect loses the session cookie) and the body `email` matches an admin, a synthetic session is created and the request proceeds without requiring a real session. Non-admin users without a valid session receive a `401` error.
+If the session email matches an admin email, the caller is treated as an admin. When the session is missing but the session email resolves to an admin, a synthetic session is created and the request proceeds. Non-admin users without a valid session receive a `401` error.
 
-<Note>Only one email is checked — the session email takes priority. If the session email exists but is not an admin, the body email is not checked as a secondary fallback. This differs from previous behavior where both emails were checked independently.</Note>
+<Note>The body `email` field is no longer used as a fallback for admin detection. Only the session email is checked. This is a change from previous behavior where the body email was checked when no session email was available.</Note>
 
 <Warning>This endpoint is subject to the general rate limit of 120 requests per minute per IP.</Warning>
 
-The request is proxied to the backend provisioning service. When `MUX_TOKEN_ID` and `MUX_TOKEN_SECRET` are configured, the backend creates a real Mux live stream via the Mux API with public playback policy. When Mux credentials are not configured, placeholder streaming credentials are returned instead.
+### Provisioning strategy
+
+The endpoint provisions agents using a two-path strategy, tried in order:
+
+1. **Backend service** — the request is forwarded to the backend Express service (`BACKEND_API_URL`). If a fallback URL is configured (`BACKEND_API_FALLBACK_URL`), it is tried next if the primary fails. Non-JSON responses (such as HTML error pages from a proxy or load balancer) are detected and treated as failures, avoiding the previous "Unexpected token" parsing errors.
+2. **Railway direct provisioning** — when all backend URLs fail or are not configured, the endpoint falls back to provisioning the agent container directly via the Railway GraphQL API. This path requires `RAILWAY_API_KEY`, `RAILWAY_PROJECT_ID`, and `RAILWAY_ENVIRONMENT_ID` to be set. The Railway path creates a new Railway service, injects environment variables, and triggers a deployment.
+
+If both paths fail, the endpoint returns a `502` error.
+
+When the backend path succeeds and `MUX_TOKEN_ID` and `MUX_TOKEN_SECRET` are configured, the backend creates a real Mux live stream via the Mux API with public playback policy. When Mux credentials are not configured, placeholder streaming credentials are returned instead. The Railway direct path does not create Mux streams.
 
 ### Request body
 
@@ -1000,16 +1008,20 @@ The request is proxied to the backend provisioning service. When `MUX_TOKEN_ID` 
 | `skills` | string[] | No | List of skill identifiers to enable on the agent. |
 | `agentType` | string | No | Agent type. When set to `business`, the agent is provisioned as an OpenClaw-only deployment and channel tokens are not required. |
 | `autoProvision` | boolean | No | When `true`, the agent is provisioned as an OpenClaw-only deployment and channel tokens are not required. The onboard flow sets this automatically in deploy mode. |
-| `email` | string | No | User email address. When omitted, the email is automatically populated from the authenticated session. When a session email is available, it takes priority and the body email is not used for the admin check. This field is only checked against `ADMIN_EMAILS` when no session email is present (see [admin check](#admin-check) above). The resolved email is forwarded to the backend in the `X-User-Email` header. |
+| `email` | string | No | User email address. This field is forwarded to the backend in the request payload but is **not** used for admin detection — only the session email is used for the admin check (see [admin check](#admin-check) above). The session email is sent to the backend in the `X-User-Email` header. |
 | `stripeSubscriptionId` | string | No | Stripe subscription ID from checkout. This field is accepted by the backend provisioning service directly. The web proxy does not forward this field — it performs its own subscription check against the database instead. |
 
-<Note>When a session is active, the server resolves the user email from the session via `getServerSession`. The session email is used for the admin check. When no session email is available, the `email` field from the request body is checked against `ADMIN_EMAILS` — if it matches, a synthetic session is created and the request proceeds. The resolved email is sent to the backend provisioning service in the `X-User-Email` header.</Note>
+<Note>The server resolves the user email exclusively from the authenticated session. The session email is sent to the backend provisioning service in the `X-User-Email` header and the session user ID is sent in the `X-User-Id` header. The `email` field in the request body is not used for authentication or admin detection.</Note>
 
 <Warning>The following request fields are deprecated and no longer accepted: `whatsappPhoneNumberId`, `whatsappBusinessAccountId`, `discordGuildId`, `discordChannelId`.</Warning>
 
 ### Response
 
-The proxy returns a filtered subset of the backend response:
+The response shape depends on which provisioning path succeeds.
+
+#### Backend path response
+
+When the backend Express service handles the request, the proxy returns a filtered subset:
 
 ```json
 {
@@ -1022,9 +1034,31 @@ The proxy returns a filtered subset of the backend response:
 }
 ```
 
-<Note>The `/api/provision` proxy returns only `success`, `userId`, `subdomain`, `url`, `streamKey`, and `liveStreamId`. The full response shape from the backend provisioning service is shown below.</Note>
+<Note>The backend path returns `success`, `userId`, `subdomain`, `url`, `streamKey`, and `liveStreamId`. The full response shape from the backend provisioning service is shown below.</Note>
 
-<Note>When provisioning with `autoProvision: true` or `agentType: "business"` (OpenClaw-only deployment), the proxy also persists the `openclawUrl` and `openclawInstanceId` to the user record. You can retrieve these values later using [`GET /api/user/openclaw`](#get-user-openclaw-instance).</Note>
+#### Railway direct path response
+
+When the Railway fallback handles the request, the response has a different shape:
+
+```json
+{
+  "success": true,
+  "userId": "a1b2c3d4e5",
+  "url": "https://agentbot-agent-a1b2c3d4e5.up.railway.app",
+  "status": "deploying"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `success` | boolean | Whether the provisioning request was accepted |
+| `userId` | string | The generated agent ID |
+| `url` | string | The Railway service URL for the agent (format: `https://agentbot-agent-{agentId}.up.railway.app`) |
+| `status` | string | Always `deploying` for the Railway path. The agent service is created and the deployment is triggered, but it may not be ready to receive traffic immediately. |
+
+<Note>The Railway path does not return `subdomain`, `streamKey`, or `liveStreamId`. These fields are only available when the backend Express service handles the request. The `status` field is `deploying` (not `active`) because the Railway service is created asynchronously.</Note>
+
+<Note>On a successful provision through either path, the proxy persists the `openclawUrl` and `openclawInstanceId` to the user record in the database. You can retrieve these values later using [`GET /api/user/openclaw`](#get-user-openclaw-instance).</Note>
 
 ### Full backend response
 
@@ -1099,13 +1133,13 @@ When calling the backend provisioning service directly, the response includes ad
 |------|-------------|
 | 400 | At least one channel token required (Telegram, WhatsApp, or Discord) when `autoProvision` is not `true` and `agentType` is not `business`, or invalid `aiProvider` value |
 | 400 | Invalid plan value (backend only). The `plan` field must be one of `solo`, `collective`, `label`, or `network`. The web proxy defaults to `label` when forwarding to the backend, so this error is only returned when calling the backend directly with an unrecognized value. Since the `plan` field defaults to `free` when omitted, and `free` is not a valid plan, callers must always specify an explicit paid plan. The error message is: `Invalid plan. Supported: solo, collective, label, network`. |
-| 401 | Authentication required. Returned when no session is present and the resolved email (session email or body `email`) does not match a configured admin email (or no email is available). |
+| 401 | Authentication required. Returned when no valid session is present, or the session email does not match a configured admin email. The body `email` field is not used for authentication. |
 | 403 | Active subscription required (web proxy). Returned when the authenticated user does not have an active subscription and is not an admin. The response body includes `success: false` and an `error` message: `Active subscription required. Please purchase a plan to deploy.` |
 | 402 | No free tier available. Returned when `plan` is `free` (the default when omitted). The response body includes `code: "PAYMENT_REQUIRED"` and the message `"No free tier. Choose a paid plan to get started."` You must explicitly specify a paid plan (`solo`, `collective`, `label`, or `network`). |
 | 402 | Active subscription required (backend). **Currently disabled.** This check is commented out in the backend while payment enforcement is being validated. When re-enabled, it will be returned when a valid paid plan is specified but no Stripe subscription ID is provided and the caller is not an admin or tester. The response body will include a `code` field set to `PAYMENT_REQUIRED`. |
 | 402 | Agent limit reached for your plan. The response body includes a `code` field set to `AGENT_LIMIT_REACHED`, along with `current` (current agent count) and `limit` (maximum allowed) fields. Provisioning limits: `solo` 1, `collective` 3, `label` 10, `network` unlimited. |
 | 500 | Internal server error |
-| 502 | Provisioning service unavailable or returned an error. All backend URLs failed or returned non-success responses. |
+| 502 | Provisioning service unavailable. All backend URLs failed or returned non-JSON/error responses, and Railway direct provisioning also failed or is not configured. The error message from the last attempted path is included in the response. |
 | 503 | Provisioning is temporarily disabled (kill switch active) or provisioning service misconfigured. |
 
 ### AI provider defaults
