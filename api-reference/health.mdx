@@ -78,9 +78,9 @@ An HTTP `500` is returned only when an unexpected error occurs while collecting 
 GET /health
 ```
 
-No authentication required. Returns backend service status including Render API availability. This endpoint is served by the backend API service (without the `/api` prefix).
+No authentication required. Returns backend service status including Railway API availability. This endpoint is served by the backend API service (without the `/api` prefix).
 
-<Note>The backend API continues to serve non-provisioning endpoints (health, metrics, auth, AI, registration) even when the Render API is not reachable. Agent provisioning and lifecycle operations are disabled until the Render API becomes available.</Note>
+<Note>The backend API continues to serve non-provisioning endpoints (health, metrics, auth, AI, registration) even when the Railway API is not reachable. Agent provisioning and lifecycle operations are disabled until the Railway API becomes available.</Note>
 
 ### Response
 
@@ -98,13 +98,13 @@ No authentication required. Returns backend service status including Render API 
 |-------|------|-------------|
 | `status` | string | Always `ok` when the backend is running |
 | `timestamp` | string | ISO 8601 timestamp of the health check |
-| `docker` | string | Provisioning infrastructure availability. `available` when the Render API is reachable, `unavailable` otherwise. This field name is retained for backward compatibility. |
-| `provisioning` | string | Agent provisioning capability. `enabled` when the Render API is reachable, `disabled` otherwise. |
-| `provider` | string | Provisioning infrastructure provider. Currently always `render`. |
+| `docker` | string | Provisioning infrastructure availability. `available` when the Railway API is reachable, `unavailable` otherwise. This field name is retained for backward compatibility. |
+| `provisioning` | string | Agent provisioning capability. `enabled` when the Railway API is reachable, `disabled` otherwise. |
+| `provider` | string | Provisioning infrastructure provider. Currently returns `render` for backward compatibility, but the underlying infrastructure uses Railway. |
 
-### Response when the Render API is unavailable
+### Response when the Railway API is unavailable
 
-When the Render API is not reachable, the health endpoint still returns HTTP `200` but reports degraded capabilities:
+When the Railway API is not reachable, the health endpoint still returns HTTP `200` but reports degraded capabilities:
 
 ```json
 {
@@ -118,7 +118,7 @@ When the Render API is not reachable, the health endpoint still returns HTTP `20
 
 When `provisioning` is `disabled`, any request to a provisioning-dependent endpoint (such as deploying, starting, stopping, or restarting an agent) returns a `500` error. Non-provisioning endpoints continue to operate normally.
 
-<Note>The `provider` field indicates which infrastructure provider is used for agent deployments. This is currently always `render` but may change in future releases.</Note>
+<Note>The `provider` field currently returns `render` for backward compatibility. Agent containers are now provisioned on Railway. This value may be updated to `railway` in a future release.</Note>
 
 ## Get heartbeat settings
 
@@ -297,7 +297,7 @@ Both endpoints are unauthenticated and bind to the service's internal port (`187
 | `failing` | array | List of failing readiness checks. Empty when all checks pass. |
 | `uptimeMs` | number | Gateway uptime in milliseconds since startup |
 
-<Note>The backend probes `/healthz` on the agent's public Render URL for health checks (with a 5-second timeout). The `/healthz` and `/readyz` endpoints are provided by the OpenClaw image itself and are available on all agent services.</Note>
+<Note>The backend probes `/healthz` on the agent's public Railway URL for health checks (with a 5-second timeout). The `/healthz` and `/readyz` endpoints are provided by the OpenClaw image itself and are available on all agent services.</Note>
 
 ### Container health statuses
 
@@ -305,10 +305,10 @@ Both endpoints are unauthenticated and bind to the service's internal port (`187
 |--------|-----------|
 | `healthy` | Service is running and the internal health endpoint responds successfully |
 | `starting` | Service is running but the health endpoint is not yet responding after all retries |
-| `running` | Service is active on Render and not suspended |
+| `running` | Service is active on Railway and responding |
 | `stopped` | Service has exited |
-| `suspended` | Service has been suspended on Render (saves resources, retains data) |
-| `not_found` | No matching Render service exists for this agent |
+| `suspended` | Service has been suspended (saves resources, retains data). Railway does not natively support suspension, so this status indicates the service has been marked idle. |
+| `not_found` | No matching Railway service exists for this agent |
 | `error` | Service is in an unexpected state, build failed, or cannot be inspected |
 
 ### Health check behavior

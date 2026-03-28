@@ -117,7 +117,7 @@ Creates a new agent with an auto-generated ID and stores its metadata on disk. R
 | 401 | Unauthorized |
 | 500 | Failed to create agent |
 
-<Note>For provisioning an agent with messaging channel tokens and a live Render service deployment, use [`POST /api/agents/provision`](#provision-agent) or [`POST /api/provision`](#provision-with-channel-tokens) instead.</Note>
+<Note>For provisioning an agent with messaging channel tokens and a live Railway service deployment, use [`POST /api/agents/provision`](#provision-agent) or [`POST /api/provision`](#provision-with-channel-tokens) instead.</Note>
 
 ## Get agent
 
@@ -301,7 +301,7 @@ Provisions a new agent. Requires an active subscription unless the caller is an 
 
 <Note>The agent is created immediately with a `provisioning` status and transitions to `running` once the backend deployment endpoint confirms the deployment. If deployment fails, the status changes to `error`.</Note>
 
-<Note>The provisioning endpoint calls `POST /api/deployments` on the backend to deploy the agent as a Render service. The request includes a 15-second timeout. When the model is set to `claude-opus-4-6`, the AI provider is automatically set to `anthropic`; otherwise it falls back to the provider specified in the agent configuration (default: `openrouter`). The plan sent to the backend defaults to `label` when no tier is specified.</Note>
+<Note>The provisioning endpoint calls `POST /api/deployments` on the backend to deploy the agent as a Railway service. The request includes a 15-second timeout. When the model is set to `claude-opus-4-6`, the AI provider is automatically set to `anthropic`; otherwise it falls back to the provider specified in the agent configuration (default: `openrouter`). The plan sent to the backend defaults to `label` when no tier is specified.</Note>
 
 ### Request body
 
@@ -669,7 +669,7 @@ Lifecycle operations are available at two endpoint patterns depending on which s
 
 Both patterns support the same actions. The examples below use the backend pattern.
 
-<Note>The backend agents route uses local Docker commands (`docker start`, `docker stop`, `docker restart`) for lifecycle operations, not the Render API. The Render API is used by the provisioning route (`POST /api/provision`) for creating new agent services. When Docker is unavailable on the backend host, lifecycle operations return `500` with an error message. You can check availability using the [backend health endpoint](/api-reference/health#backend-health-check) — when the `docker` field is `unavailable`, lifecycle operations will fail.</Note>
+<Note>The backend agents route uses local Docker commands (`docker start`, `docker stop`, `docker restart`) for lifecycle operations, not the Railway API. The Railway API is used by the provisioning route (`POST /api/provision`) for creating new agent services. When Docker is unavailable on the backend host, lifecycle operations return `500` with an error message. You can check availability using the [backend health endpoint](/api-reference/health#backend-health-check) — when the `docker` field is `unavailable`, lifecycle operations will fail.</Note>
 
 ### Start agent
 
@@ -677,7 +677,7 @@ Both patterns support the same actions. The examples below use the backend patte
 POST /api/agents/:id/start
 ```
 
-Starts a stopped agent container using `docker start`.
+Restarts (redeploys) a stopped agent service.
 
 ```json
 {
@@ -692,7 +692,7 @@ Starts a stopped agent container using `docker start`.
 POST /api/agents/:id/stop
 ```
 
-Stops the agent container using `docker stop`. The container retains its data and configuration and can be resumed with the [start endpoint](#start-agent).
+Stops the agent service. The service retains its data and configuration and can be resumed with the [start endpoint](#start-agent).
 
 ```json
 {
@@ -819,7 +819,7 @@ Web proxy lifecycle endpoints return a different error shape:
 |------|--------|-------------|
 | 401 | Both | Unauthorized — missing or invalid authentication |
 | 403 | Web proxy | Forbidden — authenticated user does not own this agent instance |
-| 500 | Backend | Internal server error (for example, Render API unavailable or service operation failed) |
+| 500 | Backend | Internal server error (for example, Railway API unavailable or service operation failed) |
 | 502 | Web proxy | Backend service unavailable |
 
 ## Get instance details
@@ -1076,8 +1076,8 @@ When calling the backend provisioning service directly, the response includes ad
   "container": {
     "name": "agentbot-agent-a1b2c3d4e5",
     "status": "running",
-    "serviceId": "srv-abc123def456",
-    "renderUrl": "https://agentbot-agent-a1b2c3d4e5.onrender.com"
+    "serviceId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "renderUrl": "https://agentbot-agent-a1b2c3d4e5.up.railway.app"
   }
 }
 ```
@@ -1088,10 +1088,10 @@ When calling the backend provisioning service directly, the response includes ad
 |-------|------|-------------|
 | `container.name` | string | Container name (format: `agentbot-agent-{userId}`) |
 | `container.status` | string | Container status (for example, `running`, `stopped`) |
-| `container.serviceId` | string | Render service ID for the agent container. |
-| `container.renderUrl` | string | Public Render service URL for the agent container (for example, `https://agentbot-agent-{userId}.onrender.com`). |
-| `container.port` | number \| null | **Deprecated.** Previously held the container's local listening port. Removed in favor of `container.renderUrl` because Docker-backed services on Render do not expose a local port. |
-| `container.gatewayUrl` | string | **Deprecated.** Previously held the local gateway URL. Replaced by `container.renderUrl`, which points to the Render service URL instead. |
+| `container.serviceId` | string | Railway service ID for the agent container. |
+| `container.renderUrl` | string | Public service URL for the agent container (for example, `https://agentbot-agent-{userId}.up.railway.app`). The field name is retained for backward compatibility but now points to a Railway URL. |
+| `container.port` | number \| null | **Deprecated.** Previously held the container's local listening port. Removed in favor of `container.renderUrl`. |
+| `container.gatewayUrl` | string | **Deprecated.** Previously held the local gateway URL. Replaced by `container.renderUrl`, which points to the service URL instead. |
 
 ### Errors
 
@@ -1216,7 +1216,7 @@ All tool profiles deny `browser` and `canvas` tools inside agent services. The `
 POST /api/deployments
 ```
 
-<Note>This is a backend-only endpoint. It deploys an agent as a Render web service and requires a `Content-Type: application/json` header. Requires bearer token authentication. Rate limited to 5 requests per minute per IP.</Note>
+<Note>This is a backend-only endpoint. It deploys an agent as a Railway service and requires a `Content-Type: application/json` header. Requires bearer token authentication. Rate limited to 5 requests per minute per IP.</Note>
 
 ### Request body
 
@@ -1253,7 +1253,7 @@ If the agent service is already running, returns the existing deployment details
 |------|-------------|
 | 400 | `agentId is required`, `Invalid agentId`, or `telegramToken is required` |
 | 401 | Unauthorized |
-| 500 | Deployment failed. When the Render API is not reachable, the error message indicates that provisioning is unavailable. Check the [backend health endpoint](/api-reference/health#backend-health-check) to verify Render API availability before deploying. |
+| 500 | Deployment failed. When the Railway API is not reachable, the error message indicates that provisioning is unavailable. Check the [backend health endpoint](/api-reference/health#backend-health-check) to verify Railway API availability before deploying. |
 
 ## OpenClaw version (backend)
 
