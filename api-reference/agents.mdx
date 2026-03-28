@@ -1411,14 +1411,15 @@ No additional authentication is required on the proxy itself — the agent's own
 GET /api/user/openclaw
 ```
 
-Returns the authenticated user's OpenClaw URL and instance ID. These values are set during provisioning when `autoProvision` is `true` or `agentType` is `business`. Requires session authentication.
+Returns the authenticated user's OpenClaw URL, instance ID, and gateway token. These values are set during provisioning when `autoProvision` is `true` or `agentType` is `business`. The gateway token is a platform-level credential used to authenticate with the OpenClaw Control dashboard. Requires session authentication.
 
 ### Response
 
 ```json
 {
   "openclawUrl": "https://dj-a1b2c3d4e5.agentbot.raveculture.xyz",
-  "openclawInstanceId": "inst_a1b2c3d4e5"
+  "openclawInstanceId": "inst_a1b2c3d4e5",
+  "gatewayToken": "ogt_abc123..."
 }
 ```
 
@@ -1426,6 +1427,7 @@ Returns the authenticated user's OpenClaw URL and instance ID. These values are 
 |-------|------|-------------|
 | `openclawUrl` | string \| null | The OpenClaw dashboard URL for this user. `null` when no OpenClaw instance has been provisioned. |
 | `openclawInstanceId` | string \| null | The OpenClaw instance identifier. `null` when no OpenClaw instance has been provisioned. |
+| `gatewayToken` | string \| null | The platform-level gateway token for authenticating with the OpenClaw Control dashboard. `null` when no gateway token is configured. |
 
 ## Agent interaction
 
