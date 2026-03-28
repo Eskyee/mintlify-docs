@@ -66,14 +66,14 @@ import { auth } from '@/app/lib/auth'
 
 </Accordion>
 
-<Accordion icon="bug" title="Render deploy fails — health check timeout">
+<Accordion icon="bug" title="Railway deploy fails — health check timeout">
 
 The health check at `/health` must respond within 60 seconds. Common causes:
 
 - Database connection string is wrong (check `DATABASE_URL`)
 - Missing environment variables causing startup crash
 
-Check Render logs for the actual error.
+Check Railway logs for the actual error.
 
 </Accordion>
 
@@ -82,7 +82,7 @@ Check Render logs for the actual error.
 Agentbot reads env vars at startup. After changing them:
 
 - **Vercel:** Redeploy from dashboard or `vercel --prod`
-- **Render:** Service auto-restarts on env change
+- **Railway:** Service auto-restarts on env change
 - **Local:** Restart the dev server (`npm run dev`)
 
 </Accordion>
