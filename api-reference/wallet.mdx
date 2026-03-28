@@ -7,6 +7,8 @@ description: "Manage wallets for on-chain transactions and payments"
 
 Manage wallets for on-chain transactions and payments. Supports session-based wallets, Coinbase Developer Platform (CDP) wallets, and Tempo network balance queries.
 
+<Note>The platform uses Coinbase Smart Wallet as its only wallet connector on Base (`coinbaseWallet({ preference: 'smartWalletOnly' })`). Injected wallets such as MetaMask are not supported. All wallet interactions on the Base network require a Coinbase Smart Wallet.</Note>
+
 ## Get wallet
 
 ```http

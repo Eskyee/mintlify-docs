@@ -402,9 +402,11 @@ Users are matched by email address.
 POST /api/wallet-auth
 ```
 
-Sign in using an Ethereum wallet via [Sign-In with Ethereum (SIWE)](https://eips.ethereum.org/EIPS/eip-4361). This flow is designed for Base smart wallets and supports ERC-6492 signature verification for pre-deployed wallets.
+Sign in using an Ethereum wallet via [Sign-In with Ethereum (SIWE)](https://eips.ethereum.org/EIPS/eip-4361). This flow is designed for Coinbase Smart Wallets on Base and supports ERC-6492 signature verification for pre-deployed wallets.
 
 <Note>This endpoint replaced the previous NextAuth wallet callback (`/api/auth/callback/wallet`). If you are migrating from an older integration, update your wallet sign-in requests to use `/api/wallet-auth`.</Note>
+
+<Warning>The platform uses `coinbaseWallet({ preference: 'smartWalletOnly' })` as its only wallet connector. Injected wallets (such as MetaMask) are not supported. Users must connect through a Coinbase Smart Wallet on the Base network.</Warning>
 
 ### How it works
 

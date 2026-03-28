@@ -62,6 +62,8 @@ POST /api/basefm/streams
 
 Creates a new Mux live stream. Access is gated by RAVE token balance — the caller's wallet must hold at least 1,250,000 RAVE tokens on the Base network.
 
+<Note>The `wallet` address used for RAVE token verification must be a Coinbase Smart Wallet on Base. The platform enforces `smartWalletOnly` as its connector policy — injected wallets (such as MetaMask) are not supported for DJ streaming.</Note>
+
 ### Request body
 
 | Field | Type | Required | Description |
