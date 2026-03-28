@@ -181,7 +181,7 @@ When no settings have been saved for the agent, the endpoint returns defaults:
 POST /api/heartbeat
 ```
 
-Requires session authentication. Updates heartbeat settings for a specific agent. The agent must belong to the authenticated user.
+Requires session authentication. Updates heartbeat settings for a specific agent. The agent must belong to the authenticated user. Ownership is verified against both the agent table (for legacy Docker-provisioned agents) and the user's `openclawInstanceId` field (for Railway-provisioned agents). If either check matches, the request is authorized.
 
 ### Request body
 
@@ -219,7 +219,7 @@ Requires session authentication. Updates heartbeat settings for a specific agent
 |------|-------------|
 | 400 | `agentId required` — the `agentId` field is missing from the request body |
 | 401 | Unauthorized |
-| 404 | Agent not found — the agent does not exist or is not owned by the authenticated user |
+| 404 | Agent not found — the agent does not exist in the agent table and does not match the user's `openclawInstanceId` |
 | 500 | Heartbeat update failed |
 
 ## Delete heartbeat settings
