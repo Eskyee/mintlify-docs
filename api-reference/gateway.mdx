@@ -180,7 +180,7 @@ The following environment variables are set on every agent container at launch. 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `NODE_ENV` | `production` | Node.js environment. Set by the provisioning service. |
-| `PORT` | `3001` | Port the agent process listens on inside the container. Set by the provisioning service. |
+| `PORT` | `18789` | Port the agent process listens on inside the container. Must match the OpenClaw Gateway port. Set by the provisioning service. |
 | `HOME` | `/home/node` | Home directory for the `node` user that the official OpenClaw image runs as |
 | `TERM` | `xterm-256color` | Terminal type |
 | `NODE_COMPILE_CACHE` | `/var/tmp/openclaw-compile-cache` | Directory for the Node.js compile cache. Speeds up cold starts by caching compiled bytecode across process restarts. |
@@ -188,6 +188,8 @@ The following environment variables are set on every agent container at launch. 
 | `OPENCLAW_GATEWAY_TOKEN` | Auto-generated | Gateway authentication token. When not set, the entrypoint generates a 32-character hex token. See [per-agent gateway authentication](#per-agent-gateway-authentication). |
 | `OPENCLAW_GATEWAY_URL` | Platform URL | Gateway URL for the agent to communicate with the platform gateway. Set by the provisioning service. |
 | `OPENCLAW_GATEWAY_PORT` | `18789` | Port the gateway listens on inside the container |
+| `OPENCLAW_GATEWAY_BIND` | `0.0.0.0` | Bind address for the gateway process. Set to `0.0.0.0` so Railway (and other reverse proxies) can route traffic into the container. |
+| `OPENCLAW_BIND` | `0.0.0.0` | Fallback bind address used when `OPENCLAW_GATEWAY_BIND` is not set. |
 | `AGENTBOT_USER_ID` | Per-user | Owner user ID passed at provisioning time |
 | `AGENTBOT_PLAN` | `solo` | Subscription plan tier (`solo`, `collective`, `label`, or `network`) |
 | `AGENTBOT_API_URL` | `https://agentbot-api.onrender.com` | Backend API URL for the agent to call platform services. Set by the provisioning service. |
@@ -202,7 +204,7 @@ The following environment variables are set on every agent container at launch. 
 
 | Parameter | Value | Description |
 |-----------|-------|-------------|
-| `gateway.bind` | `loopback` | Bind address for the gateway. The container entrypoint overrides this to `loopback` via the `--bind loopback` CLI flag, so the gateway only listens on `127.0.0.1`. Docker port mapping forwards external traffic to the loopback address inside the container. The provisioning config sets `lan` but the entrypoint takes precedence at runtime. |
+| `gateway.bind` | `0.0.0.0` | Bind address for the gateway. On Railway-provisioned containers, the `OPENCLAW_GATEWAY_BIND` environment variable is set to `0.0.0.0` so the gateway listens on all interfaces and Railway's reverse proxy can route traffic into the container. For local Docker containers, the entrypoint overrides this to `loopback` via the `--bind loopback` CLI flag unless `OPENCLAW_GATEWAY_BIND` is set. |
 | `gateway.port` | `18789` | Internal gateway port |
 | `gateway.auth.mode` | `token` | Authentication mode |
 | `gateway.auth.rateLimit.maxAttempts` | `10` | Maximum authentication attempts before lockout |
