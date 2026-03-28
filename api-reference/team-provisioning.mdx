@@ -86,7 +86,7 @@ Each object in the `customAgents` array has the following fields:
 | `agents` | array | Per-agent provisioning results |
 | `agents[].container` | string | Container path (format: `{teamId}/{agentName}`) |
 | `agents[].status` | string | Agent status (`running` or `failed`) |
-| `agents[].url` | string | Agent service URL |
+| `agents[].url` | string | Agent service URL. The format depends on the provisioning path used. When Railway generates a public domain, the URL is assigned by Railway and may not follow a predictable pattern. |
 | `yaml_config` | string | Generated YAML configuration for the team |
 
 <Note>If an individual agent in the team fails to provision, its `status` is set to `failed` and the remaining agents continue provisioning. The overall request still returns `200` — check each agent's `status` field to identify failures.</Note>
