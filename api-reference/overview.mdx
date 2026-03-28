@@ -295,7 +295,7 @@ curl -X POST https://agentbot.raveculture.xyz/api/ai/chat \
 | `/api/invites/verify` | POST | Verify an invite token (no auth required) |
 | `/api/admin/invites` | GET | List all invites (requires admin session) |
 | `/api/admin/invites` | POST | Create an invite for a specific email (requires admin session) |
-| `/api/admin/fix-openclaw` | GET | Update the OpenClaw service start command and trigger a redeploy (requires `INTERNAL_API_KEY` query parameter) |
+| `/api/admin/fix-openclaw` | GET | **Deprecated.** Previously updated the OpenClaw service start command and triggered a redeploy. This endpoint has been removed. |
 | `/api/summarize` | POST | Summarize a URL — returns title, description, headings, paragraphs, word count (web summarizer service) |
 | `/api/extract` | POST | Extract links, images, and Open Graph metadata from a URL (web summarizer service) |
 | `/api/clawmerchants` | GET | List available ClawMerchants data feeds, or fetch a specific feed by `feed` query parameter |

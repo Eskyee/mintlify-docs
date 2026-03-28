@@ -1431,13 +1431,13 @@ Returns the authenticated user's OpenClaw URL, instance ID, and gateway token. T
 
 ## Fix OpenClaw start command (admin)
 
+<Warning>**Deprecated.** This endpoint has been removed and is no longer available. It was a one-time administrative utility.</Warning>
+
 ```http
 GET /api/admin/fix-openclaw
 ```
 
-Updates the OpenClaw service start command on Railway and triggers a redeploy. The updated start command writes a gateway configuration file with `gateway.trustedProxies` and `gateway.controlUi.allowedOrigins` before launching the OpenClaw process. This resolves "origin not allowed" WebSocket rejections when accessing the Control UI.
-
-Authenticates using the `INTERNAL_API_KEY` passed as a query parameter. This endpoint is intended for one-time administrative use to apply configuration fixes to a running service.
+Previously updated the OpenClaw service start command on Railway and triggered a redeploy. The updated start command wrote a gateway configuration file with `gateway.trustedProxies` and `gateway.controlUi.allowedOrigins` before launching the OpenClaw process.
 
 ### Query parameters
 
@@ -1445,21 +1445,9 @@ Authenticates using the `INTERNAL_API_KEY` passed as a query parameter. This end
 |-----------|------|----------|-------------|
 | `key` | string | Yes | Must match the configured `INTERNAL_API_KEY` environment variable |
 
-### Response (200)
+### Response
 
-```json
-{
-  "ok": true,
-  "message": "Start command updated and redeploy triggered"
-}
-```
-
-### Errors
-
-| Code | Description |
-|------|-------------|
-| 401 | Unauthorized — the `key` query parameter is missing or does not match `INTERNAL_API_KEY` |
-| 500 | Update or redeploy failed |
+This endpoint no longer returns a response. Any request will result in a `404`.
 
 ## Agent interaction
 
