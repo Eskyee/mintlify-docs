@@ -128,8 +128,9 @@ Requires session authentication. Removes a skill from an agent.
 |------|-------------|
 | 400 | Missing `skillId` or `agentId` |
 | 401 | Unauthorized |
-| 404 | Skill installation not found |
 | 500 | Internal error |
+
+<Note>The uninstall endpoint returns `{ "success": true }` even when no matching installation exists. It does not return a `404` error for missing installations.</Note>
 
 ## Available skills
 
