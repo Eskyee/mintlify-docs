@@ -1381,6 +1381,30 @@ Returns resource usage for a specific agent service. Requires bearer token authe
 }
 ```
 
+## Proxy to agent instance (backend)
+
+```http
+ALL /api/openclaw/proxy/:agentId/*
+```
+
+Transparently forwards HTTP requests to the agent's internal service address. The proxy strips the `/api/openclaw/proxy/:agentId` prefix from the request path before forwarding. WebSocket upgrades are also supported and handled at the server level.
+
+No additional authentication is required on the proxy itself — the agent's own token authentication handles access control.
+
+### Path parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `agentId` | string | Agent ID. Only alphanumeric characters, hyphens, and underscores are allowed; all other characters are stripped. |
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 502 | Agent instance unreachable |
+
+<Note>The proxy rewrites the request path so that `/api/openclaw/proxy/agent_123/some/path` forwards to `/some/path` on the agent's internal address. If no path follows the agent ID, the request is forwarded to `/`.</Note>
+
 ## Get user OpenClaw instance
 
 ```http
