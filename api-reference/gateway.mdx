@@ -212,7 +212,9 @@ The following environment variables are set on every agent container at launch. 
 | `gateway.auth.rateLimit.lockoutMs` | `300000` | Lockout duration in milliseconds (5 minutes) |
 | `gateway.auth.rateLimit.exemptLoopback` | `true` | Exempt loopback addresses from rate limiting |
 | `gateway.auth.allowTailscale` | `true` | Allow Tailscale network connections |
+| `gateway.trustedProxies` | `["127.0.0.1"]` | IP addresses trusted as reverse proxies. Requests from these addresses have their `X-Forwarded-For` headers honored for origin detection. Required for Railway-provisioned containers where a TCP proxy forwards traffic to the gateway on the loopback interface. |
 | `gateway.controlUi.enabled` | `true` | Gateway control UI is enabled in containers. |
+| `gateway.controlUi.allowedOrigins` | `["*"]` | Origins permitted to connect to the Control UI via WebSocket. Set to `["*"]` to allow connections from any origin. When not configured, the gateway may reject WebSocket connections with an "origin not allowed" error if the request origin does not match the gateway's hostname. |
 
 ### Tool settings
 
