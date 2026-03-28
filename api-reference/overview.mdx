@@ -249,6 +249,7 @@ curl -X POST https://agentbot.raveculture.xyz/api/ai/chat \
 | `/api/openclaw/version` | GET | Get OpenClaw runtime version (backend only) |
 | `/api/openclaw/instances` | GET | List running agent instances (backend only, requires auth) |
 | `/api/openclaw/instances/:id/stats` | GET | Get instance container stats (backend only, requires auth) |
+| `/api/openclaw/proxy/:agentId/*` | ALL | Proxy HTTP and WebSocket requests to an agent instance (backend only) |
 | `/api/deployments` | POST | Deploy an agent container (backend only, requires auth) |
 | `/api/models` | GET | List available OpenRouter AI models |
 | `/api/coinbase` | GET | Get Coinbase CDP configuration and supported features |
