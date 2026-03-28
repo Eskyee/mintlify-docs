@@ -145,7 +145,7 @@ curl -X GET "https://agentbot.raveculture.xyz/api/colony/status?action=tree" \
 |-------|------|-------------|
 | `colony_size` | number | Total number of agents in the colony |
 | `avg_fitness` | number | Average fitness score across all agents (0–100) |
-| `fittest` | object | Agent with the highest fitness score |
+| `fittest` | object \| null | Agent with the highest fitness score, or `null` when the colony has no agents |
 | `cull_queue` | number | Number of agents with fitness below 40, eligible for culling |
 | `agents` | array | All agents in the colony including root, children, and peers |
 | `root` | object | Root node details including soul cognitive state and colony rank |
@@ -169,7 +169,7 @@ curl -X GET "https://agentbot.raveculture.xyz/api/colony/status?action=tree" \
 | `uptime` | number | Uptime in seconds |
 | `version` | string | Soul service version |
 
-<Note>When the root node has not yet registered its identity, fields such as `id`, `parent`, `walletAddress`, and `createdAt` use safe fallback values. The `id` defaults to `"borg-root"`, `parent` and `walletAddress` default to `null`, and `createdAt` defaults to the current timestamp. The `root.address` falls back to the zero address (`0x0000000000000000000000000000000000000000`) and `root.wallet_balance` returns `{ "formatted": "0.00", "token": "USDC.e" }`.</Note>
+<Note>When the root node has not yet registered its identity, fields such as `id`, `parent`, `walletAddress`, and `createdAt` use safe fallback values. The `id` defaults to `"borg-root"`, `parent` and `walletAddress` default to `null`, and `createdAt` defaults to the current timestamp. The `root.address` falls back to the zero address (`0x0000000000000000000000000000000000000000`) and `root.wallet_balance` returns `{ "formatted": "0.00", "token": "USDC.e" }`. When the colony contains no agents, `fittest` returns `null` and `avg_fitness` returns `0`.</Note>
 
 **Root fields (`root`):**
 
