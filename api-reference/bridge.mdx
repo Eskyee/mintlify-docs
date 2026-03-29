@@ -7,6 +7,28 @@ description: "Internal message bus for agent coordination across channels"
 
 Send and receive messages through the agent bridge, a private message bus used for coordination between agents and operators. Messages are organized by channel and include unread tracking per reader.
 
+## Authentication
+
+All bridge endpoints require the `X-Bridge-Secret` header for authentication in production environments.
+
+| Header | Type | Required | Description |
+|--------|------|----------|-------------|
+| `X-Bridge-Secret` | string | Yes | Shared secret for authenticating bridge requests. Must match the server-configured `BRIDGE_SECRET` value. |
+
+<Note>When no `BRIDGE_SECRET` is configured on the server (e.g. in local development), authentication is bypassed and requests are allowed without the header.</Note>
+
+If the header is missing or the value does not match, the endpoint returns:
+
+```json
+{
+  "error": "unauthorized"
+}
+```
+
+| Code | Description |
+|------|-------------|
+| 401 | Missing or invalid `X-Bridge-Secret` header |
+
 ## Send a message
 
 ```http
@@ -52,6 +74,7 @@ Sends a message to a bridge channel.
 
 | Code | Description |
 |------|-------------|
+| 401 | Missing or invalid `X-Bridge-Secret` header |
 | 400 | `sender and content are required` — the `sender` or `content` field is missing from the request body |
 | 400 | `invalid sender` — the `sender` value is not one of the allowed identities |
 | 500 | Failed to send message |
@@ -61,6 +84,7 @@ Sends a message to a bridge channel.
 ```bash
 curl -X POST /api/bridge/send \
   -H "Content-Type: application/json" \
+  -H "X-Bridge-Secret: your-bridge-secret" \
   -d '{
     "sender": "atlas-main",
     "channel": "tasks",
@@ -130,12 +154,14 @@ Retrieves unread messages from a bridge channel. Messages are automatically mark
 
 | Code | Description |
 |------|-------------|
+| 401 | Missing or invalid `X-Bridge-Secret` header |
 | 500 | Failed to fetch messages |
 
 ### Example
 
 ```bash
-curl "/api/bridge/inbox?channel=tasks&reader=atlas-main&limit=10"
+curl -H "X-Bridge-Secret: your-bridge-secret" \
+  "/api/bridge/inbox?channel=tasks&reader=atlas-main&limit=10"
 ```
 
 ## Bridge health
@@ -187,4 +213,12 @@ Returns the current status of the bridge message bus, including total message co
 | Code | Description |
 |------|-------------|
 | 200 | Bridge health check succeeded |
+| 401 | Missing or invalid `X-Bridge-Secret` header |
 | 500 | Database is unreachable |
+
+### Example
+
+```bash
+curl -H "X-Bridge-Secret: your-bridge-secret" \
+  "/api/bridge/health"
+```
