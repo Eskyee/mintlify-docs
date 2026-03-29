@@ -195,6 +195,12 @@ curl -X POST https://agentbot.raveculture.xyz/api/ai/chat \
 | `/api/wallet/cdp` | POST | Create a CDP wallet client |
 | `/api/wallet/top-up` | GET | Create a Stripe checkout session for wallet top-up |
 | `/api/wallet/top-up` | POST | Stripe webhook for wallet top-up payment completion |
+| `/api/user/bankr-key` | GET | Check if a personal Bankr API key is configured |
+| `/api/user/bankr-key` | POST | Save or update a personal Bankr API key (encrypted at rest) |
+| `/api/user/bankr-key` | DELETE | Remove a personal Bankr API key |
+| `/api/bankr/balances` | GET | Get wallet balances from the Bankr trading service |
+| `/api/bankr/prompt` | POST | Send a natural-language prompt to the Bankr trading agent |
+| `/api/bankr/prompt` | GET | Poll the status of an asynchronous Bankr agent job |
 | `/api/provision` | POST | Provision agent with channel tokens or as OpenClaw-only deployment (requires auth) |
 | `/api/user/openclaw` | GET | Get the authenticated user's OpenClaw URL, instance ID, and gateway token |
 | `/api/validate-key` | POST | Validate an API key (backend only) |
