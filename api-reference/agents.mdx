@@ -1761,7 +1761,7 @@ POST /api/agent
 POST /api/chat
 ```
 
-Sends a message to the caller's deployed agent. The server connects to the agent's OpenClaw Gateway via WebSocket, performs the challenge-response authentication handshake, delivers the message, and returns the agent's reply.
+Sends a message to the caller's deployed agent via the OpenAI-compatible REST API. The server forwards the message to the agent's gateway using `POST /v1/chat/completions` with a bearer token. The gateway must have `chatCompletions` enabled in its configuration.
 
 Requires session authentication.
 
@@ -1770,14 +1770,14 @@ Requires session authentication.
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `message` | string | Yes | Message to send |
-| `topic` | string | No | Conversation topic. Defaults to `main`. |
 
 ```json
 {
-  "message": "Hello!",
-  "topic": "general"
+  "message": "Hello!"
 }
 ```
+
+<Warning>The `topic` parameter was removed. Conversation context is no longer passed through this endpoint. If you need to route messages to a specific conversation, use the [gateway chat proxy](/api-reference/gateway#gateway-chat-proxy) which supports a `sessionKey` parameter.</Warning>
 
 ### Response (200)
 
@@ -1787,16 +1787,27 @@ Requires session authentication.
   "message": "Hello!",
   "agent": "my-agent",
   "reply": "Hi there! How can I help you today?",
+  "model": "openclaw/default",
+  "usage": {
+    "prompt_tokens": 12,
+    "completion_tokens": 25,
+    "total_tokens": 37
+  },
   "timestamp": "2026-03-20T03:33:15.000Z"
 }
 ```
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `id` | string | Message identifier (prefixed with `msg_`) |
+| `id` | string | Message identifier. Uses the upstream completion ID when available, otherwise prefixed with `msg_`. |
 | `message` | string | The original message that was sent |
 | `agent` | string | Name of the agent that processed the message |
 | `reply` | string | The agent's response |
+| `model` | string | Model identifier used by the gateway for the completion |
+| `usage` | object | Token usage statistics from the upstream completion |
+| `usage.prompt_tokens` | number | Input tokens consumed |
+| `usage.completion_tokens` | number | Output tokens generated |
+| `usage.total_tokens` | number | Total tokens used |
 | `timestamp` | string | ISO 8601 timestamp of when the response was generated |
 
 ### Errors
@@ -1807,10 +1818,11 @@ Requires session authentication.
 | 401 | `Unauthorized` — no valid session |
 | 404 | `User not found` — authenticated user does not exist in the database |
 | 404 | `No agent deployed` — the user does not have a deployed agent |
+| 502 | Gateway returned a 5xx error — the agent's gateway encountered an internal error |
 | 500 | `Failed to send message` — an unexpected error occurred |
 | 503 | `Gateway not configured` — the server does not have a gateway token configured |
 
-<Note>The server opens a WebSocket connection to the agent's gateway for each request. Responses time out after 30 seconds. If the gateway is unreachable or the agent does not respond within this window, a `500` error is returned.</Note>
+<Note>The server sends an HTTP POST request to the agent's gateway for each call. Requests time out after 30 seconds. If the gateway is unreachable or the agent does not respond within this window, a `502` or `500` error is returned.</Note>
 
 ## List messages
 
