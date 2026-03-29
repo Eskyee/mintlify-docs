@@ -19,6 +19,32 @@ All calendar endpoints require a valid NextAuth session. The user identity is de
 https://agentbot.raveculture.xyz/api/calendar
 ```
 
+## Check connection status
+
+```http
+GET /api/calendar?action=status
+```
+
+Returns whether the authenticated user has a Google Calendar connected. If the request is unauthenticated, returns `{ "connected": false }` without an error.
+
+### Query parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `action` | string | Yes | Must be `status` |
+
+### Response
+
+```json
+{
+  "connected": true
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `connected` | boolean | `true` if the user has a Google Calendar connected, `false` otherwise |
+
 ## Connect calendar
 
 ```http
