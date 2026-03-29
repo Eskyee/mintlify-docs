@@ -57,20 +57,20 @@ Returned when the upstream gateway is unreachable.
 POST /api/x402
 ```
 
-Dispatches an action to the x402 gateway. Most actions require an authenticated session with both a user ID and email. The `endpoints` action is public and does not require authentication.
+Dispatches an action to the x402 gateway. The `endpoints`, `fitness`, and `pricing` actions are public and do not require authentication. All other actions require an authenticated session with both a user ID and email.
 
 ### Headers
 
 | Header | Type | Required | Description |
 |--------|------|----------|-------------|
 | `Content-Type` | string | Yes | Must be `application/json` |
-| `Cookie` | string | Conditional | Valid NextAuth session cookie. Required for all actions except `endpoints`. |
+| `Cookie` | string | Conditional | Valid NextAuth session cookie. Required for `join-colony` and `pay` actions. |
 
 ### Body
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `agentId` | string | Conditional | Agent instance identifier. Required for all actions except `endpoints`. |
+| `agentId` | string | Conditional | Agent instance identifier. Required for `join-colony` and `pay`. Optional for `fitness` and `pricing` (defaults to `atlas` when omitted). Not used by `endpoints`. |
 | `walletAddress` | string | No | Agent wallet address. Required for `join-colony`. |
 | `action` | string | Yes | Action to perform. One of `join-colony`, `fitness`, `pricing`, `endpoints`, or `pay`. |
 
@@ -108,7 +108,7 @@ Returns the response from the upstream colony gateway on success.
 
 #### `fitness`
 
-Retrieve the fitness score for an agent.
+Retrieve the fitness score for an agent. This action is **public** and does not require authentication. The `agentId` field is optional and defaults to `atlas` when omitted.
 
 **Request:**
 
@@ -137,11 +137,13 @@ Retrieve the fitness score for an agent.
 |-------|------|-------------|
 | `score` | number | Agent fitness score (0–100) |
 | `tier` | string | Fitness tier (e.g. `bronze`, `silver`, `gold`) |
-| `details` | object | Breakdown of fitness dimensions |
+| `details` | object \| null | Breakdown of fitness dimensions. May be `null` if the upstream gateway is unreachable. |
+
+<Note>When the upstream gateway is unreachable, the endpoint returns a fallback response with a score of `50`, tier of `new`, and `details` set to `null`.</Note>
 
 #### `pricing`
 
-Retrieve dynamic pricing for an agent. Pricing is adjusted based on the agent's fitness score and tier.
+Retrieve dynamic pricing for an agent. Pricing is adjusted based on the agent's fitness score and tier. This action is **public** and does not require authentication. The `agentId` field is optional and defaults to `atlas` when omitted.
 
 **Request:**
 
@@ -178,6 +180,8 @@ Retrieve dynamic pricing for an agent. Pricing is adjusted based on the agent's 
 | `fitness.score` | number | Agent fitness score |
 | `fitness.tier` | string | Agent fitness tier |
 
+<Note>When the upstream gateway is unreachable, the endpoint returns a fallback response with tier `basic`, a rate of `0.01`, no discount, and a fitness score of `50` (tier `new`).</Note>
+
 #### `endpoints`
 
 List all available endpoints on the x402 gateway. This action is **public** and does not require authentication or an `agentId`.
@@ -192,18 +196,31 @@ List all available endpoints on the x402 gateway. This action is **public** and 
 
 **Response (200):**
 
+The response is forwarded from the upstream gateway. When the upstream gateway is unreachable, the following fallback is returned:
+
 ```json
 {
+  "success": true,
   "endpoints": [
     {
-      "slug": "chat",
-      "description": "Chat with the soul",
-      "price": "0.001"
+      "slug": "/gateway/colony/join",
+      "description": "Join agent colony",
+      "price": "Free"
     },
     {
-      "slug": "clone",
-      "description": "Clone an agent",
-      "price": "1.0"
+      "slug": "/gateway/fitness/:agentId",
+      "description": "Get agent fitness score",
+      "price": "Free"
+    },
+    {
+      "slug": "/gateway/pricing/:agentId",
+      "description": "Get dynamic pricing",
+      "price": "Free"
+    },
+    {
+      "slug": "/gateway/pay",
+      "description": "Make payment",
+      "price": "Variable"
     }
   ]
 }
@@ -212,9 +229,9 @@ List all available endpoints on the x402 gateway. This action is **public** and 
 | Field | Type | Description |
 |-------|------|-------------|
 | `endpoints` | array | List of available gateway endpoints |
-| `endpoints[].slug` | string | Endpoint identifier |
+| `endpoints[].slug` | string | Endpoint path |
 | `endpoints[].description` | string | Human-readable description |
-| `endpoints[].price` | string | Price per request |
+| `endpoints[].price` | string | Price per request (e.g. `Free`, `Variable`) |
 
 #### `pay`
 
@@ -264,23 +281,23 @@ Every payment attempt is logged with the user's email, amount, currency, recipie
 
 ## Authentication behavior
 
-The `endpoints` action and the `GET` health check are fully public and never require a session.
+The `endpoints`, `fitness`, `pricing` actions and the `GET` health check are fully public and never require a session.
 
-All other actions (`join-colony`, `fitness`, `pricing`, `pay`) require a valid NextAuth session. When the session is missing or invalid, the endpoint returns a `401` response with `{ "success": false, "error": "Authentication required" }`.
+The `join-colony` and `pay` actions require a valid NextAuth session. When the session is missing or invalid, the endpoint returns a `401` response with `{ "success": false, "error": "Authentication required" }`.
 
-<Note>The x402 dashboard handles `401` responses from the `fitness` and `pricing` actions gracefully. When an unauthenticated user views the dashboard, these actions return a `401` and the dashboard displays fallback default values (a fitness score of 50, tier of `new`, and default pricing) along with a banner prompting the user to sign in. This means the dashboard is viewable without authentication, but personalized fitness and pricing data require a valid session.</Note>
+<Note>The x402 dashboard can be viewed without authentication. The `fitness` and `pricing` actions are public, so unauthenticated users see real data from the upstream gateway. When the upstream gateway is unreachable, fallback default values are displayed (a fitness score of 50, tier of `new`, and default pricing).</Note>
 
 ## Error responses
 
 | Status | Error | Description |
 |--------|-------|-------------|
-| 400 | `agentId required` | The `agentId` field is missing from the request body (does not apply to the `endpoints` action) |
+| 400 | `agentId required` | The `agentId` field is missing from the request body (applies to `join-colony` and `pay` only) |
 | 400 | `Invalid amount` | The `amount` field is missing, zero, or negative (applies to the `pay` action) |
 | 400 | `Amount exceeds $100 limit. Contact support for higher limits.` | The `amount` exceeds the per-payment maximum of $100 (applies to the `pay` action) |
 | 400 | `Recipient required` | The `recipient` field is missing (applies to the `pay` action) |
 | 400 | `Invalid recipient address` | The `recipient` does not match a valid EVM or Solana address format (applies to the `pay` action) |
 | 400 | `Invalid action. Use: join-colony, fitness, pricing, endpoints, or pay` | The `action` field is missing or not one of the supported values |
-| 401 | `Authentication required` | No valid session. Returned for all actions except `endpoints` and the `GET` health check. |
+| 401 | `Authentication required` | No valid session. Returned for `join-colony` and `pay` actions only. |
 | 402 | `Colony join failed: 402 ...` | The upstream gateway requires payment for the `join-colony` action |
 | 500 | `x402 gateway error` | An unexpected error occurred while communicating with the upstream gateway |
 | 502 | `Colony join failed: {status} ...` | The upstream gateway returned an error for the `join-colony` action |
@@ -312,11 +329,18 @@ curl -X POST https://agentbot.raveculture.xyz/api/x402 \
 ```bash
 curl -X POST https://agentbot.raveculture.xyz/api/x402 \
   -H "Content-Type: application/json" \
-  -H "Cookie: next-auth.session-token=YOUR_SESSION" \
   -d '{
     "agentId": "inst_abc123",
     "action": "fitness"
   }'
+```
+
+The `agentId` is optional. When omitted, it defaults to `atlas`:
+
+```bash
+curl -X POST https://agentbot.raveculture.xyz/api/x402 \
+  -H "Content-Type: application/json" \
+  -d '{"action": "fitness"}'
 ```
 
 ### Get pricing
@@ -324,7 +348,6 @@ curl -X POST https://agentbot.raveculture.xyz/api/x402 \
 ```bash
 curl -X POST https://agentbot.raveculture.xyz/api/x402 \
   -H "Content-Type: application/json" \
-  -H "Cookie: next-auth.session-token=YOUR_SESSION" \
   -d '{
     "agentId": "inst_abc123",
     "action": "pricing"
