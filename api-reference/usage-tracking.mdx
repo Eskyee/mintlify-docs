@@ -117,6 +117,81 @@ Requires session authentication. Returns aggregated cost, token, and call data f
 
 ---
 
+## Dashboard stats
+
+```http
+GET /api/dashboard/stats
+```
+
+Requires session authentication. Returns aggregated agent, skill, and task counts for the authenticated user. Used by the dashboard overview to display real-time stats cards.
+
+### Response
+
+```json
+{
+  "agents": {
+    "active": 1,
+    "total": 3,
+    "limit": 3,
+    "newToday": 0
+  },
+  "skills": {
+    "installed": 5
+  },
+  "tasks": {
+    "total": 12
+  }
+}
+```
+
+### Response fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `agents.active` | number | Number of agents with `active` status |
+| `agents.total` | number | Total number of agents owned by the user |
+| `agents.limit` | number | Maximum agents allowed by the user's plan |
+| `agents.newToday` | number | Number of agents created since midnight (UTC) |
+| `skills.installed` | number | Total installed skills across all the user's agents |
+| `tasks.total` | number | Total scheduled tasks across all the user's agents |
+
+### Plan-based agent limits
+
+The `agents.limit` value is determined by the user's subscription plan:
+
+| Plan | Agent limit |
+|------|-------------|
+| `free` | 1 |
+| `solo` | 1 |
+| `starter` | 1 |
+| `pro` | 3 |
+| `collective` | 3 |
+| `scale` | 10 |
+| `label` | 10 |
+| `enterprise` | 100 |
+| `network` | 100 |
+
+### Error handling
+
+On failure, the endpoint returns a fallback response with zeroed-out values instead of an error status code:
+
+```json
+{
+  "agents": { "active": 0, "total": 0, "limit": 1, "newToday": 0 },
+  "skills": { "installed": 0 },
+  "tasks": { "total": 0 }
+}
+```
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | Unauthorized — no valid session |
+| 404 | User not found |
+
+---
+
 <Info>The remaining endpoints on this page are planned for a future release. They are not yet available. Usage events are recorded internally but these query APIs have not been deployed. This section documents the intended specification for reference.</Info>
 
 All query endpoints below require bearer token authentication and are served by the backend API.
