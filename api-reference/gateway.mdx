@@ -1,6 +1,6 @@
 ---
 title: Gateway
-description: "Route requests to plugins through the v1 gateway with support for Stripe, MPP, and session-based payments."
+description: "Route requests to plugins through the v1 gateway, and chat with agents via the gateway WebSocket proxy."
 ---
 
 # Gateway
@@ -156,6 +156,72 @@ When paid via MPP, the response includes a `Payment-Receipt` header and the `pay
 | 402 | `voucher_failed` | The off-chain voucher could not be processed (e.g., concurrent debit race) |
 | 500 | `internal` | Internal server error |
 | 502 | `no_plugin` | No plugin registered for the given ID |
+
+## Gateway chat proxy
+
+```http
+POST /api/gateway/chat
+```
+
+Sends a chat message to the caller's deployed agent through the OpenClaw Gateway. The server connects to the agent's gateway via WebSocket, authenticates using the challenge-response handshake, delivers the message, and returns the agent's reply.
+
+This endpoint is similar to [`POST /api/chat`](/api-reference/agents#send-message) but retrieves the gateway token dynamically from the backend API rather than relying on a single environment variable.
+
+Requires session authentication.
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `message` | string | Yes | Message to send |
+| `sessionKey` | string | No | Session key for the conversation. Defaults to `main`. |
+
+```json
+{
+  "message": "Summarize my tasks",
+  "sessionKey": "project-alpha"
+}
+```
+
+### Response (200)
+
+```json
+{
+  "success": true,
+  "reply": "Here is a summary of your tasks...",
+  "agentId": "abc123",
+  "agentName": "my-agent"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `success` | boolean | Always `true` on success |
+| `reply` | string | The agent's response text |
+| `agentId` | string | ID of the agent that handled the request |
+| `agentName` | string | Name of the agent |
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | `Message required` — the `message` field is missing |
+| 401 | `Unauthorized` — no valid session |
+| 404 | `User not found` — authenticated user does not exist |
+| 404 | `No agent found` — the user has no deployed agent |
+| 500 | `Chat failed` — WebSocket connection or agent response error |
+| 503 | `No gateway token available` — no gateway token could be retrieved from the backend or environment |
+
+<Note>The server opens a WebSocket connection per request and times out after 30 seconds. If the gateway rejects the authentication handshake, a `500` error is returned with details from the gateway.</Note>
+
+### Example
+
+```bash
+curl -X POST https://agentbot.raveculture.xyz/api/gateway/chat \
+  -H "Content-Type: application/json" \
+  -H "Cookie: next-auth.session-token=YOUR_SESSION" \
+  -d '{"message": "What is my agent status?", "sessionKey": "main"}'
+```
 
 ## Per-agent gateway authentication
 
