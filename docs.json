@@ -128,7 +128,8 @@
           "api-reference/clawmerchants",
           "api-reference/debug",
           "api-reference/config",
-          "api-reference/devices"
+          "api-reference/devices",
+          "api-reference/bridge"
         ]
       },
       {
