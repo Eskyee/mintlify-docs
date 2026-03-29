@@ -20,7 +20,7 @@ Returns the current agent configuration and a list of available backups.
 ```json
 {
   "config": {
-    "version": "2026.3.23",
+    "version": "2026.3.28",
     "model": {
       "default": "openrouter/auto",
       "fallbacks": ["openrouter/anthropic/claude-3.5-sonnet"]
@@ -144,7 +144,7 @@ curl -X POST https://agentbot.raveculture.xyz/api/config \
   -H "Content-Type: application/json" \
   -d '{
     "config": {
-      "version": "2026.3.23",
+      "version": "2026.3.28",
       "model": { "default": "openrouter/auto", "fallbacks": [] },
       "channels": { "telegram": { "enabled": true } },
       "memory": { "maxEntries": 500, "ttlDays": 30 },
