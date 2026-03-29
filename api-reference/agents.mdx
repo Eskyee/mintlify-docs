@@ -1119,14 +1119,17 @@ When calling the backend provisioning service directly, the response includes ad
   },
   "container": {
     "name": "agentbot-agent-a1b2c3d4e5",
-    "status": "running",
+    "status": "deploying",
     "serviceId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-    "renderUrl": "https://agentbot-agent-a1b2c3d4e5.up.railway.app"
+    "renderUrl": "https://agentbot-agent-a1b2c3d4e5.up.railway.app",
+    "controlUiUrl": "https://agentbot-agent-a1b2c3d4e5.up.railway.app/#token=your-gateway-token"
   }
 }
 ```
 
 <Note>The `container` object is included when the backend successfully creates a container for the agent. If container creation fails, provisioning still succeeds and the `container` field is omitted. The agent can operate using API-side processing until the container becomes available. You can check backend availability using the [backend health endpoint](/api-reference/health#backend-health-check).</Note>
+
+<Note>The `container.status` is `deploying` because the Railway service is created asynchronously. The service transitions to `running` once the deployment completes. Device pairing (`dangerouslyDisableDeviceAuth`) is automatically disabled for user containers at provisioning time — each user has an isolated container, so device auth is unnecessary. The gateway is still protected by token authentication (`OPENCLAW_GATEWAY_TOKEN`).</Note>
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -1134,6 +1137,7 @@ When calling the backend provisioning service directly, the response includes ad
 | `container.status` | string | Container status (for example, `running`, `stopped`) |
 | `container.serviceId` | string | Railway service ID for the agent container. |
 | `container.renderUrl` | string | Public service URL for the agent container (for example, `https://agentbot-agent-{userId}.up.railway.app`). The field name is retained for backward compatibility but now points to a Railway URL. |
+| `container.controlUiUrl` | string | Auto-connect URL for the OpenClaw Control UI. Includes the gateway token in the URL fragment (for example, `https://service.up.railway.app/#token=...`). The token is in the fragment so it is never sent to the server — the Control UI reads it client-side on load. Only present when a gateway token is configured. |
 | `container.port` | number \| null | **Deprecated.** Previously held the container's local listening port. Removed in favor of `container.renderUrl`. |
 | `container.gatewayUrl` | string | **Deprecated.** Previously held the local gateway URL. Replaced by `container.renderUrl`, which points to the service URL instead. |
 
