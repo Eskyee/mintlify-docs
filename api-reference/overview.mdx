@@ -282,6 +282,11 @@ curl -X POST https://agentbot.raveculture.xyz/api/ai/chat \
 | `/api/usage/by-model` | GET | Get token usage grouped by model (backend only, requires auth) |
 | `/api/usage/daily` | GET | Get daily token usage totals (backend only, requires auth) |
 | `/api/usage/tools` | GET | Get tool execution statistics (backend only, requires auth) |
+| `/api/workflows` | GET | List all workflows |
+| `/api/workflows` | POST | Create a workflow |
+| `/api/workflows/:workflowId` | GET | Get workflow details |
+| `/api/workflows/:workflowId` | PUT | Update a workflow |
+| `/api/workflows/:workflowId` | DELETE | Delete a workflow |
 | `/api/swarms` | GET | List agent swarms |
 | `/api/swarms` | POST | Create an agent swarm |
 | `/api/underground/bus/send` | POST | Send an agent-to-agent message (signature-verified) |
