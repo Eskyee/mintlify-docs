@@ -5,7 +5,7 @@ description: Provision multi-agent teams with pre-built templates across music, 
 
 # Team provisioning API
 
-Provision coordinated multi-agent teams for Collective and Label plan tiers. Each agent in the team receives its own container service, provisioned asynchronously in the background.
+Provision coordinated multi-agent teams for Collective, Label, and Network plan tiers. Each agent in the team receives its own container service, provisioned asynchronously in the background.
 
 <Note>Team provisioning requires a Collective plan or higher. Solo plan users are limited to single-agent provisioning via [`POST /api/provision`](/api-reference/agents#provision-with-channel-tokens).</Note>
 
@@ -18,6 +18,7 @@ Each plan tier determines how many agents are provisioned in a single team:
 | `solo` | 1 (team provisioning not available) |
 | `collective` | 3 |
 | `label` | 10 |
+| `network` | Unlimited |
 
 ## Provision a team
 
@@ -31,8 +32,9 @@ Creates a team of agents using a pre-built template. Requires session authentica
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `plan` | string | Yes | Plan tier. Must be one of `collective` or `label`. |
-| `templateKey` | string | Yes | Key of the pre-built team template to use. See [list templates](#list-team-templates) for available options. |
+| `plan` | string | Yes | Plan tier. Must be one of `collective`, `label`, or `network`. |
+| `templateKey` | string | No | Key of the pre-built team template to use. Defaults to `dev_team` when omitted. See [list templates](#list-team-templates) for available options. |
+| `customAgents` | array | No | Custom agent configurations to provision instead of (or in addition to) the template defaults. Each entry defines an agent with its own configuration. |
 
 ### Response
 
@@ -40,10 +42,20 @@ Creates a team of agents using a pre-built template. Requires session authentica
 {
   "success": true,
   "teamId": "team-a1b2c3d4e5f6",
-  "plan": "collective",
-  "templateKey": "dev-fullstack",
-  "agentCount": 3,
-  "message": "Team provisioning started. 3 agents are being deployed."
+  "template": "Full Stack Dev",
+  "agents": [
+    {
+      "container": "agentbot-agent-frontend-a1b2c3d4",
+      "status": "deploying",
+      "url": "https://agentbot-agent-frontend-a1b2c3d4.up.railway.app"
+    },
+    {
+      "container": "agentbot-agent-backend-a1b2c3d4",
+      "status": "deploying",
+      "url": "https://agentbot-agent-backend-a1b2c3d4.up.railway.app"
+    }
+  ],
+  "yaml_config": "name: Full Stack Dev\nagents:\n  - name: frontend-agent\n    role: Frontend\n..."
 }
 ```
 
@@ -51,19 +63,22 @@ Creates a team of agents using a pre-built template. Requires session authentica
 |-------|------|-------------|
 | `success` | boolean | Whether provisioning was initiated |
 | `teamId` | string | Unique team identifier (format: `team-{hex}`) |
-| `plan` | string | The plan tier used |
-| `templateKey` | string | The template key used |
-| `agentCount` | number | Number of agents being provisioned |
-| `message` | string | Human-readable status message |
+| `template` | string | Human-readable name of the template used |
+| `agents` | array | Per-agent provision results |
+| `agents[].container` | string | Container name for the agent |
+| `agents[].status` | string | Current deployment status (for example, `deploying`, `running`) |
+| `agents[].url` | string | Public URL for the agent service |
+| `yaml_config` | string | YAML configuration generated from the template |
 
-<Note>Agent provisioning happens asynchronously after the response is returned. The endpoint confirms that provisioning has been kicked off, not that all agents are running.</Note>
+<Note>Agent provisioning happens asynchronously after the response is returned. The `agents` array confirms that provisioning has been kicked off for each agent, not that all agents are running.</Note>
 
 ### Errors
 
 | Code | Description |
 |------|-------------|
-| 400 | Invalid JSON body, missing or invalid `plan`, or missing `templateKey` |
+| 400 | Invalid JSON body or missing/invalid `plan`. The `plan` field must be one of `collective`, `label`, or `network`. The response includes an `available_templates` array listing valid template keys. |
 | 401 | Unauthorized — missing or invalid session |
+| 500 | Team provisioning failed |
 
 ### Example request
 
