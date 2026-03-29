@@ -272,7 +272,8 @@ The following environment variables are set on every agent container at launch. 
 
 | Parameter | Value | Description |
 |-----------|-------|-------------|
-| `gateway.bind` | `loopback` | Bind address for the gateway. The gateway binds to the loopback interface (`127.0.0.1`). On Railway-provisioned containers, a TCP proxy runs alongside the gateway and forwards traffic from the Railway-assigned `PORT` to `127.0.0.1:18789`, so the gateway does not need to bind to all interfaces. For local Docker containers, the entrypoint uses the `--bind loopback` CLI flag by default. |
+| `gateway.mode` | `local` | Gateway operating mode |
+| `gateway.bind` | `lan` | Bind address for the gateway. Set to `lan` so the gateway listens on all interfaces inside the Docker container, which is required for port-mapped containers where the host forwards traffic to the container's published port. On Railway-provisioned containers, a TCP proxy may still forward traffic from the Railway-assigned `PORT` to `127.0.0.1:18789`. |
 | `gateway.port` | `18789` | Internal gateway port |
 | `gateway.auth.mode` | `token` | Authentication mode |
 | `gateway.auth.rateLimit.maxAttempts` | `10` | Maximum authentication attempts before lockout |
