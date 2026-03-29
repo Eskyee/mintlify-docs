@@ -922,12 +922,20 @@ POST /api/agents/:id/verify
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `verificationType` | string | Yes | One of: `eas`, `coinbase`, `ens`, `webauthn` |
-| `verified` | boolean | No | Whether the agent is verified (defaults to `true` via web API) |
-| `attestationUid` | string | No | Attestation UID from EAS |
-| `verifierAddress` | string | No | Address of the verifying wallet |
-| `metadata` | object | No | Additional verification metadata |
+| `attestationUid` | string | Conditional | Attestation UID from EAS. Required when `verificationType` is `eas`. |
+| `walletAddress` | string | Conditional | Address of the verifying wallet. Required when `verificationType` is `ens`. Optional for `coinbase`. |
+| `signature` | string | Conditional | Cryptographic signature or attestation data. Required when `verificationType` is `coinbase`, `ens`, or `webauthn`. |
 
-<Note>The web API always sets `verified: true` on success. When calling the backend directly, you can pass `verified`, `verifierAddress`, and `metadata` explicitly.</Note>
+<Note>The web API always sets `verified: true` on success and computes the `verifierAddress` and `metadata` fields internally based on the verification type. When calling the backend directly, you can pass `verified`, `verifierAddress`, and `metadata` explicitly.</Note>
+
+Each verification type requires a different combination of fields:
+
+| Type | Required fields |
+|------|----------------|
+| `eas` | `attestationUid` |
+| `coinbase` | `signature` |
+| `ens` | `signature`, `walletAddress` |
+| `webauthn` | `signature` |
 
 #### Response
 
@@ -945,6 +953,8 @@ POST /api/agents/:id/verify
 
 | Code | Description |
 |------|-------------|
+| 400 | Invalid verification type. Must be one of: `eas`, `coinbase`, `ens`, `webauthn`. |
+| 400 | Missing required field for the selected verification type (for example, `Attestation UID required for EAS verification`, `Signature required for Coinbase verification`, `Signature and wallet address required for ENS verification`, `Attestation required for WebAuthn verification`) |
 | 401 | Unauthorized (handled by authentication middleware) |
 | 404 | Agent not found |
 | 500 | Failed to update verification |
