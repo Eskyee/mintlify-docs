@@ -1761,6 +1761,8 @@ POST /api/agent
 POST /api/chat
 ```
 
+Sends a message to the caller's deployed agent. The server connects to the agent's OpenClaw Gateway via WebSocket, performs the challenge-response authentication handshake, delivers the message, and returns the agent's reply.
+
 Requires session authentication.
 
 ### Request body
@@ -1768,7 +1770,7 @@ Requires session authentication.
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `message` | string | Yes | Message to send |
-| `topic` | string | No | Conversation topic |
+| `topic` | string | No | Conversation topic. Defaults to `main`. |
 
 ```json
 {
@@ -1777,26 +1779,38 @@ Requires session authentication.
 }
 ```
 
-### Response
+### Response (200)
 
 ```json
 {
-  "id": "msg_123",
+  "id": "msg_1742472000000",
   "message": "Hello!",
-  "topic": "general",
-  "status": "sent",
-  "timestamp": "2026-03-19T00:00:00Z",
-  "reply": "Message received by agent"
+  "agent": "my-agent",
+  "reply": "Hi there! How can I help you today?",
+  "timestamp": "2026-03-20T03:33:15.000Z"
 }
 ```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Message identifier (prefixed with `msg_`) |
+| `message` | string | The original message that was sent |
+| `agent` | string | Name of the agent that processed the message |
+| `reply` | string | The agent's response |
+| `timestamp` | string | ISO 8601 timestamp of when the response was generated |
 
 ### Errors
 
 | Code | Description |
 |------|-------------|
-| 400 | Message required |
-| 401 | Unauthorized |
-| 500 | Failed to send message |
+| 400 | `Message required` — the `message` field is missing from the request body |
+| 401 | `Unauthorized` — no valid session |
+| 404 | `User not found` — authenticated user does not exist in the database |
+| 404 | `No agent deployed` — the user does not have a deployed agent |
+| 500 | `Failed to send message` — an unexpected error occurred |
+| 503 | `Gateway not configured` — the server does not have a gateway token configured |
+
+<Note>The server opens a WebSocket connection to the agent's gateway for each request. Responses time out after 30 seconds. If the gateway is unreachable or the agent does not respond within this window, a `500` error is returned.</Note>
 
 ## List messages
 

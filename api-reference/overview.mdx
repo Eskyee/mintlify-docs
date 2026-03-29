@@ -164,7 +164,8 @@ curl -X POST https://agentbot.raveculture.xyz/api/ai/chat \
 | `/api/agents/provision` | GET | List provisioned agents (web) |
 | `/api/agents/:id/verification` | GET | Get verification status (backend) |
 | `/api/chat` | GET | List message history |
-| `/api/chat` | POST | Send message to agent |
+| `/api/chat` | POST | Send message to agent via gateway WebSocket proxy |
+| `/api/gateway/chat` | POST | Send message to agent via gateway chat proxy (dynamic token retrieval) |
 | `/api/demo/chat` | GET | List available demo models (no auth) |
 | `/api/demo/chat` | POST | Send a demo chat message (no auth, rate-limited by IP) |
 | `/api/daily-brief` | GET | Aggregated daily service health brief |
