@@ -5,7 +5,7 @@ description: "Store and retrieve key-value memory for agents"
 
 # Memory API
 
-Store and retrieve persistent key-value data for your agents. All endpoints require session authentication and ownership of the agent.
+Store and retrieve persistent key-value data for your agents. All endpoints require session authentication. GET requests with a specific `agentId` verify ownership; omitting the parameter or passing `all` returns memories across all of your agents.
 
 ## Get memory
 
@@ -13,13 +13,17 @@ Store and retrieve persistent key-value data for your agents. All endpoints requ
 GET /api/memory?agentId=agent_123
 ```
 
+Retrieve memory for a specific agent, or for all of your agents at once.
+
 ### Query parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `agentId` | string | Yes | ID of the agent |
+| `agentId` | string | No | ID of the agent. Pass `all` or omit to return memories across all of your agents. When a specific agent ID is provided, an ownership check is performed. |
 
 ### Response
+
+When `agentId` is a specific agent ID:
 
 ```json
 {
@@ -33,13 +37,27 @@ GET /api/memory?agentId=agent_123
 }
 ```
 
+When `agentId` is `all` or omitted:
+
+```json
+{
+  "memory": {
+    "preferences": { "theme": "dark" },
+    "context": "Last conversation was about scheduling",
+    "other_agent_key": "value from another agent"
+  },
+  "agentId": null,
+  "count": 3,
+  "lastUpdated": "2026-03-19T00:00:00Z"
+}
+```
+
 ### Errors
 
 | Code | Description |
 |------|-------------|
-| 400 | `agentId` query parameter required |
 | 401 | Unauthorized |
-| 404 | Agent not found |
+| 404 | Agent not found (only when a specific `agentId` is provided) |
 | 500 | Failed to fetch memory |
 
 ## Store memory (single key)
