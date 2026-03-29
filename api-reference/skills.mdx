@@ -19,7 +19,7 @@ https://agentbot.raveculture.xyz/api/skills
 GET /api/skills
 ```
 
-Returns all available skills in the marketplace. No authentication required.
+Returns all available skills in the marketplace. No authentication required for basic listing. When a valid session is present and `agentId` is provided, the response includes which skills are already installed for that user and agent.
 
 ### Query parameters
 
@@ -27,6 +27,7 @@ Returns all available skills in the marketplace. No authentication required.
 |-----------|------|-------------|
 | `category` | string | Filter by category. Use `all` or omit for all skills. Options: `streaming`, `events`, `payments`, `finance`, `productivity`, `communication`, `development`, `channels`, `music`, `creative`, `marketing` |
 | `featured` | string | Set to `true` to return only featured skills |
+| `agentId` | string | Agent identifier. When provided with an authenticated session, the response includes an `installedSkillIds` array indicating which skills are already installed on this agent. |
 
 ### Response
 
@@ -57,9 +58,17 @@ Returns all available skills in the marketplace. No authentication required.
     "creative",
     "marketing"
   ],
-  "featured": []
+  "featured": [],
+  "installedSkillIds": ["dj-streaming", "guestlist"]
 }
 ```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `skills` | array | List of skill objects matching the query filters |
+| `categories` | string[] | All distinct skill categories in the marketplace |
+| `featured` | array | Subset of `skills` where `featured` is `true` |
+| `installedSkillIds` | string[] | IDs of skills installed and enabled for the authenticated user and the specified `agentId`. Returns an empty array when no session is present or `agentId` is omitted. |
 
 ## Install skill
 
