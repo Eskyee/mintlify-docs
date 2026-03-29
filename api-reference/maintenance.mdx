@@ -1,0 +1,120 @@
+---
+title: Maintenance API
+description: "Agent health monitoring and restart endpoints"
+---
+
+# Maintenance API
+
+Check agent health and trigger maintenance restarts. These endpoints operate on the authenticated user's deployed agent instance.
+
+## Get agent health
+
+```http
+GET /api/openclaw/maintenance
+```
+
+Requires session authentication. Returns liveness and readiness status for the user's agent container by probing the agent's `/healthz` and `/readyz` endpoints.
+
+### Response
+
+```json
+{
+  "instanceId": "abc123",
+  "railwayUrl": "https://agentbot-agent-abc123-production.up.railway.app",
+  "healthy": true,
+  "ready": true,
+  "version": "2026.3.28",
+  "uptime": "2d 5h",
+  "status": "healthy"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `instanceId` | string | The agent's instance identifier |
+| `railwayUrl` | string | The agent's public Railway URL |
+| `healthy` | boolean | `true` when the agent's `/healthz` endpoint responds successfully |
+| `ready` | boolean | `true` when the agent's `/readyz` endpoint responds successfully |
+| `version` | string \| null | Agent runtime version reported by `/healthz`, or `null` if unavailable |
+| `uptime` | string \| null | Agent uptime reported by `/healthz`, or `null` if unavailable |
+| `status` | string | Computed status: `healthy`, `starting`, or `unreachable` |
+
+### Status values
+
+| Status | Condition |
+|--------|-----------|
+| `healthy` | Both `/healthz` and `/readyz` respond successfully |
+| `starting` | `/healthz` responds but `/readyz` does not |
+| `unreachable` | `/healthz` does not respond |
+
+### Response when no agent is deployed
+
+When the authenticated user has no deployed agent:
+
+```json
+{
+  "status": "no_agent",
+  "healthy": false,
+  "ready": false
+}
+```
+
+<Note>The health check uses a 5-second timeout for the `/healthz` probe and a 4-second timeout for the `/readyz` probe. Agents that are slow to start may report as `unreachable` or `starting` until fully initialized.</Note>
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 200 | Health status returned (check `status` field for actual health) |
+| 401 | Unauthorized — missing or invalid session |
+
+## Restart agent
+
+```http
+POST /api/openclaw/maintenance
+```
+
+Requires session authentication. Triggers a restart of the user's agent container. The agent automatically runs `openclaw doctor --fix` on startup, which performs health checks and applies any pending migrations.
+
+### Response
+
+```json
+{
+  "success": true,
+  "message": "Agent restarting — doctor & migrations run on startup"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `success` | boolean | `true` when the restart was initiated |
+| `message` | string | Confirmation message |
+
+### Error responses
+
+When the user has no deployed agent:
+
+```json
+{
+  "error": "No agent deployed"
+}
+```
+
+When the backend restart call fails:
+
+```json
+{
+  "error": "Restart failed",
+  "details": 502
+}
+```
+
+| Code | Description |
+|------|-------------|
+| 200 | Restart initiated |
+| 401 | Unauthorized — missing or invalid session |
+| 404 | No agent deployed for the authenticated user |
+| 500 | Internal error during the restart request |
+| 502 | Backend restart call failed |
+
+<Warning>Restarting an agent causes a brief period of downtime while the container reinitializes. The `openclaw doctor --fix` process runs automatically during startup and may take additional time depending on the number of pending fixes or migrations.</Warning>
