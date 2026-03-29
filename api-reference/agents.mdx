@@ -850,9 +850,18 @@ Returns the current status and metadata for an agent instance.
 GET /api/instance/:userId/stats
 ```
 
-Returns resource usage statistics for an agent instance.
+Returns resource usage statistics for an agent instance. Requires session authentication and ownership of the instance.
 
-### Response
+The endpoint uses a two-tier fallback strategy:
+
+1. **Backend API** — queries the backend service for full resource metrics (CPU, memory, plan, version).
+2. **Agent health probe** — when the backend is unavailable (for example, returns `503` when suspended), the endpoint probes the agent's own `/healthz` and `/readyz` endpoints directly on Railway. This returns health status instead of full resource metrics.
+
+If both the backend and the agent are unreachable, the endpoint returns a minimal response indicating the stats service is unavailable.
+
+### Response (backend available)
+
+When the backend API responds successfully, the full resource metrics are returned:
 
 ```json
 {
@@ -860,10 +869,81 @@ Returns resource usage statistics for an agent instance.
   "cpu": "0.15%",
   "memory": "128MiB",
   "status": "running",
-    "plan": "solo",
-    "openclawVersion": "2026.3.28"
+  "plan": "solo",
+  "openclawVersion": "2026.3.28",
+  "health": "healthy",
+  "uptime": 86400,
+  "messages": 1234,
+  "errors": 5
 }
 ```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `userId` | string | Agent instance identifier |
+| `cpu` | string | CPU usage. Falls back to `"unknown"` when not reported by the backend. |
+| `memory` | string | Memory usage. Falls back to `"unknown"` when not reported by the backend. |
+| `status` | string | Agent status (for example, `running`, `stopped`). Falls back to `"unknown"`. |
+| `plan` | string | Subscription plan tier. Falls back to `"free"`. |
+| `openclawVersion` | string | OpenClaw runtime version |
+| `health` | string | Agent health status. Falls back to `"unknown"` when not reported. |
+| `uptime` | number \| undefined | Agent uptime in seconds, when available |
+| `messages` | number \| undefined | Message count, when available |
+| `errors` | number \| undefined | Error count, when available |
+
+### Response (backend unavailable, agent healthy)
+
+When the backend is down but the agent's Railway service is reachable, the endpoint probes the agent's `/healthz` endpoint. If `/healthz` reports the agent is live, the endpoint also probes `/readyz` to determine readiness.
+
+```json
+{
+  "userId": "user_123",
+  "status": "running",
+  "health": "healthy",
+  "cpu": "—",
+  "memory": "—",
+  "uptime": "active",
+  "openclawVersion": "2026.3.24"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `status` | string | `running` when `/healthz` reports the agent is live, `unreachable` otherwise |
+| `health` | string | `healthy` when both `/healthz` and `/readyz` succeed, `degraded` when `/healthz` succeeds but `/readyz` fails, `unreachable` when `/healthz` fails |
+| `cpu` | string | `"—"` when the agent is healthy (resource metrics are not available without the backend), `"0%"` when unreachable |
+| `memory` | string | `"—"` when the agent is healthy, `"0MB"` when unreachable |
+| `uptime` | string | `"active"` when the agent is healthy, `"unknown"` when unreachable |
+| `openclawVersion` | string | OpenClaw runtime version (static fallback value) |
+
+<Note>When the backend is unavailable, CPU and memory metrics cannot be retrieved because the agent's `/healthz` and `/readyz` endpoints do not report resource usage. The `cpu` and `memory` fields return `"—"` to indicate that the agent is running but detailed metrics are unavailable.</Note>
+
+### Response (both unreachable)
+
+When both the backend and the agent's Railway service are unreachable:
+
+```json
+{
+  "userId": "user_123",
+  "cpu": "0%",
+  "memory": "0MB",
+  "status": "unknown",
+  "health": "unreachable",
+  "error": "Stats service unavailable"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `status` | string | Always `unknown` when both services are unreachable |
+| `health` | string | Always `unreachable` when both services are unreachable |
+| `error` | string | Error message indicating the stats service is unavailable |
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 403 | Forbidden — authenticated user does not own this agent instance |
 
 ## Get agent gateway token
 
