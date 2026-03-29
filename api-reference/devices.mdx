@@ -7,6 +7,8 @@ description: "Manage paired devices with approve, deny, and revoke actions"
 
 Manage device pairing for your agent. Devices start in a `pending` state and can be approved, denied, or revoked.
 
+<Note>All device endpoints require an authenticated session. Unauthenticated requests receive a `401` response.</Note>
+
 ## List devices
 
 ```http
@@ -58,6 +60,12 @@ Returns all pending and approved devices grouped by status.
 | `lastSeen` | string | ISO 8601 timestamp of the device's most recent activity |
 | `status` | string | One of `pending`, `approved`, `denied`, or `revoked` |
 
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | `Unauthorized` — no authenticated session |
+
 ## Manage a device
 
 ```http
@@ -82,17 +90,16 @@ Approve, deny, or revoke a device. The action must be valid for the device's cur
 ```json
 {
   "success": true,
-  "device": {
-    "id": "dev_pending_1",
-    "name": "iPhone 15 Pro — Atlas Mobile",
-    "ip": "86.23.104.12",
-    "firstSeen": "2026-03-27T14:22:00Z",
-    "lastSeen": "2026-03-27T15:35:00Z",
-    "status": "approved"
-  },
   "pending": [],
   "approved": [
-    { ... }
+    {
+      "id": "dev_approved_1",
+      "name": "iPhone 15 Pro — Atlas Mobile",
+      "ip": "86.23.104.12",
+      "firstSeen": "2026-03-27T14:22:00Z",
+      "lastSeen": "2026-03-27T15:35:00Z",
+      "status": "approved"
+    }
   ]
 }
 ```
@@ -100,7 +107,6 @@ Approve, deny, or revoke a device. The action must be valid for the device's cur
 | Field | Type | Description |
 |-------|------|-------------|
 | `success` | boolean | `true` when the action was applied |
-| `device` | object | The updated device object |
 | `pending` | array | Remaining pending devices |
 | `approved` | array | Currently approved devices |
 
@@ -108,6 +114,7 @@ Approve, deny, or revoke a device. The action must be valid for the device's cur
 
 | Code | Description |
 |------|-------------|
+| 401 | `Unauthorized` — no authenticated session |
 | 400 | `Missing required fields: deviceId, action` — one or both required fields are missing |
 | 400 | `Invalid action. Must be: approve, deny, or revoke` — the action is not recognized |
 | 400 | `Device is not pending` — attempted to approve or deny a device that is not in `pending` status |
