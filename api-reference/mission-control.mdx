@@ -178,7 +178,7 @@ The web proxy returns a `200` response with default empty data (see above) for u
 GET /api/mission-control/fleet/traces
 ```
 
-Returns up to 20 of the most recent execution traces for your agent fleet, sorted by recency. Traces include active plan steps, recent thoughts, free energy component readings, and cycle status from live soul instances. Returns an empty array when no soul instances are reachable or when the request is unauthenticated.
+Returns up to 20 of the most recent execution traces for your agent fleet, sorted by recency. Each trace is returned as an `AgentTask`-shaped object with fields like `description`, `completedAt`, `tokensUsed`, and `costUSD`. Traces include active plan steps, recent thoughts, free energy component readings, and cycle status from live soul instances. Returns an empty array when no soul instances are reachable or when the request is unauthenticated.
 
 ### Authentication
 
@@ -196,61 +196,63 @@ Requires bearer token authentication.
 [
   {
     "id": "trace-plan-0",
-    "type": "plan",
-    "label": "plan: reflect (2/5)",
-    "agent": "tempo-x402",
     "status": "running",
-    "duration": "—",
+    "description": "plan: reflect (2/5)",
     "startedAt": "2026-03-22T12:00:00.000Z",
-    "tokens": null
+    "completedAt": null,
+    "tokensUsed": 0,
+    "costUSD": 0,
+    "model": "tempo-x402"
   },
   {
     "id": "trace-thought-0-0",
-    "type": "inference",
-    "label": "plan: next step is to consolidate memory entries",
-    "agent": "tempo-x402",
-    "status": "success",
-    "duration": "285ms",
+    "status": "completed",
+    "description": "plan: next step is to consolidate memory entries",
     "startedAt": "2026-03-22T11:59:56.000Z",
-    "tokens": 542
+    "completedAt": "2026-03-22T11:59:56.285Z",
+    "tokensUsed": 542,
+    "costUSD": 0,
+    "model": "tempo-x402"
   },
   {
     "id": "trace-fe-0-0",
-    "type": "monitor",
-    "label": "cortex: surprise=0.12, contribution=0.04",
-    "agent": "tempo-x402",
-    "status": "success",
-    "duration": "1ms",
+    "status": "completed",
+    "description": "cortex: surprise=0.12, contribution=0.04",
     "startedAt": "2026-03-22T11:59:50.000Z",
-    "tokens": null
+    "completedAt": "2026-03-22T11:59:50.001Z",
+    "tokensUsed": 0,
+    "costUSD": 0,
+    "model": "tempo-x402"
   },
   {
     "id": "trace-cycles-0",
-    "type": "monitor",
-    "label": "cycle 1042 complete — mode: active, regime: explore",
-    "agent": "tempo-x402",
-    "status": "success",
-    "duration": "—",
+    "status": "idle",
+    "description": "cycle 1042 complete — mode: active, regime: explore",
     "startedAt": "2026-03-22T11:59:45.000Z",
-    "tokens": null
+    "completedAt": null,
+    "tokensUsed": 0,
+    "costUSD": 0,
+    "model": "tempo-x402"
   }
 ]
 ```
 
-### Trace object
+### Trace object (AgentTask shape)
 
 | Field | Type | Description |
 |-------|------|-------------|
 | `id` | string | Unique trace identifier |
-| `type` | string | Task type. One of `plan`, `tool_call`, `inference`, or `monitor` |
-| `label` | string | Description of the task executed |
-| `agent` | string | Soul designation that produced the trace (for example `"tempo-x402"`) |
-| `status` | string | Execution result. One of `success`, `running`, or `idle` |
-| `duration` | string | Execution time in milliseconds (for example `"285ms"`), or `"—"` for ongoing or non-timed traces |
+| `status` | string | Execution result. One of `completed`, `running`, or `idle`. Raw `success` status is mapped to `completed` |
+| `description` | string | Description of the task executed |
 | `startedAt` | string | ISO 8601 timestamp when the task started |
-| `tokens` | number \| null | Token count for inference-type traces. `null` for other trace types |
+| `completedAt` | string \| null | ISO 8601 timestamp when the task finished. Computed from the original duration for timed traces. `null` for ongoing or non-timed traces |
+| `tokensUsed` | number | Token count for inference-type traces. `0` for other trace types |
+| `costUSD` | number | Cost in USD attributed to this trace. Currently always `0` |
+| `model` | string | Soul designation that produced the trace (for example `"tempo-x402"`) |
 
 <Note>The response is capped at 20 traces, sorted from most recent to oldest.</Note>
+
+<Note>The previous raw trace fields (`type`, `label`, `agent`, `duration`, `tokens`) have been replaced by the `AgentTask` shape (`description`, `completedAt`, `tokensUsed`, `costUSD`, `model`). The `status` value `success` is now returned as `completed`.</Note>
 
 ### Errors
 
