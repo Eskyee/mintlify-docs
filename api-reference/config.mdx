@@ -1,11 +1,15 @@
 ---
 title: Config API
-description: "Read, update, and restore agent configuration with versioned backups"
+description: "Read, update, and restore per-user agent configuration with versioned backups"
 ---
 
 # Config API
 
-Manage agent configuration with automatic versioned backups. The system keeps the last 10 configuration backups and allows restoring to any previous version.
+Manage per-user agent configuration with automatic versioned backups. Configuration is persisted in the database and survives server restarts. The system keeps the last 10 configuration backups and allows restoring to any previous version.
+
+<Note>
+All Config API endpoints require authentication. Include a valid session cookie or auth token with every request. Unauthenticated requests receive a `401 Unauthorized` response.
+</Note>
 
 ## Get current configuration
 
@@ -13,26 +17,32 @@ Manage agent configuration with automatic versioned backups. The system keeps th
 GET /api/config
 ```
 
-Returns the current agent configuration and a list of available backups.
+Returns the authenticated user's current agent configuration and a list of available backups. If no custom configuration has been saved, the default OpenClaw configuration is returned.
 
 ### Response
 
 ```json
 {
   "config": {
-    "version": "2026.3.28",
-    "model": {
-      "default": "openrouter/auto",
-      "fallbacks": ["openrouter/anthropic/claude-3.5-sonnet"]
+    "logging": { "level": "info" },
+    "agent": {
+      "model": "anthropic/claude-opus-4-5",
+      "workspace": "~/.openclaw/workspace",
+      "thinkingDefault": "auto",
+      "timeoutSeconds": 1800,
+      "heartbeat": { "every": "0m" }
     },
     "channels": {
-      "telegram": { "enabled": true },
+      "whatsapp": { "allowFrom": [] },
+      "telegram": { "enabled": false },
       "discord": { "enabled": false },
       "webchat": { "enabled": true }
     },
-    "memory": { "maxEntries": 1000, "ttlDays": 90 },
-    "cron": { "heartbeatIntervalMinutes": 30 },
-    "safety": { "maxTokensPerDay": 100000, "allowedDomains": [] }
+    "session": {
+      "scope": "per-sender",
+      "resetTriggers": ["/new", "/reset"],
+      "reset": { "mode": "daily", "atHour": 4, "idleMinutes": 10080 }
+    }
   },
   "backups": [
     {
@@ -46,9 +56,31 @@ Returns the current agent configuration and a list of available backups.
 | Field | Type | Description |
 |-------|------|-------------|
 | `config` | object | The current agent configuration |
+| `config.logging.level` | string | Log level (e.g. `"info"`, `"debug"`, `"warn"`) |
+| `config.agent.model` | string | Default AI model identifier |
+| `config.agent.workspace` | string | Path to the agent's workspace directory |
+| `config.agent.thinkingDefault` | string | Default thinking mode (`"auto"`, `"on"`, `"off"`) |
+| `config.agent.timeoutSeconds` | number | Maximum time in seconds before the agent times out |
+| `config.agent.heartbeat.every` | string | Heartbeat interval (e.g. `"30m"`, `"0m"` to disable) |
+| `config.channels` | object | Channel-specific settings |
+| `config.channels.whatsapp.allowFrom` | array | Phone numbers allowed to message the agent. Empty array allows all. |
+| `config.channels.telegram.enabled` | boolean | Whether the Telegram channel is active |
+| `config.channels.discord.enabled` | boolean | Whether the Discord channel is active |
+| `config.channels.webchat.enabled` | boolean | Whether the webchat channel is active |
+| `config.session.scope` | string | Session scope (e.g. `"per-sender"`) |
+| `config.session.resetTriggers` | array | Commands that trigger a session reset |
+| `config.session.reset.mode` | string | Reset mode (e.g. `"daily"`) |
+| `config.session.reset.atHour` | number | Hour of day (0–23) for daily resets |
+| `config.session.reset.idleMinutes` | number | Minutes of inactivity before automatic reset |
 | `backups` | array | List of available backups (id and timestamp only) |
 | `backups[].id` | string | Unique backup identifier |
 | `backups[].timestamp` | string | ISO 8601 timestamp when the backup was created |
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | `Unauthorized` — no valid session |
 
 ## Save configuration
 
@@ -56,7 +88,7 @@ Returns the current agent configuration and a list of available backups.
 POST /api/config
 ```
 
-Saves a new configuration. The current configuration is automatically backed up before the new one is applied. The system retains the 10 most recent backups.
+Saves a new configuration for the authenticated user. The current configuration is automatically backed up before the new one is applied. The system retains the 10 most recent backups.
 
 ### Request body
 
@@ -92,6 +124,7 @@ Saves a new configuration. The current configuration is automatically backed up 
 | 400 | `Invalid config object` — the `config` field is missing or is not an object |
 | 400 | `Config is not valid JSON` — the config object cannot be serialized as valid JSON |
 | 400 | `Invalid request body` — the request body is not valid JSON |
+| 401 | `Unauthorized` — no valid session |
 
 ## Restore a backup
 
@@ -99,7 +132,7 @@ Saves a new configuration. The current configuration is automatically backed up 
 PUT /api/config
 ```
 
-Restores a previous configuration from a backup. The current configuration is automatically backed up before the restore is applied.
+Restores a previous configuration from a backup for the authenticated user. The current configuration is automatically backed up before the restore is applied.
 
 ### Request body
 
@@ -134,27 +167,43 @@ Restores a previous configuration from a backup. The current configuration is au
 |------|-------------|
 | 400 | `Missing backupId` — the `backupId` field is missing from the request body |
 | 400 | `Invalid request body` — the request body is not valid JSON |
+| 401 | `Unauthorized` — no valid session |
 | 404 | `Backup not found` — no backup exists with the given identifier |
 
 ### Example: save and restore
 
 ```bash
-# Save a new configuration
+# Save a new configuration (requires authentication)
 curl -X POST https://agentbot.raveculture.xyz/api/config \
   -H "Content-Type: application/json" \
+  -H "Cookie: session=YOUR_SESSION_TOKEN" \
   -d '{
     "config": {
-      "version": "2026.3.28",
-      "model": { "default": "openrouter/auto", "fallbacks": [] },
-      "channels": { "telegram": { "enabled": true } },
-      "memory": { "maxEntries": 500, "ttlDays": 30 },
-      "cron": { "heartbeatIntervalMinutes": 15 },
-      "safety": { "maxTokensPerDay": 50000, "allowedDomains": [] }
+      "logging": { "level": "debug" },
+      "agent": {
+        "model": "anthropic/claude-opus-4-5",
+        "workspace": "~/.openclaw/workspace",
+        "thinkingDefault": "auto",
+        "timeoutSeconds": 1800,
+        "heartbeat": { "every": "30m" }
+      },
+      "channels": {
+        "whatsapp": { "allowFrom": [] },
+        "telegram": { "enabled": true },
+        "discord": { "enabled": false },
+        "webchat": { "enabled": true }
+      },
+      "session": {
+        "scope": "per-sender",
+        "resetTriggers": ["/new", "/reset"],
+        "reset": { "mode": "daily", "atHour": 4, "idleMinutes": 10080 }
+      }
     }
   }'
 
-# Restore from a backup
+# Restore from a backup (requires authentication)
 curl -X PUT https://agentbot.raveculture.xyz/api/config \
   -H "Content-Type: application/json" \
+  -H "Cookie: session=YOUR_SESSION_TOKEN" \
   -d '{ "backupId": "bkp_initial" }'
 ```
