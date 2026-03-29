@@ -1,6 +1,6 @@
 ---
 title: Gateway
-description: "Route requests to plugins through the v1 gateway, and chat with agents via the gateway WebSocket proxy."
+description: "Route requests to plugins through the v1 gateway, and chat with agents via the OpenAI-compatible REST API or WebSocket fallback."
 ---
 
 # Gateway
@@ -157,15 +157,17 @@ When paid via MPP, the response includes a `Payment-Receipt` header and the `pay
 | 500 | `internal` | Internal server error |
 | 502 | `no_plugin` | No plugin registered for the given ID |
 
-## Gateway chat proxy
+## Gateway chat proxy (WebSocket fallback)
 
 ```http
 POST /api/gateway/chat
 ```
 
-Sends a chat message to the caller's deployed agent through the OpenClaw Gateway. The server connects to the agent's gateway via WebSocket, authenticates using the challenge-response handshake, delivers the message, and returns the agent's reply.
+Sends a chat message to the caller's deployed agent through the OpenClaw Gateway using WebSocket. The server connects to the agent's gateway via WebSocket, authenticates using the challenge-response handshake, delivers the message, and returns the agent's reply.
 
-This endpoint is similar to [`POST /api/chat`](/api-reference/agents#send-message) but retrieves the gateway token dynamically from the backend API rather than relying on a single environment variable.
+<Info>The primary chat endpoint [`POST /api/chat`](/api-reference/agents#send-message) now uses the OpenAI-compatible REST API (`POST /v1/chat/completions`) instead of WebSocket. This WebSocket-based endpoint is retained as a fallback for gateways that do not have `chatCompletions` enabled. For new integrations, prefer `POST /api/chat`.</Info>
+
+This endpoint retrieves the gateway token dynamically from the backend API rather than relying on a single environment variable.
 
 Requires session authentication.
 
@@ -212,7 +214,7 @@ Requires session authentication.
 | 500 | `Chat failed` — WebSocket connection or agent response error |
 | 503 | `No gateway token available` — no gateway token could be retrieved from the backend or environment |
 
-<Note>The server opens a WebSocket connection per request and times out after 30 seconds. If the gateway rejects the authentication handshake, a `500` error is returned with details from the gateway.</Note>
+<Note>This endpoint opens a WebSocket connection per request and times out after 30 seconds. If the gateway rejects the authentication handshake, a `500` error is returned with details from the gateway. For lower-overhead chat that avoids WebSocket, use [`POST /api/chat`](/api-reference/agents#send-message) which uses the OpenAI-compatible REST API.</Note>
 
 ### Example
 
@@ -279,6 +281,7 @@ The following environment variables are set on every agent container at launch. 
 | `gateway.auth.rateLimit.exemptLoopback` | `true` | Exempt loopback addresses from rate limiting |
 | `gateway.auth.allowTailscale` | `true` | Allow Tailscale network connections |
 | `gateway.trustedProxies` | `["127.0.0.1"]` | IP addresses trusted as reverse proxies. Requests from these addresses have their `X-Forwarded-For` headers honored for origin detection. Required for Railway-provisioned containers where a TCP proxy forwards traffic to the gateway on the loopback interface. |
+| `gateway.http.endpoints.chatCompletions.enabled` | `true` | Enables the OpenAI-compatible `POST /v1/chat/completions` endpoint on the gateway. Required for the REST-based [`POST /api/chat`](/api-reference/agents#send-message) endpoint. Set during provisioning. |
 | `gateway.controlUi.enabled` | `true` | Gateway control UI is enabled in containers. |
 | `gateway.controlUi.allowedOrigins` | `["*"]` | Origins permitted to connect to the Control UI via WebSocket. Set to `["*"]` to allow connections from any origin. When not configured, the gateway may reject WebSocket connections with an "origin not allowed" error if the request origin does not match the gateway's hostname. |
 
