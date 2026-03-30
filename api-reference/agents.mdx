@@ -117,6 +117,7 @@ Creates a new agent with an auto-generated ID and stores its metadata on disk. R
 |------|-------------|
 | 400 | Name required |
 | 401 | Unauthorized |
+| 402 | Active subscription required. The response body includes `code: "PAYMENT_REQUIRED"`. Non-admin users must have an active subscription to create agents. |
 | 500 | Failed to create agent |
 
 <Note>For provisioning an agent with messaging channel tokens and a live Railway service deployment, use [`POST /api/agents/provision`](#provision-agent) or [`POST /api/provision`](#provision-with-channel-tokens) instead.</Note>
@@ -262,6 +263,7 @@ Updates an agent's metadata including plan, AI provider, and configuration. Requ
 | Code | Description |
 |------|-------------|
 | 401 | Unauthorized |
+| 403 | Forbidden — you do not own this agent |
 | 404 | Agent not found |
 | 500 | Failed to update agent |
 
@@ -289,6 +291,8 @@ Stops and removes the agent's local Docker container, deallocates its port, and 
 | Code | Description |
 |------|-------------|
 | 401 | Unauthorized |
+| 403 | Forbidden — you do not own this agent |
+| 404 | Agent not found |
 | 500 | Failed to delete agent |
 
 <Note>The backend uses best-effort cleanup (service destruction and metadata removal). If the agent does not exist, the operation succeeds silently and returns `deleted: true`.</Note>
@@ -820,7 +824,8 @@ Web proxy lifecycle endpoints return a different error shape:
 | Code | Source | Description |
 |------|--------|-------------|
 | 401 | Both | Unauthorized — missing or invalid authentication |
-| 403 | Web proxy | Forbidden — authenticated user does not own this agent instance |
+| 403 | Both | Forbidden — authenticated user does not own this agent instance |
+| 404 | Backend | Agent not found |
 | 500 | Backend | Internal server error (for example, Railway API unavailable or service operation failed) |
 | 502 | Web proxy | Backend service unavailable |
 
