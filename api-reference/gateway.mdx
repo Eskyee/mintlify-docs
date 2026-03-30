@@ -167,7 +167,7 @@ Sends a chat message to the caller's deployed agent through the OpenClaw Gateway
 
 <Info>The primary chat endpoint [`POST /api/chat`](/api-reference/agents#send-message) now uses the OpenAI-compatible REST API (`POST /v1/chat/completions`) instead of WebSocket. This WebSocket-based endpoint is retained as a fallback for gateways that do not have `chatCompletions` enabled. For new integrations, prefer `POST /api/chat`.</Info>
 
-This endpoint retrieves the gateway token dynamically from the backend API rather than relying on a single environment variable.
+This endpoint retrieves the gateway token dynamically from the backend API rather than relying on a single environment variable. The gateway URL is always the shared platform gateway — per-user `openclawUrl` values from the database are no longer used for routing.
 
 Requires session authentication.
 
