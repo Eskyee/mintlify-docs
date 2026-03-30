@@ -1258,6 +1258,19 @@ Every new user instance is provisioned with a complete configuration template. T
 | `agents.defaults.heartbeat.lightContext` | `true` | Use lightweight context during heartbeat checks to reduce token usage |
 | `agents.defaults.heartbeat.isolatedSession` | `true` | Run heartbeat checks in an isolated session to avoid polluting conversation state |
 
+### Workspace starter files
+
+On first boot, the agent container pre-seeds the workspace directory with a set of starter files. These files are only created when the workspace does not already contain an `AGENTS.md` file. If the workspace has been previously initialized, the seeding step is skipped.
+
+| File | Description |
+|------|-------------|
+| `IDENTITY.md` | Agent identity including the agent name, plan tier, and platform origin |
+| `USER.md` | User context including the user ID, plan tier, and AI provider |
+| `SOUL.md` | Agent personality and behavioral instructions |
+| `AGENTS.md` | Per-session instructions that the agent reads on startup, including safety rules |
+
+<Note>The memory plugin requires these workspace files to be present. If the files are deleted, the memory plugin may not function correctly until the agent container is restarted (which re-creates them). You can view and edit these files using the [file explorer API](/api-reference/browse).</Note>
+
 ### Channel defaults
 
 All channels are pre-configured at provisioning time. Webchat is enabled by default; all other channels are disabled until you provide tokens.
