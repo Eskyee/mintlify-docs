@@ -35,17 +35,25 @@ Routes that are not mounted through the main API key middleware can use the stan
 | 403 | `Forbidden` | Token does not match `INTERNAL_API_KEY` |
 | 500 | `Server misconfigured` | `INTERNAL_API_KEY` is not set |
 
-### Header-based authentication (AI routes)
+### Header-based authentication (backend user context)
 
-The AI chat endpoint (`/api/ai/chat`) reads user context from request headers rather than verifying a token. The following headers are used:
+Backend endpoints that accept user context from the frontend proxy read the following headers. When `HMAC_SECRET` (or `INTERNAL_API_KEY` as fallback) is configured, the backend requires a valid HMAC-SHA256 signature to trust these headers.
 
-| Header | Type | Description |
-|--------|------|-------------|
-| `x-user-email` | string | User email address |
-| `x-user-id` | string | User ID (defaults to `anonymous` if missing) |
-| `x-user-role` | string | User role |
+| Header | Type | Required | Description |
+|--------|------|----------|-------------|
+| `x-user-email` | string | No | User email address |
+| `x-user-id` | string | No | User ID (defaults to `anonymous` if missing) |
+| `x-user-role` | string | No | User role (defaults to `user` if missing) |
+| `x-user-signature` | string | Conditional | HMAC-SHA256 signature of the user context. Required when `HMAC_SECRET` or `INTERNAL_API_KEY` is set. |
 
-<Warning>The AI route middleware does not reject unauthenticated requests. It reads the headers and always passes the request through. Access control is enforced by the plan middleware, which checks `x-user-plan` and `x-stripe-subscription-id`.</Warning>
+The signature is computed over the string `{userId}:{userEmail}:{userRole}` using the `HMAC_SECRET` environment variable (falls back to `INTERNAL_API_KEY`). The frontend proxy signs these headers before forwarding requests to the backend.
+
+| HTTP status | Error code | Description |
+|-------------|------------|-------------|
+| 401 | `SIGNATURE_REQUIRED` | `HMAC_SECRET` is configured but the `x-user-signature` header is missing |
+| 401 | `INVALID_SIGNATURE` | The provided signature does not match the expected HMAC-SHA256 digest |
+
+<Warning>The AI route middleware (`/api/ai/chat`) reads user context from headers separately from this middleware. Access control on AI routes is enforced by the plan middleware, which checks `x-user-plan` and `x-stripe-subscription-id`.</Warning>
 
 ### Admin middleware
 
@@ -111,6 +119,16 @@ POST /api/auth/login
 
 Authenticates a user with email and password. On success, creates a database-backed session and sets the `agentbot-session` cookie.
 
+This endpoint requires a valid CSRF token in the `x-csrf-token` or `x-xsrf-token` request header. Requests without a valid CSRF token are rejected with a `403` error.
+
+Rate-limited to 5 attempts per 15 minutes per IP address. After 5 failed attempts, subsequent requests are rejected with a `429` error until the 15-minute window resets.
+
+### Request headers
+
+| Header | Type | Required | Description |
+|--------|------|----------|-------------|
+| `x-csrf-token` | string | Yes | CSRF token in the format `{token}:{signed}`. You can also use `x-xsrf-token`. |
+
 ### Request body
 
 | Field | Type | Required | Description |
@@ -145,6 +163,8 @@ A `Set-Cookie` header is included with the `agentbot-session` token. The cookie 
 |------|-------------|
 | 400 | Missing email or password |
 | 401 | Invalid email or password |
+| 403 | Invalid or missing CSRF token |
+| 429 | Too many login attempts. Rate limit is 5 attempts per 15 minutes per IP address. |
 | 500 | Login failed |
 
 <Note>This endpoint replaced the previous NextAuth credentials callback (`/api/auth/callback/credentials`). If you are migrating from an older integration, update your sign-in requests to use `/api/auth/login`.</Note>
