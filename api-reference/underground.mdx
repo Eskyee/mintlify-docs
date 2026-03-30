@@ -75,7 +75,7 @@ Returns events for agents owned by the authenticated user, ordered by event date
     "description": "A curated underground event",
     "venue": "Warehouse 42",
     "event_date": "2026-04-15T22:00:00Z",
-    "ticket_price_usdc": "25.00",
+    "ticket_price_usdc": 25.00,
     "total_tickets": 200
   }
 ]
@@ -86,10 +86,10 @@ Returns events for agents owned by the authenticated user, ordered by event date
 | `id` | number | Event identifier |
 | `agent_id` | string | Agent that created the event |
 | `name` | string | Event name |
-| `description` | string | Event description |
-| `venue` | string | Event venue |
-| `event_date` | string | ISO 8601 event date and time |
-| `ticket_price_usdc` | string | Ticket price in USDC |
+| `description` | string \| null | Event description |
+| `venue` | string \| null | Event venue |
+| `event_date` | string \| null | ISO 8601 event date and time |
+| `ticket_price_usdc` | number | Ticket price in USDC |
 | `total_tickets` | number | Total tickets available |
 
 ### Errors
@@ -111,12 +111,12 @@ Creates a new event. Requires bearer token authentication with user context. The
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `agentId` | string | Yes | Agent identifier creating the event. The authenticated user must own this agent. |
-| `name` | string | Yes | Event name |
-| `description` | string | Yes | Event description |
-| `venue` | string | Yes | Event venue |
-| `eventDate` | string | Yes | ISO 8601 event date and time |
-| `ticketPriceUsdc` | string | Yes | Ticket price in USDC |
-| `totalTickets` | number | Yes | Total tickets available |
+| `name` | string | Yes | Event name. Maximum 200 characters. |
+| `description` | string | No | Event description. Defaults to `null` when omitted. |
+| `venue` | string | No | Event venue. Defaults to `null` when omitted. |
+| `eventDate` | string | No | ISO 8601 event date and time. Defaults to `null` when omitted. |
+| `ticketPriceUsdc` | number | No | Ticket price in USDC. Must be a non-negative number. Defaults to `0` when omitted. |
+| `totalTickets` | number | No | Total tickets available. Must be a positive integer. Defaults to `100` when omitted. |
 
 ### Response (201 Created)
 
@@ -128,7 +128,7 @@ Creates a new event. Requires bearer token authentication with user context. The
   "description": "A curated underground event",
   "venue": "Warehouse 42",
   "event_date": "2026-04-15T22:00:00Z",
-  "ticket_price_usdc": "25.00",
+  "ticket_price_usdc": 25.00,
   "total_tickets": 200
 }
 ```
@@ -137,7 +137,7 @@ Creates a new event. Requires bearer token authentication with user context. The
 
 | Code | Description |
 |------|-------------|
-| 400 | Bad request — `agentId` is missing |
+| 400 | Bad request — `agentId` is missing, `name` exceeds 200 characters, `ticketPriceUsdc` is not a non-negative number, or `totalTickets` is not a positive integer |
 | 401 | Unauthorized — missing or invalid bearer token, or missing user context |
 | 403 | Forbidden — the authenticated user does not own the specified agent |
 | 500 | Failed to create event |
@@ -223,11 +223,11 @@ Creates and executes a royalty split. The split is recorded in the database and 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `agentId` | string | Yes | Agent identifier. The authenticated user must own this agent. |
-| `name` | string | Yes | Split name |
-| `totalAmount` | string | Yes | Total amount in USDC to distribute |
-| `recipients` | array | Yes | Array of recipient objects (must not be empty) |
+| `name` | string | Yes | Split name. Maximum 200 characters. |
+| `totalAmount` | number | Yes | Total amount in USDC to distribute. Must be a positive number. |
+| `recipients` | array | Yes | Array of recipient objects (must not be empty). Recipient shares must sum to exactly 100. |
 | `recipients[].address` | string | Yes | Recipient wallet address |
-| `recipients[].share` | number | Yes | Share percentage for this recipient |
+| `recipients[].share` | number | Yes | Share percentage for this recipient. Must be between 0 and 100. |
 
 <Warning>The `userId` and `fromAddress` parameters were previously accepted in the request body but are now ignored. The user identifier is always derived from the authenticated session context to prevent unauthorized split creation.</Warning>
 
@@ -250,7 +250,7 @@ Creates and executes a royalty split. The split is recorded in the database and 
 
 | Code | Description |
 |------|-------------|
-| 400 | Bad request — `agentId` is missing, or `recipients` array is missing or empty |
+| 400 | Bad request — `agentId` is missing, `name` exceeds 200 characters, `totalAmount` is not a positive number, `recipients` array is missing or empty, a recipient share is outside the 0–100 range, or recipient shares do not sum to 100 |
 | 401 | Unauthorized — missing or invalid bearer token, or missing user context |
 | 403 | Forbidden — the authenticated user does not own the specified agent |
 | 500 | Failed to create split |

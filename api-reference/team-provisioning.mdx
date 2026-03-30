@@ -26,7 +26,7 @@ Each plan tier determines how many agents are provisioned in a single team:
 POST /api/provision/team
 ```
 
-Creates a team of agents using a pre-built template. Requires session authentication.
+Creates a team of agents using a pre-built template. Requires bearer token authentication.
 
 ### Request body
 
@@ -35,6 +35,7 @@ Creates a team of agents using a pre-built template. Requires session authentica
 | `plan` | string | Yes | Plan tier. Must be one of `collective`, `label`, or `network`. |
 | `templateKey` | string | No | Key of the pre-built team template to use. Defaults to `dev_team` when omitted. See [list templates](#list-team-templates) for available options. |
 | `customAgents` | array | No | Custom agent configurations to provision instead of (or in addition to) the template defaults. Each entry defines an agent with its own configuration. |
+| `stripeSubscriptionId` | string | No | Stripe subscription ID. Can also be passed in the `x-stripe-subscription-id` header. Required for non-admin users when payment enforcement is active. |
 
 ### Response
 
@@ -77,7 +78,9 @@ Creates a team of agents using a pre-built template. Requires session authentica
 | Code | Description |
 |------|-------------|
 | 400 | Invalid JSON body or missing/invalid `plan`. The `plan` field must be one of `collective`, `label`, or `network`. The response includes an `available_templates` array listing valid template keys. |
-| 401 | Unauthorized — missing or invalid session |
+| 401 | Unauthorized — missing or invalid bearer token, or missing user context |
+| 402 | Payment required — no `stripeSubscriptionId` provided and the caller is not an admin. The response body includes `code: "PAYMENT_REQUIRED"`. |
+| 402 | Agent limit reached for this plan. The response body includes `code: "AGENT_LIMIT_REACHED"` along with `current` (current agent count) and `limit` (maximum allowed) fields. |
 | 500 | Team provisioning failed |
 
 ### Example request
@@ -85,7 +88,7 @@ Creates a team of agents using a pre-built template. Requires session authentica
 ```bash
 curl -X POST https://api.agentbot.raveculture.xyz/api/provision/team \
   -H "Content-Type: application/json" \
-  -H "Cookie: session=YOUR_SESSION_COOKIE" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
   -d '{
     "plan": "collective",
     "templateKey": "dev-fullstack"
@@ -98,7 +101,7 @@ curl -X POST https://api.agentbot.raveculture.xyz/api/provision/team \
 GET /api/provision/team/templates
 ```
 
-Returns all available pre-built team templates and their categories. Requires session authentication.
+Returns all available pre-built team templates and their categories. Requires bearer token authentication.
 
 ### Response
 
@@ -146,7 +149,7 @@ Returns all available pre-built team templates and their categories. Requires se
 
 | Code | Description |
 |------|-------------|
-| 401 | Unauthorized — missing or invalid session |
+| 401 | Unauthorized — missing or invalid bearer token |
 
 ## Available templates
 
