@@ -32,7 +32,7 @@ Requires session authentication. Returns liveness and readiness status for the u
 | Field | Type | Description |
 |-------|------|-------------|
 | `instanceId` | string | The agent's instance identifier |
-| `railwayUrl` | string | The agent's public Railway URL |
+| `railwayUrl` | string | The URL used for health probes. This is the per-user `openclawUrl` from the database when available, otherwise falls back to the constructed Railway URL (`https://agentbot-agent-{instanceId}-production.up.railway.app`). Note that the per-user URL may be stale — for gateway connections, use the shared gateway URL instead (see [`GET /api/user/openclaw`](/api-reference/agents#get-user-openclaw-instance)). |
 | `healthy` | boolean | `true` when the agent's `/healthz` endpoint responds successfully |
 | `ready` | boolean | `true` when the agent's `/readyz` endpoint responds successfully |
 | `version` | string \| null | Agent runtime version reported by `/healthz`, or `null` if unavailable |

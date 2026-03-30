@@ -1148,7 +1148,7 @@ When the Railway fallback handles the request, the response has a different shap
 
 <Note>The Railway path does not return `subdomain`, `streamKey`, or `liveStreamId`. These fields are only available when the backend Express service handles the request. The `status` field is `deploying` (not `active`) because the Railway service is created asynchronously. The Railway path creates a service domain with `targetPort: 18789` so that Railway's HTTP proxy routes incoming requests directly to the OpenClaw gateway port. The start command configures the gateway in local mode with device auth disabled and chat completions enabled before launching on port 18789.</Note>
 
-<Note>On a successful provision through either path, the proxy persists the `openclawUrl` and `openclawInstanceId` to the user record in the database. You can retrieve these values later using [`GET /api/user/openclaw`](#get-user-openclaw-instance).</Note>
+<Note>On a successful provision through either path, the proxy persists the `openclawUrl` and `openclawInstanceId` to the user record in the database. You can retrieve these values later using [`GET /api/user/openclaw`](#get-user-openclaw-instance). Note that the stored `openclawUrl` is no longer used for gateway routing — the platform always uses the shared gateway URL instead. The `openclawInstanceId` remains the primary identifier for the agent instance.</Note>
 
 ### Full backend response
 
@@ -1519,9 +1519,11 @@ Returns the authenticated user's OpenClaw URL, instance ID, and gateway token. T
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `openclawUrl` | string \| null | The OpenClaw dashboard URL for this user. `null` when no OpenClaw instance has been provisioned. |
+| `openclawUrl` | string \| null | **Deprecated for routing.** The per-user OpenClaw URL stored at provisioning time. This value may become stale if the gateway infrastructure changes. Clients should use the shared gateway URL (configured via `NEXT_PUBLIC_OPENCLAW_GATEWAY_URL`) instead of this field for connecting to the gateway. The field is still returned for backward compatibility but should not be used to construct gateway connections. `null` when no OpenClaw instance has been provisioned. |
 | `openclawInstanceId` | string \| null | The OpenClaw instance identifier. `null` when no OpenClaw instance has been provisioned. |
 | `gatewayToken` | string \| null | The platform-level gateway token for authenticating with the OpenClaw Control dashboard. `null` when no gateway token is configured. |
+
+<Warning>The `openclawUrl` field is no longer used for gateway routing. The platform now always routes through the shared gateway URL, ignoring per-user URLs that may have become stale in the database. If you previously relied on `openclawUrl` to connect to a user's gateway, switch to the shared gateway URL instead.</Warning>
 
 ## Fix OpenClaw start command (admin)
 
