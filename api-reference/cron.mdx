@@ -9,6 +9,8 @@ Create, list, and delete cron jobs directly on the OpenClaw gateway. Cron jobs r
 
 <Note>These endpoints manage cron jobs on the gateway itself via `POST /tools/invoke`. For application-level scheduled tasks stored in the database, see the [scheduled tasks API](/api-reference/scheduled-tasks).</Note>
 
+<Note>Cron is enabled by default on all new instances. The provisioning template sets a maximum of 2 concurrent runs and 24-hour session retention. You can adjust these limits using the [config API](/api-reference/config).</Note>
+
 All cron endpoints require session authentication.
 
 ## List cron jobs

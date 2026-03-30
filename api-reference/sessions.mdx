@@ -15,6 +15,8 @@ GET /api/sessions
 
 Requires session authentication. Returns up to 50 conversation sessions from the gateway.
 
+<Note>New instances are provisioned with `per-sender` session scope, meaning each sender gets an isolated conversation. Sessions reset daily at 4:00 AM server time and are pruned after 30 days (with a maximum of 500 entries per sender). You can change these defaults using the [config API](/api-reference/config).</Note>
+
 ### Response
 
 ```json

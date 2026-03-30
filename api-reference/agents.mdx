@@ -1244,6 +1244,69 @@ Each provider includes a fallback model in the service config that is used autom
 
 <Note>`minimax` is available as a fallback in the provider configuration map but is not currently accepted as a value for the `aiProvider` request parameter. Passing `minimax` as `aiProvider` returns a `400` validation error. This provider may be enabled in a future release.</Note>
 
+## Provisioning template defaults
+
+Every new user instance is provisioned with a complete configuration template. These defaults are written to the agent's `openclaw.json` at container creation time. You can override them later using the [config API](/api-reference/config).
+
+### Agent defaults
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `agents.defaults.workspace` | `/home/node/.openclaw/workspace` | Path to the agent's workspace directory inside the container |
+| `agents.defaults.model.primary` | `openrouter/xiaomi/mimo-v2-pro` | Primary AI model used for completions |
+| `agents.defaults.heartbeat.every` | `30m` | Heartbeat interval (30 minutes) |
+| `agents.defaults.heartbeat.lightContext` | `true` | Use lightweight context during heartbeat checks to reduce token usage |
+| `agents.defaults.heartbeat.isolatedSession` | `true` | Run heartbeat checks in an isolated session to avoid polluting conversation state |
+
+### Channel defaults
+
+All channels are pre-configured at provisioning time. Webchat is enabled by default; all other channels are disabled until you provide tokens.
+
+| Channel | Enabled | `dmPolicy` |
+|---------|---------|------------|
+| `telegram` | `false` | `pairing` |
+| `discord` | `false` | `pairing` |
+| `whatsapp` | `false` | `pairing` |
+| `webchat` | `true` | — |
+
+### Cron defaults
+
+Cron is enabled by default on all new instances with the following limits:
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `cron.enabled` | `true` | Cron scheduler is active |
+| `cron.maxConcurrentRuns` | `2` | Maximum number of cron jobs that can execute simultaneously |
+| `cron.sessionRetention` | `24h` | How long cron session data is retained before cleanup |
+
+### Session defaults
+
+Sessions use per-sender scoping with automatic daily resets:
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `session.scope` | `per-sender` | Each sender gets an isolated conversation session |
+| `session.reset.mode` | `daily` | Sessions reset automatically on a recurring schedule |
+| `session.reset.atHour` | `4` | Daily reset occurs at 4:00 AM (server time) |
+| `session.maintenance.mode` | `warn` | Warn before pruning old sessions rather than pruning silently |
+| `session.maintenance.pruneAfter` | `30d` | Sessions older than 30 days are eligible for pruning |
+| `session.maintenance.maxEntries` | `500` | Maximum number of session entries retained per sender |
+
+### Tool defaults
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `tools.profile` | `coding` | Tool profile applied to the agent (includes shell commands, code execution) |
+| `tools.exec.backgroundMs` | `10000` | Maximum time in milliseconds for background execution tasks |
+| `tools.exec.timeoutSec` | `1800` | Maximum execution timeout in seconds (30 minutes) |
+| `tools.web.search.enabled` | `true` | Web search tool is available to the agent |
+| `tools.web.fetch.enabled` | `true` | Web fetch tool is available to the agent |
+| `tools.web.fetch.maxChars` | `50000` | Maximum characters returned from a web fetch |
+
+### LLM authentication
+
+The provisioning template includes the platform's `OPENROUTER_API_KEY` in the agent's `env` section so the agent can authenticate with the LLM provider without additional configuration.
+
 ## Channel configuration
 
 When an agent is provisioned, its channel configuration is generated based on the tokens provided. All channels share a set of defaults and each channel type has specific settings.
