@@ -128,107 +128,136 @@ GET /api/heartbeat?agentId=agent_123
 
 Requires session authentication. Returns the heartbeat configuration for a specific agent.
 
+The endpoint first queries the OpenClaw gateway for a heartbeat cron job. If the gateway returns a matching job, the response uses the gateway data. If the gateway is unavailable or no heartbeat job exists, the endpoint falls back to the database.
+
+<Note>The `source` field in the response indicates where the data came from: `gateway` when read from the gateway's cron scheduler, or `db` when read from the database fallback.</Note>
+
 ### Query parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `agentId` | string | Yes | The agent to retrieve heartbeat settings for |
+| `agentId` | string | No | The agent to retrieve heartbeat settings for. Required for the database fallback. When the gateway returns a heartbeat job, the `agentId` parameter is not used. |
 
-### Response
+### Response (gateway source)
 
-```json
-{
-  "heartbeat": {
-    "frequency": "3h",
-    "enabled": true,
-    "lastHeartbeat": "2026-03-19T00:00:00Z",
-    "nextHeartbeat": "2026-03-19T03:00:00Z"
-  }
-}
-```
-
-When no settings have been saved for the agent, the endpoint returns defaults:
+When the gateway has a heartbeat cron job configured:
 
 ```json
 {
-  "heartbeat": {
-    "frequency": "3h",
-    "enabled": true,
-    "lastHeartbeat": null,
-    "nextHeartbeat": null
-  }
+  "source": "gateway",
+  "enabled": true,
+  "frequency": "1h",
+  "nextRun": "2026-03-30T02:00:00Z",
+  "lastRun": "2026-03-30T01:00:00Z"
 }
 ```
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `heartbeat.frequency` | string | Heartbeat interval (for example, `3h`, `30m`, `1d`) |
-| `heartbeat.enabled` | boolean | Whether heartbeats are enabled |
-| `heartbeat.lastHeartbeat` | string \| null | ISO 8601 timestamp of the last heartbeat, or `null` if never set |
-| `heartbeat.nextHeartbeat` | string \| null | ISO 8601 timestamp of the next scheduled heartbeat, or `null` if never set |
+| `source` | string | Always `gateway` when data is from the gateway |
+| `enabled` | boolean | Whether the heartbeat job is enabled |
+| `frequency` | string | Heartbeat interval derived from the cron schedule (for example, `1h`, `30m`). When the schedule uses milliseconds, the value is converted to hours. |
+| `nextRun` | string \| null | ISO 8601 timestamp of the next scheduled run |
+| `lastRun` | string \| null | ISO 8601 timestamp of the last run |
+
+### Response (database fallback)
+
+When no gateway heartbeat job is found and `agentId` is provided:
+
+```json
+{
+  "source": "db",
+  "enabled": true,
+  "frequency": "30m",
+  "message": "Using defaults — gateway heartbeat not configured"
+}
+```
+
+When saved settings exist in the database, the response includes the stored `enabled` and `frequency` values.
+
+When no `agentId` is provided and no gateway heartbeat is found:
+
+```json
+{
+  "source": "db",
+  "enabled": false,
+  "message": "No agentId provided"
+}
+```
 
 ### Errors
 
 | Code | Description |
 |------|-------------|
-| 400 | `agentId required` — the `agentId` query parameter is missing |
 | 401 | Unauthorized |
 | 500 | Failed to fetch heartbeat settings |
 
 ## Update heartbeat settings
 
 ```http
-POST /api/heartbeat
+PUT /api/heartbeat
 ```
 
-Requires session authentication. Updates heartbeat settings for a specific agent. The agent must belong to the authenticated user. Ownership is verified against both the agent table (for legacy Docker-provisioned agents) and the user's `openclawInstanceId` field (for Railway-provisioned agents). If either check matches, the request is authorized.
+Requires session authentication. Updates heartbeat settings for a specific agent.
+
+The endpoint first attempts to write the heartbeat as a cron job on the OpenClaw gateway. If the gateway write succeeds, the response indicates `source: "gateway"`. If the gateway is unavailable or the write fails, the settings are saved to the database as a fallback.
+
+<Warning>**Breaking change:** This endpoint now uses the `PUT` method instead of `POST`. The `POST` method is deprecated and may be removed in a future release. Update your integration to use `PUT`.</Warning>
 
 ### Request body
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `agentId` | string | Yes | The agent to update heartbeat settings for |
-| `frequency` | string | No | Heartbeat interval (for example, `3h`, `30m`, `1d`). Defaults to `3h`. Supported units: `m` (minutes), `h` (hours), `d` (days). |
+| `agentId` | string | Conditional | The agent to update heartbeat settings for. Required when the gateway write fails and the database fallback is used. |
+| `frequency` | string | No | Heartbeat interval. Supported values: `30m`, `1h`, `2h`, `3h`, `6h`, `12h`. |
 | `enabled` | boolean | No | Enable or disable heartbeats. Defaults to `true`. |
 
-### Response
+### Response (gateway source)
 
 ```json
 {
-  "heartbeat": {
-    "frequency": "3h",
-    "enabled": true,
-    "lastHeartbeat": "2026-03-19T00:00:00Z",
-    "nextHeartbeat": "2026-03-19T03:00:00Z",
-    "lastUpdated": "2026-03-19T00:00:00Z"
-  }
+  "success": true,
+  "source": "gateway",
+  "enabled": true,
+  "frequency": "3h"
+}
+```
+
+### Response (database fallback)
+
+```json
+{
+  "success": true,
+  "source": "db",
+  "enabled": true,
+  "frequency": "3h"
 }
 ```
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `heartbeat.frequency` | string | Configured heartbeat interval |
-| `heartbeat.enabled` | boolean | Whether heartbeats are enabled |
-| `heartbeat.lastHeartbeat` | string | ISO 8601 timestamp when the settings were saved |
-| `heartbeat.nextHeartbeat` | string | ISO 8601 timestamp of the next scheduled heartbeat, calculated from the current time plus the frequency |
-| `heartbeat.lastUpdated` | string | ISO 8601 timestamp of the last settings update |
+| `success` | boolean | `true` on success |
+| `source` | string | Where the settings were saved: `gateway` or `db` |
+| `enabled` | boolean | Whether heartbeats are enabled |
+| `frequency` | string | Configured heartbeat interval |
 
 ### Errors
 
 | Code | Description |
 |------|-------------|
-| 400 | `agentId required` — the `agentId` field is missing from the request body |
+| 400 | `agentId required` — the `agentId` field is missing and the gateway write failed (database fallback requires `agentId`) |
 | 401 | Unauthorized |
-| 404 | Agent not found — the agent does not exist in the agent table and does not match the user's `openclawInstanceId` |
 | 500 | Heartbeat update failed |
 
 ## Delete heartbeat settings
+
+<Warning>**Deprecated:** The `DELETE /api/heartbeat` endpoint is deprecated. To disable heartbeats, use `PUT /api/heartbeat` with `"enabled": false` instead. When using the gateway, you can also remove the heartbeat cron job directly via `DELETE /api/cron?jobId=heartbeat`. See the [cron API](/api-reference/cron).</Warning>
 
 ```http
 DELETE /api/heartbeat
 ```
 
-Requires session authentication. Resets heartbeat configuration for a specific agent by removing saved settings.
+Requires session authentication. Resets heartbeat configuration for a specific agent by removing saved settings from the database.
 
 ### Request body
 
