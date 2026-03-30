@@ -477,7 +477,7 @@ export async function POST(request) {
 }
 ```
 
-<Warning>The legacy endpoint at `/api/stripe/webhook` is deprecated. It logs a deprecation warning and forwards requests to `/api/webhooks/stripe`. Update your Stripe dashboard webhook URL to the canonical endpoint. If the forwarding request fails, the legacy endpoint returns a `502 Bad Gateway` response with `{ "error": "Forward failed" }`. A `GET` request to the legacy endpoint returns `{ "status": "deprecated", "message": "Use /api/webhooks/stripe instead" }`.</Warning>
+<Warning>The legacy endpoint at `/api/stripe/webhook` has been permanently removed. Both `POST` and `GET` requests return `410 Gone` with `{ "error": "This endpoint is deprecated. Use /api/webhooks/stripe instead." }`. Update your Stripe dashboard webhook URL to the canonical endpoint at `/api/webhooks/stripe`. The previous forwarding behavior has been removed.</Warning>
 
 ### Plan mapping
 

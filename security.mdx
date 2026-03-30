@@ -12,7 +12,7 @@ Agentbot is committed to keeping your data safe. Here's our security posture.
 | Category | Status | Notes |
 |----------|--------|-------|
 | Data Encryption | ✅ | TLS 1.3 in transit |
-| API Authorization | ✅ | Session-based auth + JWT middleware, timing-safe key comparison |
+| API Authorization | ✅ | Session-based auth + JWT middleware, timing-safe key comparison, HMAC-SHA256 signature verification on backend user context headers |
 | Data Isolation | ✅ | Row-level security (RLS) policies |
 | Bot Detection | ✅ | Automated request filtering on sensitive endpoints |
 | Input Validation | ✅ | Allowlist + sanitization |
@@ -126,12 +126,20 @@ The backend API uses auth middleware that runs before protected endpoints. API k
 3. On success, the middleware attaches `userId`, `userEmail`, and `userRole` to the request and sets the RLS context.
 4. On failure, the endpoint returns one of the error codes below.
 
+### HMAC signature verification
+
+The backend `authenticate` middleware verifies user context headers using HMAC-SHA256 signatures. When the frontend proxy forwards requests to the backend, it signs the user context (`userId:userEmail:userRole`) with a shared secret and includes the signature in the `x-user-signature` header. The backend verifies this signature before trusting the forwarded user identity.
+
+The signing secret is read from `HMAC_SECRET`, falling back to `INTERNAL_API_KEY`. When the secret is configured, all requests with user context headers must include a valid signature. See the [API reference](/api-reference/auth#header-based-authentication-backend-user-context) for header details and error codes.
+
 ### Error codes
 
 | Code | HTTP status | Description |
 |------|-------------|-------------|
 | `AUTH_REQUIRED` | 401 | No `Authorization` header or missing `Bearer` prefix |
 | `TOKEN_INVALID` | 401 | JWT signature verification failed or token has expired |
+| `SIGNATURE_REQUIRED` | 401 | HMAC secret is configured but no `x-user-signature` header was provided |
+| `INVALID_SIGNATURE` | 401 | The HMAC-SHA256 signature does not match the expected value |
 | `AUTH_ERROR` | 500 | Unexpected error during authentication |
 | `ADMIN_REQUIRED` | 403 | Endpoint requires admin privileges and the authenticated user is not an admin |
 
@@ -163,7 +171,7 @@ The web frontend wraps API routes with security middleware that provides:
 - **SQL injection prevention** — request parameters and body are scanned for injection patterns
 - **XSS prevention** — payloads containing script tags or event handlers are rejected
 - **JSON validation** — `Content-Type` enforcement and body parsing on mutation endpoints
-- **CSRF protection** — token-based verification using the `x-csrf-token` or `x-xsrf-token` header
+- **CSRF protection** — token-based verification using the `x-csrf-token` or `x-xsrf-token` header, enforced on the login endpoint and all sensitive mutation routes
 - **Header stripping** — bypass headers (`X-Original-URL`, `X-Rewrite-URL`, `X-Forwarded-Host`) are removed or rejected
 
 ### Route protection levels
@@ -212,7 +220,7 @@ All web frontend responses include the following security headers:
 
 | Header | Value | Purpose |
 |--------|-------|---------|
-| `Content-Security-Policy` | Restrictive policy with `default-src 'self'` | Limits sources for scripts, styles, images, and connections |
+| `Content-Security-Policy` | Restrictive policy with `default-src 'self'` and `script-src 'self'` (no `unsafe-eval`) | Limits sources for scripts, styles, images, and connections. Scripts are restricted to same-origin only — `unsafe-eval` is not permitted. |
 | `X-Frame-Options` | `DENY` | Prevents clickjacking by blocking iframe embedding |
 | `X-Content-Type-Options` | `nosniff` | Prevents MIME type sniffing |
 | `Referrer-Policy` | `strict-origin-when-cross-origin` | Limits referrer information sent to external sites |
@@ -230,11 +238,16 @@ API responses include `no-cache, no-store, must-revalidate` to prevent caching o
 Currently skills run in demo mode. In production:
 - API rate limits will be per-user
 
-### In-Memory Storage
+### In-memory storage
+
 Groupie Manager uses in-memory Map storage. Data is:
 - Lost on server restart
 - Not shared between server instances
 - Only for demonstration purposes
+
+### In-memory rate limiting (cold starts)
+
+The web API security middleware uses in-memory stores for rate limiting, failed auth tracking, and bot detection. On serverless platforms (such as Vercel), this state resets on every cold start. For persistent rate limiting in production, configure `KV_REST_API_URL` and `KV_REST_API_TOKEN` to use Redis-backed storage. Without Redis, rate limits may be temporarily bypassed after a cold start until the in-memory counters rebuild.
 
 ## Reporting Issues
 

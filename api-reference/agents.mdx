@@ -9,6 +9,8 @@ Create, manage, and interact with agents.
 
 <Note>All agent endpoints that require authentication are scoped to the authenticated user's data through [row-level security](/security#row-level-security). You can only access agents that belong to your account.</Note>
 
+<Warning>Authentication tokens (such as channel tokens and gateway tokens) are never included in agent API responses. Tokens are write-only secrets — they are stored server-side at provisioning time but are stripped from all subsequent read operations (list, get, and provision responses).</Warning>
+
 ## List agents
 
 ```http
