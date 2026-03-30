@@ -225,6 +225,117 @@ curl -X POST https://agentbot.raveculture.xyz/api/gateway/chat \
   -d '{"message": "What is my agent status?", "sessionKey": "main"}'
 ```
 
+## Production gateway service
+
+The production gateway is a standalone service deployed on Railway that exposes an OpenAI-compatible chat completions endpoint. It runs separately from the per-agent containers and uses its own configuration file.
+
+### Environment variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `OPENCLAW_GATEWAY_TOKEN` | Auto-generated | Bearer token for authenticating requests. If not set, a 64-character hex token is generated at startup. |
+| `PORT` | `8080` | Port the gateway listens on |
+| `AGENTBOT_API_URL` | `https://agentbot-prod-production.up.railway.app` | Backend API URL the gateway proxies to |
+
+### Default model configuration
+
+The production gateway uses the following model defaults:
+
+| Parameter | Value | Description |
+|-----------|-------|-------------|
+| `agents.defaults.model.primary` | `openrouter/xiaomi/mimo-v2-pro` | Primary model for agent requests |
+| `agents.defaults.model.fallbacks` | `["openrouter/anthropic/claude-sonnet-4", "openrouter/google/gemini-2.5-flash"]` | Fallback models tried in order if the primary is unavailable |
+| `agents.defaults.imageModel.primary` | `openrouter/google/gemini-2.5-flash` | Model used for image-related tasks |
+
+Model aliases are configured for convenience:
+
+| Alias | Model |
+|-------|-------|
+| `mimo` | `openrouter/xiaomi/mimo-v2-pro` |
+| `sonnet` | `openrouter/anthropic/claude-sonnet-4` |
+| `gemini` | `openrouter/google/gemini-2.5-flash` |
+
+### Agent defaults
+
+| Parameter | Value | Description |
+|-----------|-------|-------------|
+| `agents.defaults.workspace` | `/home/node/.openclaw/workspace` | Default workspace directory |
+| `agents.defaults.userTimezone` | `Europe/London` | Default timezone |
+| `agents.defaults.thinkingDefault` | `low` | Default thinking verbosity level |
+| `agents.defaults.verboseDefault` | `off` | Default verbose output mode |
+| `agents.defaults.timeoutSeconds` | `600` | Maximum time in seconds for a single request |
+| `agents.defaults.mediaMaxMb` | `5` | Maximum media file size in megabytes |
+| `agents.defaults.maxConcurrent` | `3` | Maximum concurrent agent tasks |
+| `agents.defaults.heartbeat.every` | `30m` | Self-monitoring heartbeat interval |
+| `agents.defaults.heartbeat.lightContext` | `true` | Use minimal context for heartbeat checks |
+| `agents.defaults.heartbeat.isolatedSession` | `true` | Run heartbeat in an isolated session to avoid polluting active conversations |
+| `agents.defaults.heartbeat.target` | `none` | Heartbeat notification target (disabled by default) |
+
+### Tool configuration
+
+| Parameter | Value | Description |
+|-----------|-------|-------------|
+| `tools.profile` | `coding` | Tool profile loaded by default |
+| `tools.deny` | `["browser", "canvas"]` | Tools disabled in the gateway environment |
+| `tools.exec.backgroundMs` | `10000` | Maximum time in milliseconds a background process can run |
+| `tools.exec.timeoutSec` | `1800` | Maximum execution time in seconds for foreground commands (30 minutes) |
+| `tools.loopDetection.enabled` | `true` | Whether loop detection is active |
+| `tools.loopDetection.historySize` | `30` | Number of recent tool calls tracked for loop detection |
+| `tools.loopDetection.warningThreshold` | `10` | Number of repeated calls before a warning is issued |
+| `tools.loopDetection.criticalThreshold` | `20` | Number of repeated calls before the agent is interrupted |
+| `tools.web.search.enabled` | `true` | Web search tool is available |
+| `tools.web.fetch.enabled` | `true` | Web fetch tool is available |
+| `tools.web.fetch.maxChars` | `50000` | Maximum characters returned from web fetch requests |
+
+### Session configuration
+
+| Parameter | Value | Description |
+|-----------|-------|-------------|
+| `session.scope` | `per-sender` | Each sender gets an isolated conversation session |
+| `session.reset.mode` | `daily` | Sessions reset on a daily schedule |
+| `session.reset.atHour` | `4` | Hour (UTC) when daily session reset occurs |
+| `session.maintenance.mode` | `warn` | Log warnings when sessions exceed size limits instead of force-pruning |
+| `session.maintenance.pruneAfter` | `30d` | Inactive sessions are pruned after 30 days |
+| `session.maintenance.maxEntries` | `500` | Maximum entries per session before maintenance triggers |
+
+### Cron configuration
+
+| Parameter | Value | Description |
+|-----------|-------|-------------|
+| `cron.enabled` | `true` | Scheduled task execution is enabled |
+| `cron.maxConcurrentRuns` | `2` | Maximum number of cron jobs that can run simultaneously |
+| `cron.sessionRetention` | `24h` | How long cron session data is retained after completion |
+
+### Logging configuration
+
+| Parameter | Value | Description |
+|-----------|-------|-------------|
+| `logging.level` | `info` | Minimum log level written to persistent storage |
+| `logging.consoleLevel` | `info` | Minimum log level written to stdout |
+| `logging.consoleStyle` | `compact` | Log output format (`compact` omits timestamps and metadata for cleaner output) |
+| `logging.redactSensitive` | `tools` | Redacts sensitive data in tool call logs (API keys, tokens, credentials) |
+
+### Gateway settings
+
+| Parameter | Value | Description |
+|-----------|-------|-------------|
+| `gateway.mode` | `local` | Gateway operating mode |
+| `gateway.bind` | `lan` | Bind address |
+| `gateway.auth.mode` | `token` | Authentication mode |
+| `gateway.auth.rateLimit.maxAttempts` | `10` | Maximum authentication attempts before lockout |
+| `gateway.auth.rateLimit.windowMs` | `60000` | Rate limit window (1 minute) |
+| `gateway.auth.rateLimit.lockoutMs` | `300000` | Lockout duration (5 minutes) |
+| `gateway.http.endpoints.chatCompletions.enabled` | `true` | OpenAI-compatible chat completions endpoint is enabled |
+| `gateway.controlUi.allowedOrigins` | `["*"]` | Permitted WebSocket origins |
+| `gateway.controlUi.dangerouslyDisableDeviceAuth` | `true` | Device auth disabled for headless deployment |
+| `gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback` | `true` | Host header fallback for reverse-proxy environments |
+| `gateway.reload.mode` | `hybrid` | Configuration reload strategy |
+| `gateway.reload.debounceMs` | `300` | Debounce interval for configuration reloads in milliseconds |
+
+### Health check
+
+The production gateway exposes a `/healthz` endpoint for Railway health monitoring. Railway is configured to check this path with a 90-second timeout and will restart the service on failure (up to 10 retries).
+
 ## Per-agent gateway authentication
 
 Each agent container receives a unique gateway auth token at provisioning time. The internal gateway authenticates requests using token-based auth on port `18789`.
