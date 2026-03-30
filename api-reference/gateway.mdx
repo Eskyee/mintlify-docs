@@ -225,6 +225,76 @@ curl -X POST https://agentbot.raveculture.xyz/api/gateway/chat \
   -d '{"message": "What is my agent status?", "sessionKey": "main"}'
 ```
 
+## Gateway status
+
+```http
+GET /api/gateway/status
+```
+
+Requires session authentication. Returns a combined view of gateway health, active sessions, and cron jobs. Use this endpoint to get a real-time snapshot of the gateway's operational state.
+
+### Response
+
+```json
+{
+  "health": "healthy",
+  "healthDetail": {
+    "ok": true,
+    "status": "healthy"
+  },
+  "sessions": {
+    "total": 5,
+    "active": 3,
+    "list": [
+      {
+        "sessionKey": "main",
+        "status": "active",
+        "messageCount": 24,
+        "lastActivity": "2026-03-30T01:15:00Z"
+      }
+    ]
+  },
+  "cron": {
+    "total": 2,
+    "enabled": 1,
+    "jobs": [
+      {
+        "id": "heartbeat",
+        "name": "Heartbeat",
+        "enabled": true,
+        "schedule": { "kind": "every", "everyMs": 1800000 },
+        "lastRun": "2026-03-30T01:00:00Z",
+        "nextRun": "2026-03-30T01:30:00Z"
+      }
+    ]
+  }
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `health` | string | Overall gateway health: `healthy` or `unreachable` |
+| `healthDetail` | object | Raw health check result. Contains `ok` (boolean) and `status` or `error` fields. |
+| `sessions.total` | number | Total number of sessions on the gateway |
+| `sessions.active` | number | Number of sessions with recent activity |
+| `sessions.list` | array | Up to 10 recent sessions |
+| `cron.total` | number | Total number of cron jobs |
+| `cron.enabled` | number | Number of enabled cron jobs |
+| `cron.jobs` | array | Up to 10 cron jobs |
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | Unauthorized — no valid session |
+
+### Example
+
+```bash
+curl -X GET https://agentbot.raveculture.xyz/api/gateway/status \
+  -H "Cookie: next-auth.session-token=YOUR_SESSION"
+```
+
 ## Production gateway service
 
 The production gateway is a standalone service deployed on Railway that exposes an OpenAI-compatible chat completions endpoint. It runs separately from the per-agent containers and uses its own configuration file.

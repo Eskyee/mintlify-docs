@@ -90,6 +90,9 @@
         "pages": [
           "api-reference/overview",
           "api-reference/gateway",
+          "api-reference/channels",
+          "api-reference/sessions",
+          "api-reference/cron",
           "api-reference/agents",
           "api-reference/team-provisioning",
           "api-reference/auth",

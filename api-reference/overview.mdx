@@ -166,13 +166,19 @@ curl -X POST https://agentbot.raveculture.xyz/api/ai/chat \
 | `/api/chat` | GET | List message history |
 | `/api/chat` | POST | Send message to agent via OpenAI-compatible REST API |
 | `/api/gateway/chat` | POST | Send message to agent via gateway WebSocket proxy (fallback) |
+| `/api/gateway/status` | GET | Combined gateway health, sessions, and cron status |
+| `/api/channels` | GET | Channel connection status from gateway |
+| `/api/sessions` | GET | List active conversation sessions from gateway |
+| `/api/cron` | GET | List cron jobs from gateway |
+| `/api/cron` | POST | Create a cron job on the gateway |
+| `/api/cron` | DELETE | Delete a cron job from the gateway |
 | `/api/demo/chat` | GET | List available demo models (no auth) |
 | `/api/demo/chat` | POST | Send a demo chat message (no auth, rate-limited by IP) |
 | `/api/daily-brief` | GET | Aggregated daily service health brief |
 | `/api/health` | GET | Health check |
-| `/api/heartbeat` | GET | Get heartbeat settings |
-| `/api/heartbeat` | POST | Update heartbeat settings |
-| `/api/heartbeat` | DELETE | Reset heartbeat settings |
+| `/api/heartbeat` | GET | Get heartbeat settings (gateway-first, DB fallback) |
+| `/api/heartbeat` | PUT | Update heartbeat settings (gateway-first, DB fallback) |
+| `/api/heartbeat` | DELETE | Reset heartbeat settings (deprecated — use PUT with `enabled: false`) |
 | `/api/memory` | GET | Get agent memory (omit or pass `agentId=all` for all agents) |
 | `/api/memory` | POST | Store agent memory |
 | `/api/metrics` | GET | Get platform-wide metrics |
