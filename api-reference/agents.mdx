@@ -1078,7 +1078,7 @@ If the session email matches an admin email, the caller is treated as an admin. 
 The endpoint provisions agents using a two-path strategy, tried in order:
 
 1. **Backend service** — the request is forwarded to the backend Express service (`BACKEND_API_URL`). If a fallback URL is configured (`BACKEND_API_FALLBACK_URL`), it is tried next if the primary fails. Non-JSON responses (such as HTML error pages from a proxy or load balancer) are detected and treated as failures, avoiding the previous "Unexpected token" parsing errors.
-2. **Railway direct provisioning** — when all backend URLs fail or are not configured, the endpoint falls back to provisioning the agent container directly via the Railway GraphQL API. This path requires `RAILWAY_API_KEY`, `RAILWAY_PROJECT_ID`, and `RAILWAY_ENVIRONMENT_ID` to be set. The Railway path creates a new Railway service, injects environment variables (including `OPENCLAW_GATEWAY_PORT=18789`), sets a start command via the `ServiceInstanceUpdate` mutation that configures the gateway (local mode, disabled device auth, enabled chat completions endpoint), generates a public domain via the `serviceDomainCreate` mutation with `targetPort: 18789` so that Railway's HTTP proxy routes traffic directly to the gateway port, and then triggers a deployment. The domain is generated before the deploy so that the service has a routable public URL immediately. The returned URL is the direct Railway domain for the service. The `controlUiUrl` is constructed with `gatewayUrl` and `token` query parameters so the Control UI auto-connects without requiring manual configuration.
+2. **Railway direct provisioning** — when all backend URLs fail or are not configured, the endpoint falls back to provisioning the agent container directly via the Railway GraphQL API. This path requires `RAILWAY_API_KEY`, `RAILWAY_PROJECT_ID`, and `RAILWAY_ENVIRONMENT_ID` to be set. The Railway path creates a new Railway service, injects environment variables (including `OPENCLAW_GATEWAY_PORT=18789`), sets a start command via the `ServiceInstanceUpdate` mutation that configures the gateway (local mode, disabled device auth, enabled chat completions endpoint), generates a public domain via the `serviceDomainCreate` mutation with `targetPort: 18789` so that Railway's HTTP proxy routes traffic directly to the gateway port, and then triggers a deployment. The domain is generated before the deploy so that the service has a routable public URL immediately. The returned URL is the direct Railway domain for the service. The `controlUiUrl` is constructed with `token` and `gatewayUrl` in the URL hash fragment so the Control UI auto-connects without requiring manual configuration. The hash fragment is never sent to the server, keeping the gateway token client-side only.
 
 If both paths fail, the endpoint returns a `502` error.
 
@@ -1202,7 +1202,7 @@ When calling the backend provisioning service directly, the response includes ad
     "status": "deploying",
     "serviceId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
     "renderUrl": "https://agentbot-agent-a1b2c3d4e5.up.railway.app",
-    "controlUiUrl": "https://agentbot-agent-a1b2c3d4e5.up.railway.app/?gatewayUrl=wss%3A%2F%2Fagentbot-agent-a1b2c3d4e5.up.railway.app&token=your-gateway-token"
+    "controlUiUrl": "https://agentbot-agent-a1b2c3d4e5.up.railway.app/chat?session=main#token=your-gateway-token&gatewayUrl=wss%3A%2F%2Fagentbot-agent-a1b2c3d4e5.up.railway.app"
   }
 }
 ```
@@ -1217,7 +1217,7 @@ When calling the backend provisioning service directly, the response includes ad
 | `container.status` | string | Container status (for example, `running`, `stopped`) |
 | `container.serviceId` | string | Railway service ID for the agent container. |
 | `container.renderUrl` | string | Public service URL for the agent container (for example, `https://agentbot-agent-{userId}.up.railway.app`). The field name is retained for backward compatibility but now points to a Railway URL. |
-| `container.controlUiUrl` | string | Auto-connect URL for the OpenClaw Control UI. The `gatewayUrl` and `token` are passed as query parameters (for example, `https://service.up.railway.app/?gatewayUrl=wss%3A%2F%2Fservice.up.railway.app&token=...`). This allows the Control UI to read the WebSocket endpoint and authentication token on load, bypassing the onboarding redirect that previously stripped hash-fragment credentials. Only present when a gateway token is configured. |
+| `container.controlUiUrl` | string | Auto-connect URL for the OpenClaw Control UI. The `token` and `gatewayUrl` are passed in the URL hash fragment (for example, `https://service.up.railway.app/chat?session=main#token=...&gatewayUrl=wss%3A%2F%2Fservice.up.railway.app`). Because the hash fragment is never sent to the server, the gateway token remains client-side only. The Control UI reads the token and WebSocket endpoint from the fragment on load and connects automatically, bypassing the onboarding redirect. Only present when a gateway token is configured. |
 | `container.port` | number \| null | **Deprecated.** Previously held the container's local listening port. Removed in favor of `container.renderUrl`. |
 | `container.gatewayUrl` | string | **Deprecated.** Previously held the local gateway URL. Replaced by `container.renderUrl`, which points to the service URL instead. |
 
@@ -1524,6 +1524,8 @@ Returns the authenticated user's OpenClaw URL, instance ID, and gateway token. T
 | `gatewayToken` | string \| null | The platform-level gateway token for authenticating with the OpenClaw Control dashboard. `null` when no gateway token is configured. |
 
 <Warning>The `openclawUrl` field is no longer used for gateway routing. The platform now always routes through the shared gateway URL, ignoring per-user URLs that may have become stale in the database. If you previously relied on `openclawUrl` to connect to a user's gateway, switch to the shared gateway URL instead.</Warning>
+
+<Note>To construct a Control UI auto-connect URL from this response, use the shared gateway URL and embed the `gatewayToken` in the URL hash fragment: `{sharedGatewayUrl}/chat?session=main#token={gatewayToken}&gatewayUrl=wss://{gatewayHost}`. The hash fragment is never sent to the server, so the token stays client-side only. The Control UI reads the token and WebSocket endpoint from the fragment on load and connects automatically.</Note>
 
 ## Fix OpenClaw start command (admin)
 
