@@ -307,6 +307,14 @@ The production gateway is a standalone service deployed on Railway that exposes 
 | `PORT` | `8080` | Port the gateway listens on |
 | `AGENTBOT_API_URL` | `https://agentbot-prod-production.up.railway.app` | Backend API URL the gateway proxies to |
 
+### OpenClaw configuration `env` section
+
+The production gateway configuration includes a top-level `env` section in `openclaw.json` that passes secrets directly to the OpenClaw runtime. This is separate from container-level environment variables — the `env` section is read by OpenClaw at startup to authenticate with external services.
+
+| Parameter | Description |
+|-----------|-------------|
+| `env.OPENROUTER_API_KEY` | OpenRouter API key for LLM provider authentication. Populated from the `OPENROUTER_API_KEY` container environment variable at startup. Required for the gateway to route model requests to OpenRouter. |
+
 ### Default model configuration
 
 The production gateway uses the following model defaults:
@@ -416,11 +424,21 @@ Each agent container receives a unique gateway auth token at provisioning time. 
 | `gateway.auth.token` | Unique hex token auto-generated per container. Provisioning generates a 48-character token (24 bytes of entropy). The container entrypoint generates a 32-character token (16 bytes) if no token is passed via the `OPENCLAW_GATEWAY_TOKEN` environment variable. |
 | `gateway.port` | `18789` |
 
-<Note>The container entrypoint writes its own minimal configuration to `$HOME/.openclaw/openclaw.json` using a slightly different schema (`auth.method` at the top level instead of `gateway.auth.mode`). The provisioning config written by the backend uses the `gateway.auth.mode` path. When the entrypoint runs, it overwrites the provisioning config with its own minimal skeleton. To preserve the full provisioning config, pass the gateway token via the `OPENCLAW_GATEWAY_TOKEN` environment variable so the entrypoint uses the same token.</Note>
+<Note>The container entrypoint writes its own minimal configuration to `$HOME/.openclaw/openclaw.json` using a slightly different schema (`auth.method` at the top level instead of `gateway.auth.mode`). The provisioning config written by the backend uses the `gateway.auth.mode` path. When the entrypoint runs, it overwrites the provisioning config with its own minimal skeleton. All provisioning paths include a top-level `env` section containing `OPENROUTER_API_KEY` so the OpenClaw runtime can authenticate with the LLM provider. To preserve the full provisioning config, pass the gateway token via the `OPENCLAW_GATEWAY_TOKEN` environment variable so the entrypoint uses the same token.</Note>
 
 ## Agent container configuration
 
 When an agent is provisioned, the backend generates an OpenClaw configuration with the following parameters. These values are set automatically and cannot be overridden by the caller.
+
+### OpenClaw configuration `env` section
+
+Each agent container's `openclaw.json` includes a top-level `env` section that passes secrets to the OpenClaw runtime. All three provisioning paths (production gateway entrypoint, Railway direct provisioning, and backend container manager) write this section into the configuration file at launch.
+
+| Parameter | Description |
+|-----------|-------------|
+| `env.OPENROUTER_API_KEY` | OpenRouter API key for LLM provider authentication. Populated from the `OPENROUTER_API_KEY` container environment variable. Required for the agent to make model requests through OpenRouter. |
+
+<Note>The `env` section in `openclaw.json` is distinct from the container-level environment variables listed below. Container environment variables are set on the container process by the orchestrator (Railway or Docker). The `env` section is read by the OpenClaw runtime from its configuration file and used internally for service authentication. Both mechanisms deliver the same `OPENROUTER_API_KEY` value, but the config-file path ensures OpenClaw can access the key even when the runtime does not inherit the container's full environment.</Note>
 
 ### Container environment variables
 
