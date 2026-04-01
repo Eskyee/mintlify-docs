@@ -47,13 +47,15 @@ Requires bearer token authentication.
       "timestamp": 1711929600000,
       "status": "pending"
     }
-  ]
+  ],
+  "message": "Permission system initialized. Pending requests will appear here."
 }
 ```
 
 | Field | Type | Description |
 |-------|------|-------------|
 | `pending` | array | List of pending permission requests |
+| `message` | string | Human-readable status message about the permission system |
 | `pending[].id` | string | Unique request identifier (format: `perm_{timestamp}_{random}`) |
 | `pending[].agentId` | string | Agent that triggered the tool call |
 | `pending[].userId` | string | Owner of the agent |
@@ -85,6 +87,8 @@ Approve or reject a pending permission request. Requires bearer token authentica
 |-------|------|----------|-------------|
 | `requestId` | string | Yes | The `id` of the pending permission request |
 | `decision` | string | Yes | One of: `approve`, `reject`, `approve_always` |
+| `feedback` | string | No | Optional reviewer feedback or notes to attach to the decision |
+| `modifiedInput` | string | No | Optional modified command input. When provided, the approved tool call executes with this value instead of the original input. |
 
 <Note>The `approve_always` decision approves the current request and is intended to auto-approve similar commands in the future. Auto-approval persistence is not yet implemented — currently `approve_always` behaves the same as `approve`.</Note>
 
@@ -94,8 +98,7 @@ Approve or reject a pending permission request. Requires bearer token authentica
 {
   "success": true,
   "requestId": "perm_1711929600000_a1b2c3d4e",
-  "decision": "approve",
-  "tier": "dangerous"
+  "decision": "approve"
 }
 ```
 
@@ -104,7 +107,6 @@ Approve or reject a pending permission request. Requires bearer token authentica
 | `success` | boolean | Whether the decision was processed |
 | `requestId` | string | The request that was decided |
 | `decision` | string | The decision that was applied |
-| `tier` | string | The classification tier of the resolved request |
 
 ### Errors
 
