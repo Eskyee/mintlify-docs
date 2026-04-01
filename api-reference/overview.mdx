@@ -312,6 +312,8 @@ curl -X POST https://agentbot.raveculture.xyz/api/ai/chat \
 | `/api/underground/wallets/:address/balance` | GET | Get agent wallet USDC balance (backend only, requires auth) |
 | `/api/underground/splits` | POST | Create and execute a royalty split (backend only, requires auth) |
 | `/api/hooks/classify` | POST | Classify an agent tool call into a permission tier (internal, called by Docker agent hook script) |
+| `/api/orchestration/batch` | POST | Execute a batch of tool calls with concurrent optimization (backend only, requires auth) |
+| `/api/orchestration/partition` | POST | Dry-run partition of tool calls without execution (backend only, requires auth) |
 | `/api/colony/status` | GET | Get colony tree, soul cognitive state, or diagnostics |
 | `/api/invite` | POST | Create an invite token (requires session auth) |
 | `/api/invites/verify` | POST | Verify an invite token (no auth required) |

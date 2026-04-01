@@ -134,7 +134,8 @@
           "api-reference/devices",
           "api-reference/bridge",
           "api-reference/permissions",
-          "api-reference/hooks-classify"
+          "api-reference/hooks-classify",
+          "api-reference/orchestration"
         ]
       },
       {
