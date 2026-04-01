@@ -175,25 +175,29 @@ In addition to shell commands, the classifier handles structured tool calls:
 
 ## Pre-tool-use hook
 
-The permission system integrates as middleware on agent tool-call endpoints. When an agent makes a tool call:
+The permission system integrates with Docker agent containers through a pre-tool-use hook. When an agent makes a tool call inside its container:
 
-1. The classifier evaluates the tool name and input
-2. **Safe** tools pass through immediately (HTTP `200`)
-3. **Dangerous** tools return HTTP `202` with a `requestId` for dashboard polling
-4. **Destructive** tools return HTTP `403` with an explanation
+1. The `--hook-pre-tool-use` flag triggers the hook script
+2. The hook script sends tool details to [`POST /api/hooks/classify`](/api-reference/hooks-classify)
+3. The classify endpoint evaluates the tool name and input
+4. **Safe** tools are auto-approved — the agent proceeds immediately
+5. **Dangerous** tools are queued — the dashboard polls `GET /api/permissions` for pending requests
+6. **Destructive** tools are blocked — the agent cannot proceed
+
+<Note>The hook system is fail-closed. If the classify endpoint is unreachable, all tool calls are denied by default. See the [hooks classify API](/api-reference/hooks-classify) for full endpoint details including request format and authentication.</Note>
 
 ```json
 {
-  "allowed": false,
+  "allow": false,
   "tier": "dangerous",
   "reason": "Queued for approval: Dangerous command: ^node\\s",
-  "requestId": "perm_1711929600000_a1b2c3d4e"
+  "requestId": "hook_1711929600000_a1b2c3d4e"
 }
 ```
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `allowed` | boolean | Whether the tool call was permitted |
+| `allow` | boolean | Whether the tool call was permitted |
 | `tier` | string | Classification tier |
 | `reason` | string | Explanation of the classification |
 | `requestId` | string | Present only for `dangerous` tier. Use this ID to approve or reject the request via `POST /api/permissions`. |
