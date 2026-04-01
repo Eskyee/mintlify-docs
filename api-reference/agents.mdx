@@ -96,6 +96,7 @@ Creates a new agent with an auto-generated ID and stores its metadata on disk. R
 | `config` | object | No | Agent configuration |
 | `config.plan` | string | No | Plan tier (for example, `solo`, `collective`, `label`, `network`). Defaults to `free` when omitted. Note that `free` is not a standard plan tier and may not be recognized by other endpoints. |
 | `config.aiProvider` | string | No | AI provider (for example, `openrouter`, `anthropic`) |
+| `config.stripeSubscriptionId` | string | No | Stripe subscription ID. Required for non-admin users — requests without this field receive a `402` error with code `PAYMENT_REQUIRED`. |
 
 ### Response (201 Created)
 
@@ -257,6 +258,15 @@ Updates an agent's metadata including plan, AI provider, and configuration. Requ
   "message": "Agent updated"
 }
 ```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Agent identifier |
+| `plan` | string | Current plan tier |
+| `aiProvider` | string | Current AI provider |
+| `subdomain` | string | Agent subdomain |
+| `status` | string | Current agent status |
+| `message` | string | Confirmation message (`Agent updated`) |
 
 ### Errors
 
@@ -987,7 +997,17 @@ POST /api/agents/:id/verify
 | `walletAddress` | string | Conditional | Address of the verifying wallet. Required when `verificationType` is `ens`. Optional for `coinbase`. |
 | `signature` | string | Conditional | Cryptographic signature or attestation data. Required when `verificationType` is `coinbase`, `ens`, or `webauthn`. |
 
-<Note>The web API always sets `verified: true` on success and computes the `verifierAddress` and `metadata` fields internally based on the verification type. When calling the backend directly, you can pass `verified`, `verifierAddress`, and `metadata` explicitly.</Note>
+<Note>The web API always sets `verified: true` on success and computes the `verifierAddress` and `metadata` fields internally based on the verification type. When calling the backend directly, you can pass `verified`, `verifierAddress`, and `metadata` explicitly — see the additional backend parameters below.</Note>
+
+#### Additional backend parameters
+
+When calling the backend directly (not through the web proxy), the following additional fields are accepted:
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `verified` | boolean | No | Verification status. The web proxy always sets this to `true`. |
+| `verifierAddress` | string | No | Address of the verifier (for example, an Ethereum address). |
+| `metadata` | object | No | Arbitrary verification metadata to store alongside the attestation. |
 
 Each verification type requires a different combination of fields:
 

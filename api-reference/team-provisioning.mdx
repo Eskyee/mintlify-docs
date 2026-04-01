@@ -77,7 +77,7 @@ Creates a team of agents using a pre-built template. Requires bearer token authe
 
 | Code | Description |
 |------|-------------|
-| 400 | Invalid JSON body or missing/invalid `plan`. The `plan` field must be one of `collective`, `label`, or `network`. The response includes an `available_templates` array listing valid template keys. |
+| 400 | Invalid JSON body or missing/invalid `plan`. The `plan` field must be one of `collective`, `label`, or `network`. The response includes an `available_templates` array listing valid template keys. Note: the error message in the response currently reads "Team provisioning requires collect, label, or network plan" (a known typo for "collective"). |
 | 401 | Unauthorized — missing or invalid bearer token, or missing user context |
 | 402 | Payment required — no `stripeSubscriptionId` provided and the caller is not an admin. The response body includes `code: "PAYMENT_REQUIRED"`. |
 | 402 | Agent limit reached for this plan. The response body includes `code: "AGENT_LIMIT_REACHED"` along with `current` (current agent count) and `limit` (maximum allowed) fields. |

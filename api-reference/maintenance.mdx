@@ -118,3 +118,146 @@ When the backend restart call fails:
 | 502 | Backend restart call failed |
 
 <Warning>Restarting an agent causes a brief period of downtime while the container reinitializes. The `openclaw doctor --fix` process runs automatically during startup and may take additional time depending on the number of pending fixes or migrations.</Warning>
+
+## OpenClaw runtime version
+
+```http
+GET /api/openclaw/version
+```
+
+Returns the current OpenClaw runtime version and container image. No authentication required.
+
+### Response
+
+```json
+{
+  "openclawVersion": "2026.3.28",
+  "image": "ghcr.io/openclaw/openclaw:2026.3.28",
+  "deployedAt": "2026-04-01T12:00:00Z"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `openclawVersion` | string | Current OpenClaw runtime version |
+| `image` | string | Docker image used for new agent containers |
+| `deployedAt` | string | ISO 8601 timestamp of when the version info was served |
+
+## List OpenClaw instances
+
+```http
+GET /api/openclaw/instances
+```
+
+Returns all running OpenClaw agent containers with their image, status, and metadata. No authentication required.
+
+### Response
+
+```json
+{
+  "instances": [
+    {
+      "agentId": "agent_123",
+      "name": "openclaw-agent_123",
+      "image": "ghcr.io/openclaw/openclaw:2026.3.28",
+      "status": "Up 2 days",
+      "createdAt": "2026-03-30T00:00:00Z",
+      "version": "2026.3.28",
+      "metadata": {}
+    }
+  ],
+  "count": 1
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `instances` | array | List of running OpenClaw containers |
+| `instances[].agentId` | string | Agent identifier |
+| `instances[].name` | string | Docker container name |
+| `instances[].image` | string | Docker image the container is running |
+| `instances[].status` | string | Docker status string |
+| `instances[].createdAt` | string | Container creation timestamp |
+| `instances[].version` | string | OpenClaw CLI version inside the container, or `unknown` |
+| `instances[].metadata` | object \| null | Agent metadata from disk |
+| `count` | number | Total number of instances |
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 500 | Failed to list instances |
+
+## Get instance container stats
+
+```http
+GET /api/openclaw/instances/:id/stats
+```
+
+Returns live resource usage for a specific OpenClaw container. No authentication required.
+
+### Path parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `id` | string | Agent identifier |
+
+### Response
+
+```json
+{
+  "agentId": "agent_123",
+  "cpu": "0.15%",
+  "memory": "128MiB / 2GiB",
+  "memoryPercent": "6.25%",
+  "network": "1.2kB / 3.4kB",
+  "blockIO": "0B / 0B",
+  "pids": "12",
+  "status": "running",
+  "uptime": 86400000,
+  "uptimeFormatted": "1d 0h",
+  "timestamp": "2026-04-01T12:00:00Z"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `agentId` | string | Agent identifier |
+| `cpu` | string | CPU usage percentage |
+| `memory` | string | Memory usage (used / total) |
+| `memoryPercent` | string | Memory usage percentage |
+| `network` | string | Network I/O (in / out) |
+| `blockIO` | string | Block I/O (read / write) |
+| `pids` | string | Number of running processes |
+| `status` | string | Container status |
+| `uptime` | number | Uptime in milliseconds |
+| `uptimeFormatted` | string | Human-readable uptime string |
+| `timestamp` | string | ISO 8601 timestamp of the measurement |
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 500 | Failed to get container stats |
+
+## OpenClaw proxy
+
+```
+ALL /api/openclaw/proxy/:agentId/*
+```
+
+Transparent HTTP proxy to a running OpenClaw container. Forwards all HTTP methods to the container's internal address on port 18789. No authentication is required on the proxy itself — the OpenClaw instance's own token authentication handles access control.
+
+<Note>WebSocket upgrades for the proxy are handled separately at the server level. The proxy rewrites the request path by stripping the `/api/openclaw/proxy/:agentId` prefix before forwarding.</Note>
+
+### Path parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `agentId` | string | Agent identifier (alphanumeric, hyphens, and underscores only) |
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 502 | OpenClaw instance unreachable |
