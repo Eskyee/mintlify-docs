@@ -1032,6 +1032,248 @@ DELETE /api/agents/:id/verify
 }
 ```
 
+## Agent definitions
+
+Agent definitions are reusable agent templates defined as markdown files with YAML frontmatter. Definitions are loaded from three locations with the following priority: project definitions override user definitions, which override system (built-in) definitions.
+
+The platform ships with three built-in definitions: `coder`, `researcher`, and `writer`.
+
+### List agent definitions
+
+```http
+GET /api/agents/definitions
+```
+
+Returns all available agent definitions from system, user, and project directories.
+
+#### Query parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `projectDir` | string | No | Path to a project directory. When provided, definitions from the project's `.agentbot/agents/` directory are included and take highest priority. |
+
+#### Response
+
+```json
+{
+  "agents": [
+    {
+      "name": "coder",
+      "description": "Full-stack coding agent with filesystem and shell access",
+      "model": "openrouter/anthropic/claude-3.5-sonnet",
+      "tools": ["bash", "read", "write", "think", "memory"],
+      "scope": "system",
+      "source": "/path/to/definitions/coder.md"
+    },
+    {
+      "name": "researcher",
+      "description": "Deep research agent for web analysis and data gathering",
+      "model": "openrouter/anthropic/claude-3.5-sonnet",
+      "tools": ["bash", "read", "write", "web", "think", "memory"],
+      "scope": "system",
+      "source": "/path/to/definitions/researcher.md"
+    },
+    {
+      "name": "writer",
+      "description": "Content writer for blogs, docs, and social media",
+      "model": "openrouter/anthropic/claude-3.5-sonnet",
+      "tools": ["read", "write", "think", "memory", "web"],
+      "scope": "system",
+      "source": "/path/to/definitions/writer.md"
+    }
+  ],
+  "total": 3
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `agents` | array | List of agent definition metadata objects |
+| `agents[].name` | string | Unique agent name (derived from the filename without `.md`) |
+| `agents[].description` | string | Human-readable description from the frontmatter |
+| `agents[].model` | string | AI model identifier (for example, `openrouter/anthropic/claude-3.5-sonnet`) |
+| `agents[].tools` | string[] | List of tools available to the agent |
+| `agents[].scope` | string | Where the definition was loaded from: `system`, `user`, or `project` |
+| `agents[].source` | string | File path where the definition was loaded from |
+| `total` | number | Total number of definitions returned |
+
+<Note>The listing endpoint returns metadata only. The full agent instruction (markdown body) and per-tool permissions are excluded. Use the [get definition endpoint](#get-agent-definition) to retrieve the complete definition.</Note>
+
+#### Errors
+
+| Code | Description |
+|------|-------------|
+| 500 | Failed to load definitions |
+
+### Get agent definition
+
+```http
+GET /api/agents/definitions/:name
+```
+
+Returns the complete definition for a specific agent, including the full instruction text and per-tool permission overrides.
+
+#### Path parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `name` | string | Agent definition name (for example, `coder`, `researcher`, `writer`) |
+
+#### Response
+
+```json
+{
+  "name": "coder",
+  "description": "Full-stack coding agent with filesystem and shell access",
+  "model": "openrouter/anthropic/claude-3.5-sonnet",
+  "tools": ["bash", "read", "write", "think", "memory"],
+  "permissions": {
+    "bash": "dangerous",
+    "exec": "dangerous",
+    "shell": "dangerous",
+    "read": "safe",
+    "write": "dangerous",
+    "web": "dangerous",
+    "memory": "safe",
+    "think": "safe"
+  },
+  "instruction": "# Coder Agent\n\nYou are a full-stack coding assistant...",
+  "source": "/path/to/definitions/coder.md",
+  "scope": "system"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | string | Unique agent name |
+| `description` | string | Human-readable description |
+| `model` | string | AI model identifier |
+| `tools` | string[] | List of tools available to the agent |
+| `permissions` | object | Per-tool permission overrides. Each key is a tool name and the value is one of `safe`, `dangerous`, or `destructive`. Tools not explicitly listed in the definition's frontmatter use system defaults. |
+| `instruction` | string | The markdown body of the definition file (the agent's system prompt) |
+| `source` | string | File path where the definition was loaded from |
+| `scope` | string | Where the definition was loaded from: `system`, `user`, or `project` |
+
+<Note>Default permissions are applied for tools not explicitly set in the definition's frontmatter: `bash`, `exec`, and `shell` default to `dangerous`; `read`, `memory`, and `think` default to `safe`; `write` and `web` default to `dangerous`.</Note>
+
+#### Errors
+
+| Code | Description |
+|------|-------------|
+| 404 | Agent definition not found |
+| 500 | Failed to load definition |
+
+### Validate agent definition
+
+```http
+POST /api/agents/definitions
+```
+
+Validates a markdown string with YAML frontmatter and returns the parsed agent definition. This endpoint does not persist the definition — it is for preview and validation only.
+
+#### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `content` | string | Yes | Markdown content with YAML frontmatter to validate |
+
+Example request body:
+
+```json
+{
+  "content": "---\nname: my-agent\ndescription: Custom research agent\nmodel: openrouter/anthropic/claude-3.5-sonnet\ntools: [bash, read, write, web]\npermissions:\n  bash: dangerous\n  read: safe\n---\n# My Agent\n\nYou are a custom research agent."
+}
+```
+
+#### Response
+
+```json
+{
+  "valid": true,
+  "definition": {
+    "name": "my-agent",
+    "description": "Custom research agent",
+    "model": "openrouter/anthropic/claude-3.5-sonnet",
+    "tools": ["bash", "read", "write", "web"],
+    "scope": "user",
+    "source": "/tmp/agent-def-1710000000000.md"
+  },
+  "full": {
+    "name": "my-agent",
+    "description": "Custom research agent",
+    "model": "openrouter/anthropic/claude-3.5-sonnet",
+    "tools": ["bash", "read", "write", "web"],
+    "permissions": {
+      "bash": "dangerous",
+      "exec": "dangerous",
+      "shell": "dangerous",
+      "read": "safe",
+      "write": "dangerous",
+      "web": "dangerous",
+      "memory": "safe",
+      "think": "safe"
+    },
+    "instruction": "# My Agent\n\nYou are a custom research agent.",
+    "source": "/tmp/agent-def-1710000000000.md",
+    "scope": "user"
+  }
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `valid` | boolean | Whether the definition parsed successfully |
+| `definition` | object | Lightweight metadata (same shape as the [list endpoint](#list-agent-definitions) items) |
+| `full` | object | Complete parsed definition including `instruction` and `permissions` (same shape as the [get endpoint](#get-agent-definition) response) |
+
+<Note>Markdown files without YAML frontmatter are still valid. The parser uses defaults: the agent name is derived from the first heading, the model defaults to `openrouter/auto`, and tools default to `[bash, read, write, think]`.</Note>
+
+#### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | Missing `content` field in request body |
+| 400 | Invalid agent definition format (the content could not be parsed) |
+| 500 | Validation failed |
+
+### Definition file format
+
+Agent definitions are markdown files with optional YAML frontmatter:
+
+```markdown
+---
+name: researcher
+description: Deep research agent for web analysis
+model: openrouter/anthropic/claude-3.5-sonnet
+tools: [bash, read, write, web]
+permissions:
+  bash: dangerous
+  read: safe
+  write: dangerous
+---
+# Researcher Agent
+
+You are a deep research agent...
+```
+
+#### Frontmatter fields
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `name` | string | Filename without `.md` | Unique agent identifier |
+| `description` | string | First heading text | Human-readable description |
+| `model` | string | `openrouter/auto` | AI model to use |
+| `tools` | string[] | `[bash, read, write, think]` | Available tools |
+| `permissions` | object | System defaults | Per-tool permission overrides (`safe`, `dangerous`, or `destructive`) |
+
+#### Loading priority
+
+Definitions are loaded from three directories. When multiple definitions share the same name, the higher-priority source wins:
+
+1. **Project** (highest) — `.agentbot/agents/` in the project directory
+2. **User** — `~/.agentbot/agents/`
+3. **System** (lowest) — built-in definitions (`coder`, `researcher`, `writer`)
+
 ## Provision with channel tokens
 
 ```http
