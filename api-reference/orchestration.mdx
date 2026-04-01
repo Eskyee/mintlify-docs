@@ -27,6 +27,7 @@ Requires bearer token authentication.
 | `tools[].id` | string | Yes | Unique identifier for this tool call |
 | `tools[].toolName` | string | Yes | Name of the tool to invoke (for example, `read`, `grep`, `write`, `bash`) |
 | `tools[].input` | object | Yes | Input parameters for the tool call |
+| `userId` | string | No | User identifier. Used for server-side logging and monitoring. Not validated against the authenticated session. |
 
 ```json
 {
@@ -120,9 +121,10 @@ In this example, `t1` and `t2` are read-only and run in parallel. `t3` is mutati
 |------|-------------|
 | 400 | `tools array required` — missing or empty `tools` field |
 | 400 | `Maximum 20 tools per batch` — batch size exceeds the limit |
-| 400 | `Each tool must have id and toolName` — a tool object is missing required fields |
 | 401 | Unauthorized — missing or invalid bearer token |
 | 500 | Internal server error |
+
+<Note>Individual tool call objects are not validated for required fields (`id`, `toolName`) at the API level. Malformed tool objects are passed to the executor and may produce runtime errors in the tool results.</Note>
 
 ### Serial failure behavior
 
