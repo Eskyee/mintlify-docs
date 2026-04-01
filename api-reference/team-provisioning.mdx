@@ -34,6 +34,8 @@ Creates a team of agents using a pre-built template. Requires bearer token authe
 |-------|------|----------|-------------|
 | `plan` | string | Yes | Plan tier. Must be one of `collective`, `label`, or `network`. |
 | `templateKey` | string | No | Key of the pre-built team template to use. Defaults to `dev_team` when omitted. See [list templates](#list-team-templates) for available options. |
+
+<Warning>The web proxy at `/api/provision/team` currently only accepts `collective` and `label` plans — requests with `plan: "network"` return a `400` error. The backend accepts all three plans. Additionally, the web proxy requires `templateKey` to be provided explicitly (it does not apply the `dev_team` default). Omitting `templateKey` through the web proxy returns a `400` error with the message `"templateKey is required"`.</Warning>
 | `customAgents` | array | No | Custom agent configurations to provision instead of (or in addition to) the template defaults. Each entry defines an agent with its own configuration. |
 | `stripeSubscriptionId` | string | No | Stripe subscription ID. Can also be passed in the `x-stripe-subscription-id` header. Required for non-admin users when payment enforcement is active. |
 
@@ -72,6 +74,8 @@ Creates a team of agents using a pre-built template. Requires bearer token authe
 | `yaml_config` | string | YAML configuration generated from the template |
 
 <Note>Agent provisioning happens asynchronously after the response is returned. The `agents` array confirms that provisioning has been kicked off for each agent, not that all agents are running.</Note>
+
+<Warning>The web proxy at `/api/provision/team` returns a different response shape than the backend. The web proxy response includes `plan`, `templateKey`, `agentCount`, and `message` fields, but does not include `template`, `agents[]`, or `yaml_config`. The response documented above is the backend response.</Warning>
 
 ### Errors
 
