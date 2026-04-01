@@ -160,6 +160,9 @@ curl -X POST https://agentbot.raveculture.xyz/api/ai/chat \
 | `/api/instance/:userId/stats` | GET | Get instance stats via gateway healthcheck |
 | `/api/agents/clone` | POST | Clone an existing agent (requires x402 payment proof) |
 | `/api/agents/clone` | GET | Clone service health check |
+| `/api/agents/definitions` | GET | List agent definitions (backend only) |
+| `/api/agents/definitions/:name` | GET | Get agent definition by name (backend only) |
+| `/api/agents/definitions` | POST | Validate an agent definition (backend only) |
 | `/api/agents/provision` | POST | Provision a new agent (web) |
 | `/api/agents/provision` | GET | List provisioned agents (web) |
 | `/api/agents/:id/verification` | GET | Get verification status (backend) |
@@ -207,6 +210,7 @@ curl -X POST https://agentbot.raveculture.xyz/api/ai/chat \
 | `/api/bankr/balances` | GET | Get wallet balances from the Bankr trading service |
 | `/api/bankr/prompt` | POST | Send a natural-language prompt to the Bankr trading agent |
 | `/api/bankr/prompt` | GET | Poll the status of an asynchronous Bankr agent job |
+| `/api/provision` | GET | Get provisioning stats (requires bridge secret) |
 | `/api/provision` | POST | Provision agent with channel tokens or as OpenClaw-only deployment (requires auth) |
 | `/api/user/openclaw` | GET | Get the authenticated user's OpenClaw URL, instance ID, and gateway token |
 | `/api/validate-key` | POST | Validate an API key (backend only) |
@@ -262,6 +266,7 @@ curl -X POST https://agentbot.raveculture.xyz/api/ai/chat \
 | `/api/render-mcp/github` | GET | Redirect to Render MCP GitHub repo (backend only) |
 | `/api/openclaw/maintenance` | GET | Get agent health status (liveness and readiness) |
 | `/api/openclaw/maintenance` | POST | Restart agent container (runs doctor and migrations on startup) |
+| `/api/openclaw-version` | GET | Get OpenClaw runtime version (web proxy, fallback `2026.4.1`) |
 | `/api/openclaw/version` | GET | Get OpenClaw runtime version (backend only) |
 | `/api/openclaw/instances` | GET | List running agent instances (backend only, requires auth) |
 | `/api/openclaw/instances/:id/stats` | GET | Get instance container stats (backend only, requires auth) |
