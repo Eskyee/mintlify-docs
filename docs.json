@@ -133,7 +133,8 @@
           "api-reference/config",
           "api-reference/devices",
           "api-reference/bridge",
-          "api-reference/permissions"
+          "api-reference/permissions",
+          "api-reference/hooks-classify"
         ]
       },
       {
