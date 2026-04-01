@@ -132,7 +132,8 @@
           "api-reference/debug",
           "api-reference/config",
           "api-reference/devices",
-          "api-reference/bridge"
+          "api-reference/bridge",
+          "api-reference/permissions"
         ]
       },
       {
