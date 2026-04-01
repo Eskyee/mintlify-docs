@@ -107,8 +107,8 @@ The classify endpoint is one step in the Docker agent pre-tool-use hook flow:
 2. The `--hook-pre-tool-use` flag triggers the hook script
 3. The hook script sends the tool details to `POST /api/hooks/classify`
 4. The endpoint classifies the tool call and returns a decision
-5. For `dangerous` tier results, the dashboard polls [`GET /api/permissions`](/api-reference/permissions#list-pending-permission-requests) for pending requests
-6. The user approves or rejects via [`POST /api/permissions`](/api-reference/permissions#submit-permission-decision)
+5. For `dangerous` tier results, the server pushes a `permission_request` message to the dashboard via the [WebSocket endpoint](/api-reference/permissions#websocket-real-time-notifications) (the dashboard can also poll [`GET /api/permissions`](/api-reference/permissions#list-pending-permission-requests) as a fallback)
+6. The user approves or rejects via [`POST /api/permissions`](/api-reference/permissions#submit-permission-decision) or through the [WebSocket `decision` message](/api-reference/permissions#client-to-server-messages)
 7. The agent receives the decision and proceeds or stops
 
 <Warning>The hook system is fail-closed. If the classify endpoint is unreachable, all tool calls are denied by default.</Warning>
