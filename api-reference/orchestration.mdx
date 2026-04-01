@@ -128,6 +128,43 @@ In this example, `t1` and `t2` are read-only and run in parallel. `t3` is mutati
 
 When a mutating tool fails during serial execution, the batch stops immediately. Remaining tools in that serial batch are not executed. Parallel batches that already completed are unaffected.
 
+## Tool execution
+
+The batch endpoint executes each tool call through a sandboxed executor with built-in safety limits. The following tools are supported:
+
+| Tool name | Aliases | Description |
+|-----------|---------|-------------|
+| `read` | `file_read` | Read a file from the agent workspace |
+| `write` | `file_write` | Write content to a file (creates directories as needed) |
+| `edit` | `file_edit` | Replace a string in an existing file |
+| `bash` | `exec`, `shell` | Execute a shell command |
+| `grep` | `search` | Search file contents by pattern |
+| `memory_search` | — | Search the agent knowledge base |
+| `memory_get` | — | Retrieve a specific memory file |
+
+Submitting an unrecognized tool name returns an error result with `"Unknown tool: <name>"`.
+
+### Safety limits
+
+| Limit | Value | Description |
+|-------|-------|-------------|
+| Output cap | 100 KB | Tool output exceeding 100 KB is truncated. The `truncated` field in the result indicates whether truncation occurred. |
+| Default timeout | 30 seconds | Shell commands time out after 30 seconds unless a longer timeout is specified. |
+| Maximum timeout | 120 seconds | The timeout ceiling for any single tool execution. |
+| Workspace restriction | Agent workspace root | All file paths are resolved relative to the agent workspace. Directory traversal outside the workspace is blocked. |
+
+### Tool result shape
+
+Each tool execution returns a result with the following fields:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `success` | boolean | Whether the tool executed successfully |
+| `output` | string | Tool output on success |
+| `error` | string | Error message on failure |
+| `durationMs` | number | Execution time in milliseconds |
+| `truncated` | boolean | `true` if the output was capped at the 100 KB limit |
+
 ## Partition (dry run)
 
 ```http
@@ -264,10 +301,10 @@ For `bash`, `exec`, and `shell` tools, the classifier inspects the `command` inp
 
 | Category | Commands |
 |----------|----------|
-| Filesystem read | `cat`, `head`, `tail`, `ls`, `find`, `stat`, `wc`, `du`, `df` |
-| Text processing | `grep`, `sort`, `uniq`, `cut`, `awk` |
+| Filesystem read | `cat`, `head`, `tail`, `less`, `more`, `ls`, `dir`, `tree`, `find`, `locate`, `file`, `stat`, `wc`, `du`, `df` |
+| Text processing | `grep`, `egrep`, `fgrep`, `ag`, `rg`, `sort`, `uniq`, `cut`, `awk` |
 | Git read-only | `git status`, `git diff`, `git log`, `git show`, `git branch`, `git tag`, `git remote`, `git blame`, `git reflog` |
-| System info | `echo`, `pwd`, `whoami`, `date`, `uptime`, `hostname`, `env`, `which` |
+| System info | `echo`, `printf`, `pwd`, `whoami`, `id`, `date`, `uptime`, `uname`, `hostname`, `env`, `printenv`, `which`, `whereis` |
 | Package info | `npm list`, `npm view`, `npm outdated`, `pip list`, `pip show` |
 | Docker read-only | `docker ps`, `docker images`, `docker logs`, `docker inspect`, `docker stats` |
 | HTTP read | `curl` (without `-X`, `--request`, or `-d` flags) |
