@@ -27,6 +27,7 @@ Requires bearer token authentication.
 | `tools[].id` | string | Yes | Unique identifier for this tool call |
 | `tools[].toolName` | string | Yes | Name of the tool to invoke (for example, `read`, `grep`, `write`, `bash`) |
 | `tools[].input` | object | Yes | Input parameters for the tool call |
+| `userId` | string | No | Identifier for the user submitting the batch. Used for request logging and monitoring. |
 
 ```json
 {
@@ -35,7 +36,8 @@ Requires bearer token authentication.
     { "id": "t2", "toolName": "grep", "input": { "pattern": "TODO" } },
     { "id": "t3", "toolName": "write", "input": { "path": "/src/config.ts", "content": "..." } },
     { "id": "t4", "toolName": "read", "input": { "path": "/src/utils.ts" } }
-  ]
+  ],
+  "userId": "user-abc123"
 }
 ```
 
@@ -264,10 +266,10 @@ For `bash`, `exec`, and `shell` tools, the classifier inspects the `command` inp
 
 | Category | Commands |
 |----------|----------|
-| Filesystem read | `cat`, `head`, `tail`, `ls`, `find`, `stat`, `wc`, `du`, `df` |
-| Text processing | `grep`, `sort`, `uniq`, `cut`, `awk` |
+| Filesystem read | `cat`, `head`, `tail`, `less`, `more`, `ls`, `dir`, `tree`, `find`, `locate`, `file`, `stat`, `wc`, `du`, `df` |
+| Text processing | `grep`, `egrep`, `fgrep`, `ag`, `rg`, `sort`, `uniq`, `cut`, `awk` |
 | Git read-only | `git status`, `git diff`, `git log`, `git show`, `git branch`, `git tag`, `git remote`, `git blame`, `git reflog` |
-| System info | `echo`, `pwd`, `whoami`, `date`, `uptime`, `hostname`, `env`, `which` |
+| System info | `echo`, `printf`, `pwd`, `whoami`, `id`, `date`, `uptime`, `uname`, `hostname`, `env`, `printenv`, `which`, `whereis` |
 | Package info | `npm list`, `npm view`, `npm outdated`, `pip list`, `pip show` |
 | Docker read-only | `docker ps`, `docker images`, `docker logs`, `docker inspect`, `docker stats` |
 | HTTP read | `curl` (without `-X`, `--request`, or `-d` flags) |
