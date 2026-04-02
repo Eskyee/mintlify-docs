@@ -17,7 +17,7 @@ All Config API endpoints require authentication. Include a valid session cookie 
 GET /api/config
 ```
 
-Returns the authenticated user's current agent configuration and a list of available backups. If no custom configuration has been saved, the default configuration from the [provisioning template](/api-reference/agents#provisioning-template-defaults) is returned.
+Returns the authenticated user's current agent configuration and a list of available backups. If no custom configuration has been saved, the default configuration is returned.
 
 ### Response
 
@@ -27,34 +27,26 @@ Returns the authenticated user's current agent configuration and a list of avail
     "logging": { "level": "info" },
     "agents": {
       "defaults": {
-        "workspace": "/home/node/.openclaw/workspace",
-        "model": { "primary": "openrouter/xiaomi/mimo-v2-pro" },
-        "heartbeat": { "every": "30m", "lightContext": true, "isolatedSession": true }
+        "model": "anthropic/claude-opus-4-5",
+        "workspace": "~/.openclaw/workspace"
       }
     },
     "tools": {
-      "profile": "coding",
-      "exec": { "backgroundMs": 10000, "timeoutSec": 1800 },
-      "web": {
-        "search": { "enabled": true },
-        "fetch": { "enabled": true, "maxChars": 50000 }
-      }
+      "profile": "coding"
     },
     "gateway": {
       "bind": "lan",
       "auth": { "mode": "token" }
     },
     "channels": {
-      "telegram": { "enabled": false, "dmPolicy": "pairing" },
-      "discord": { "enabled": false, "dmPolicy": "pairing" },
-      "whatsapp": { "enabled": false, "dmPolicy": "pairing" },
+      "whatsapp": { "allowFrom": [] },
+      "telegram": { "enabled": false },
+      "discord": { "enabled": false },
       "webchat": { "enabled": true }
     },
-    "cron": { "enabled": true, "maxConcurrentRuns": 2, "sessionRetention": "24h" },
     "session": {
-      "scope": "per-sender",
-      "reset": { "mode": "daily", "atHour": 4 },
-      "maintenance": { "mode": "warn", "pruneAfter": "30d", "maxEntries": 500 }
+      "dmScope": "per-channel-peer",
+      "resetTriggers": ["/new", "/reset"]
     },
     "skills": {
       "install": { "nodeManager": "npm" }
@@ -73,40 +65,24 @@ Returns the authenticated user's current agent configuration and a list of avail
 |-------|------|-------------|
 | `config` | object | The current agent configuration |
 | `config.logging.level` | string | Log level (e.g. `"info"`, `"debug"`, `"warn"`) |
+| `config.agents.defaults.model` | string | Default AI model identifier (e.g. `"anthropic/claude-opus-4-5"`) |
 | `config.agents.defaults.workspace` | string | Path to the agent's workspace directory |
-| `config.agents.defaults.model.primary` | string | Default AI model identifier |
-| `config.agents.defaults.heartbeat.every` | string | Heartbeat interval (e.g. `"30m"`) |
-| `config.agents.defaults.heartbeat.lightContext` | boolean | Use lightweight context during heartbeat checks |
-| `config.agents.defaults.heartbeat.isolatedSession` | boolean | Run heartbeat checks in an isolated session |
 | `config.tools.profile` | string | Tool profile (`"coding"` for collective+ plans, `"messaging"` for solo) |
-| `config.tools.exec.backgroundMs` | number | Maximum time in milliseconds for background execution tasks |
-| `config.tools.exec.timeoutSec` | number | Maximum execution timeout in seconds |
-| `config.tools.web.search.enabled` | boolean | Whether web search is available to the agent |
-| `config.tools.web.fetch.enabled` | boolean | Whether web fetch is available to the agent |
-| `config.tools.web.fetch.maxChars` | number | Maximum characters returned from a web fetch |
 | `config.gateway.bind` | string | Gateway bind address (e.g. `"lan"` for all interfaces) |
 | `config.gateway.auth.mode` | string | Gateway authentication mode (e.g. `"token"`) |
 | `config.channels` | object | Channel-specific settings |
+| `config.channels.whatsapp.allowFrom` | array | List of allowed WhatsApp sender identifiers. Empty array allows all senders. |
 | `config.channels.telegram.enabled` | boolean | Whether the Telegram channel is active |
-| `config.channels.telegram.dmPolicy` | string | DM policy for Telegram (`"pairing"` or `"allowlist"`) |
 | `config.channels.discord.enabled` | boolean | Whether the Discord channel is active |
-| `config.channels.discord.dmPolicy` | string | DM policy for Discord (`"pairing"` or `"allowlist"`) |
-| `config.channels.whatsapp.enabled` | boolean | Whether the WhatsApp channel is active |
-| `config.channels.whatsapp.dmPolicy` | string | DM policy for WhatsApp (`"pairing"` or `"allowlist"`) |
 | `config.channels.webchat.enabled` | boolean | Whether the webchat channel is active |
-| `config.cron.enabled` | boolean | Whether the cron scheduler is active |
-| `config.cron.maxConcurrentRuns` | number | Maximum concurrent cron job executions |
-| `config.cron.sessionRetention` | string | How long cron session data is retained |
-| `config.session.scope` | string | Session scope (e.g. `"per-sender"`) |
-| `config.session.reset.mode` | string | Session reset mode (e.g. `"daily"`) |
-| `config.session.reset.atHour` | number | Hour of day when daily session reset occurs (0-23) |
-| `config.session.maintenance.mode` | string | Maintenance mode (`"warn"` or `"silent"`) |
-| `config.session.maintenance.pruneAfter` | string | Age after which sessions are eligible for pruning |
-| `config.session.maintenance.maxEntries` | number | Maximum number of session entries retained |
+| `config.session.dmScope` | string | Session scope for direct messages (e.g. `"per-channel-peer"`) |
+| `config.session.resetTriggers` | array | Commands that reset the session (e.g. `["/new", "/reset"]`) |
 | `config.skills.install.nodeManager` | string | Node package manager used for skill installation (e.g. `"npm"`) |
 | `backups` | array | List of available backups (id and timestamp only) |
 | `backups[].id` | string | Unique backup identifier |
 | `backups[].timestamp` | string | ISO 8601 timestamp when the backup was created |
+
+<Note>The provisioning template may set additional configuration fields (such as `heartbeat`, `cron`, `tools.exec`, and `tools.web`) depending on the agent's plan. The default configuration shown above is the fallback returned when no custom configuration has been saved.</Note>
 
 ### Errors
 
@@ -214,31 +190,24 @@ curl -X POST https://agentbot.raveculture.xyz/api/config \
       "logging": { "level": "debug" },
       "agents": {
         "defaults": {
-          "workspace": "/home/node/.openclaw/workspace",
-          "model": { "primary": "openrouter/xiaomi/mimo-v2-pro" },
-          "heartbeat": { "every": "30m", "lightContext": true, "isolatedSession": true }
+          "model": "anthropic/claude-opus-4-5",
+          "workspace": "~/.openclaw/workspace"
         }
       },
-      "tools": {
-        "profile": "coding",
-        "exec": { "backgroundMs": 10000, "timeoutSec": 1800 },
-        "web": { "search": { "enabled": true }, "fetch": { "enabled": true, "maxChars": 50000 } }
-      },
+      "tools": { "profile": "coding" },
       "gateway": {
         "bind": "lan",
         "auth": { "mode": "token" }
       },
       "channels": {
-        "telegram": { "enabled": true, "dmPolicy": "pairing" },
-        "discord": { "enabled": false, "dmPolicy": "pairing" },
-        "whatsapp": { "enabled": false, "dmPolicy": "pairing" },
+        "whatsapp": { "allowFrom": [] },
+        "telegram": { "enabled": true },
+        "discord": { "enabled": false },
         "webchat": { "enabled": true }
       },
-      "cron": { "enabled": true, "maxConcurrentRuns": 2, "sessionRetention": "24h" },
       "session": {
-        "scope": "per-sender",
-        "reset": { "mode": "daily", "atHour": 4 },
-        "maintenance": { "mode": "warn", "pruneAfter": "30d", "maxEntries": 500 }
+        "dmScope": "per-channel-peer",
+        "resetTriggers": ["/new", "/reset"]
       },
       "skills": {
         "install": { "nodeManager": "npm" }
