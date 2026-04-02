@@ -121,6 +121,8 @@ Creates a new agent with an auto-generated ID and stores its metadata on disk. R
 | 402 | Active subscription required. The response body includes `code: "PAYMENT_REQUIRED"`. Non-admin users must have an active subscription to create agents. |
 | 500 | Failed to create agent |
 
+<Note>The agent's `ownerEmail` is automatically set to the authenticated user's email (resolved from the bearer token by the auth middleware). This field is not accepted in the request body. All subsequent operations (GET, PUT, DELETE, lifecycle actions) verify that the requesting user's email matches the agent's `ownerEmail`. Admin users bypass ownership checks.</Note>
+
 <Note>For provisioning an agent with messaging channel tokens and a live Railway service deployment, use [`POST /api/agents/provision`](#provision-agent) or [`POST /api/provision`](#provision-with-channel-tokens) instead.</Note>
 
 ## Get agent
@@ -341,7 +343,7 @@ Admin users (configured via `ADMIN_EMAILS`) are exempt from the following restri
 
 Admin status is determined by checking the session email against `ADMIN_EMAILS`. This endpoint does not accept an `email` field in the request body — only the authenticated session email is used for the admin check. The `POST /api/provision` endpoint uses the same session-only admin check (see [admin check](#admin-check)).
 
-<Note>The backend also supports a `TESTER_EMAILS` environment variable. When backend payment enforcement is re-enabled, emails listed in `TESTER_EMAILS` will bypass the Stripe subscription check, similar to admin emails. This feature is currently inactive because backend payment enforcement is disabled (see the `402` error note below).</Note>
+<Note>The backend also supports a `TESTER_EMAILS` environment variable. Emails listed in `TESTER_EMAILS` bypass the Stripe subscription check, similar to admin emails.</Note>
 
 ### Response (201 Created)
 
@@ -1403,6 +1405,56 @@ Definitions are loaded from three directories. When multiple definitions share t
 2. **User** — `~/.agentbot/agents/`
 3. **System** (lowest) — built-in definitions (`coder`, `researcher`, `writer`)
 
+## Provisioning stats
+
+```http
+GET /api/provision
+```
+
+Returns signup statistics. Authenticated via the `x-bridge-secret` header.
+
+### Headers
+
+| Header | Type | Required | Description |
+|--------|------|----------|-------------|
+| `x-bridge-secret` | string | Conditional | Must match the `BRIDGE_SECRET` environment variable. When `BRIDGE_SECRET` is not configured, the endpoint is accessible without this header. |
+
+### Response
+
+```json
+{
+  "ok": true,
+  "totalUsers": 42,
+  "recentUsers": [
+    {
+      "id": "user_123",
+      "email": "user@example.com",
+      "plan": "solo",
+      "subscriptionStatus": "active"
+    }
+  ],
+  "timestamp": "2026-03-20T00:00:00Z"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `ok` | boolean | Always `true` on success |
+| `totalUsers` | number | Total registered user count |
+| `recentUsers` | array | Last 5 registered users (ordered by ID descending) |
+| `recentUsers[].id` | string | User identifier |
+| `recentUsers[].email` | string | User email |
+| `recentUsers[].plan` | string or null | Current subscription plan |
+| `recentUsers[].subscriptionStatus` | string or null | Stripe subscription status |
+| `timestamp` | string | ISO 8601 timestamp |
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | Invalid or missing `x-bridge-secret` header |
+| 500 | Database error |
+
 ## Provision with channel tokens
 
 ```http
@@ -1582,7 +1634,7 @@ When calling the backend provisioning service directly, the response includes ad
 | 401 | Authentication required. Returned when no valid session is present, or the session email does not match a configured admin email. The body `email` field is not used for authentication. |
 | 403 | Active subscription required (web proxy). Returned when the authenticated user does not have an active subscription and is not an admin. The response body includes `success: false` and an `error` message: `Active subscription required. Please purchase a plan to deploy.` |
 | 402 | No free tier available. Returned when `plan` is `free` (the default when omitted). The response body includes `code: "PAYMENT_REQUIRED"` and the message `"No free tier. Choose a paid plan to get started."` You must explicitly specify a paid plan (`solo`, `collective`, `label`, or `network`). |
-| 402 | Active subscription required (backend). **Currently disabled.** This check is commented out in the backend while payment enforcement is being validated. When re-enabled, it will be returned when a valid paid plan is specified but no Stripe subscription ID is provided and the caller is not an admin or tester. The response body will include a `code` field set to `PAYMENT_REQUIRED`. |
+| 402 | Active subscription required (backend). Returned when a valid paid plan is specified but no Stripe subscription ID is provided and the caller is not an admin. The response body includes `code: "PAYMENT_REQUIRED"` and `success: false`. |
 | 402 | Agent limit reached for your plan. The response body includes a `code` field set to `AGENT_LIMIT_REACHED`, along with `current` (current agent count) and `limit` (maximum allowed) fields. Provisioning limits: `solo` 1, `collective` 3, `label` 10, `network` unlimited. |
 | 500 | Internal server error |
 | 502 | Provisioning service unavailable. All backend URLs failed or returned non-JSON/error responses, and Railway direct provisioning also failed or is not configured. The error message from the last attempted path is included in the response. |

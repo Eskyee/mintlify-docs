@@ -405,7 +405,9 @@ curl -X GET "https://agentbot.raveculture.xyz/api/wallet/top-up?amount=2500&addr
 POST /api/wallet/top-up
 ```
 
-Stripe webhook endpoint that processes `checkout.session.completed` events for wallet top-ups. When a payment completes, the webhook verifies the Stripe signature and credits the user's wallet.
+Stripe webhook endpoint that processes `checkout.session.completed` events for wallet top-ups. When a payment completes, the webhook verifies the Stripe signature and logs the credit event.
+
+<Warning>Wallet crediting is not yet fully automated. The webhook records the payment event, but the actual balance update is applied when you next interact with your wallet. This is a known limitation pending indexer integration.</Warning>
 
 <Warning>This endpoint is called by Stripe, not by your application directly. You must configure the webhook URL in your Stripe dashboard to point to this endpoint. The request must include a valid `stripe-signature` header.</Warning>
 

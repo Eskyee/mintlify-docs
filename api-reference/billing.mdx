@@ -72,6 +72,8 @@ Returns the available plans, the authenticated user's current plan, subscription
 
 <Note>The `currentPlan` value is set by the Stripe webhook when a checkout completes. Plans created through the primary checkout flow (`/api/stripe/checkout`) use `solo`, `collective`, `label`, or `network`. The billing dashboard displays these with their plan names: `solo` appears as "Solo", `collective` as "Collective", and `label` as "Label".</Note>
 
+<Warning>The billing endpoint internally defines a legacy plan catalog (`starter` at $19/mo, `pro` at $39/mo, `scale` at $79/mo) which may appear in responses for users who subscribed before the current plan names were introduced. The primary checkout flow and provisioning endpoints use the current plan names (`solo`, `collective`, `label`, `network`). If you encounter legacy plan names in billing responses, they map to the current plans as follows: `starter` → `solo`, `pro` → `collective`, `scale` → `label`.</Warning>
+
 ### Errors
 
 | Code | Description |
@@ -190,7 +192,8 @@ Purchases a credit pack.
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `action` | string | Yes | Must be `buy-credits` |
-| `pack` | string | Yes | Pack size: `50`, `200`, or `500` |
+| `pack` | string | Conditional | Pack size: `50`, `200`, or `500`. Either `pack` or `amount` must be provided. |
+| `amount` | string | Conditional | Alias for `pack`. Accepted as a fallback when `pack` is not provided. Same values: `50`, `200`, or `500`. |
 
 #### Response
 
@@ -262,6 +265,49 @@ On success, redirects (303) to the Stripe checkout URL. After payment completes,
 | `/pricing?error=stripe_not_configured` | Stripe secret key not set |
 | `/pricing?error=checkout_failed` | Stripe API error |
 | `/onboard?plan=...&paid=1&admin=1` | Admin bypass (no payment required) |
+
+## Verify checkout session
+
+```http
+GET /api/checkout/verify
+```
+
+Verifies a Stripe checkout session after payment and activates the subscription. Requires session authentication.
+
+### Query parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `session_id` | string | Yes | Stripe checkout session ID returned by Stripe after payment |
+
+### Response
+
+```json
+{
+  "plan": "solo",
+  "status": "active",
+  "nextBilling": "2026-04-20T00:00:00.000Z",
+  "customerId": "cus_abc123"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `plan` | string | Plan from the checkout session metadata. Defaults to `solo`. |
+| `status` | string | Always `active` on success. |
+| `nextBilling` | string or null | ISO 8601 date of the next billing cycle. `null` when the subscription period end date is unavailable. |
+| `customerId` | string | Stripe customer ID. |
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | Missing `session_id` query parameter |
+| 401 | Unauthorized |
+| 402 | Payment not completed |
+| 403 | Session does not belong to the authenticated user |
+| 500 | Verification failed |
+| 503 | Stripe not configured |
 
 ## Subscription deploy
 
