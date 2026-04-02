@@ -246,6 +246,7 @@ curl -X POST https://agentbot.raveculture.xyz/api/ai/chat \
 | `/api/auth/farcaster/refresh` | GET, POST | Refresh Farcaster token (GET returns endpoint metadata) |
 | `/api/auth/token-gating/verify` | GET, POST | Verify token gating access |
 | `/api/dashboard/cost` | GET | Get aggregated cost dashboard data (by agent, model, and day) |
+| `/api/dashboard/health` | GET | Get health status of backend services (no auth) |
 | `/api/dashboard/stats` | GET | Get dashboard stats (agent counts, skills, tasks) |
 | `/api/billing` | GET | Get billing info |
 | `/api/billing` | POST | Billing actions (`create-checkout`, `enable-byok`, `disable-byok`, `get-usage`, `buy-credits`) |
