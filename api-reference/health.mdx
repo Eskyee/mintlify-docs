@@ -80,6 +80,12 @@ GET /api/version
 
 No authentication required. Returns the current platform version string read from the embedded `VERSION` file.
 
+### Response headers
+
+| Header | Value | Description |
+|--------|-------|-------------|
+| `Cache-Control` | `max-age=3600, stale-while-revalidate=3600` | Response is cached for 1 hour and can be served stale for an additional hour while revalidating in the background. |
+
 ### Response
 
 ```json
@@ -95,6 +101,53 @@ No authentication required. Returns the current platform version string read fro
 | Code | Description |
 |------|-------------|
 | 200 | Version returned |
+
+## Dashboard health
+
+```http
+GET /api/dashboard/health
+```
+
+No authentication required. Checks connectivity to backend services and returns their individual statuses. Use this endpoint to display an aggregated service health overview on a dashboard.
+
+### Response headers
+
+| Header | Value | Description |
+|--------|-------|-------------|
+| `Cache-Control` | `max-age=30, stale-while-revalidate=60` | Response is cached for 30 seconds and can be served stale for an additional 60 seconds while revalidating. |
+
+### Response
+
+```json
+{
+  "services": [
+    { "name": "Agentbot API", "status": "ok", "detail": "ok" },
+    { "name": "Tempo Soul", "status": "ok", "detail": "ok" },
+    { "name": "x402 Gateway", "status": "ok", "detail": "ok" }
+  ],
+  "timestamp": "2026-04-02T12:00:00.000Z"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `services` | array | List of monitored services |
+| `services[].name` | string | Service display name |
+| `services[].status` | string | Service status: `ok`, `degraded`, or `down` |
+| `services[].detail` | string | Additional detail. Contains the HTTP status code when degraded, or an error message when down. |
+| `timestamp` | string | ISO 8601 timestamp of the health check |
+
+The `status` field for each service reflects the result of an HTTP health probe with a 4-second timeout:
+
+| Value | Condition |
+|-------|-----------|
+| `ok` | Health endpoint returned HTTP 2xx |
+| `degraded` | Health endpoint returned a non-2xx HTTP status |
+| `down` | Health endpoint was unreachable or timed out |
+
+| Code | Description |
+|------|-------------|
+| 200 | Health check completed (check individual service statuses in the response) |
 
 ## Backend health check
 
