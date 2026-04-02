@@ -154,22 +154,30 @@ const artwork = await agent.generate.artwork({
 });
 ```
 
-## Custom Skills
+## Custom skills
 
-Need something specific? Build your own:
+You can publish your own skills to the marketplace using the create endpoint. Custom skills are visible to all users once created.
 
-```javascript
-// Create a custom skill
-await agentbot.skills.create({
-  name: 'My Custom Skill',
-  description: 'Analyzes track mix quality',
-  handler: async (audioBuffer) => {
-    // Your custom logic
-    return { mixQuality: 'professional', issues: [] };
-  },
-  triggers: ['analyze-mix', 'check-mix']
-});
+```bash
+curl -X POST https://agentbot.raveculture.xyz/api/skills/create \
+  -H "Content-Type: application/json" \
+  -H "Cookie: <session-cookie>" \
+  -d '{
+    "name": "Mix Analyzer",
+    "description": "Analyzes track mix quality and returns mastering suggestions",
+    "category": "music",
+    "code": ""
+  }'
 ```
+
+| Field | Limit | Required |
+|-------|-------|----------|
+| `name` | 80 chars, must be unique | Yes |
+| `description` | 600 chars | Yes |
+| `category` | 40 chars, defaults to `custom` | No |
+| `code` | 2000 chars | No |
+
+See the [Skills API reference](/api-reference/skills) for the full response shape and error codes.
 
 ## Pricing
 
