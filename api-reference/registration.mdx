@@ -84,9 +84,9 @@ Validates a bearer token by computing a SHA-256 hash of the raw key and looking 
 POST /api/register-home
 ```
 
-Registers a Home mode installation. Requires identity headers (`x-user-email`, `x-user-id`, `x-user-role`) set by the authenticated frontend. The backend middleware extracts these headers but does not independently verify a bearer token on this route.
+Registers a Home mode installation. Requires identity headers (`x-user-email`, `x-user-id`, `x-user-role`) set by the authenticated frontend.
 
-<Note>The web proxy forwards identity headers from the active session. The backend `authenticate` middleware reads these headers and attaches them to the request context. If no headers are provided, `userId` defaults to `anonymous`.</Note>
+<Note>The registration routes use a different authentication middleware (header-based identity) than the API key authentication used by routes like `/api/agents` or `/api/deployments`. This middleware reads identity headers (`x-user-email`, `x-user-id`, `x-user-role`) from the request and attaches them to the request context. If no headers are provided, `userId` defaults to `anonymous`. The web proxy forwards these headers from the active session.</Note>
 
 ### Request body
 
