@@ -205,6 +205,38 @@ Payment sessions provide off-chain, per-call billing without an on-chain transac
 | `settling` | Vouchers are being settled on-chain (temporary) |
 | `closed` | Session has been closed and remaining funds returned |
 
+### Session initialization
+
+When opening a session, you must provide a viem `Account` to the `tempo.session()` call. If no account is provided, the SDK throws immediately with a descriptive error message and an example fix. This prevents cryptic errors during channel close.
+
+```typescript
+import { tempo } from 'mppx';
+import { privateKeyToAccount } from 'viem/accounts';
+
+// Correct — pass an Account object
+const account = privateKeyToAccount('0xYOUR_PRIVATE_KEY');
+const session = tempo.session({ account });
+
+// Incorrect — throws immediately with a helpful error
+const session = tempo.session({}); // Error: No Account provided. Pass { account: privateKeyToAccount('0x...') }
+```
+
+### Redis store for session state
+
+By default, session state is stored in memory. For production deployments where you need persistence across restarts or across multiple server instances, use the `Store.redis()` adapter. It works with standard Redis clients including ioredis, node-redis, and Valkey.
+
+```typescript
+import { Store } from 'mppx';
+import Redis from 'ioredis';
+
+const redis = new Redis(process.env.REDIS_URL);
+const store = Store.redis(redis);
+```
+
+The Redis adapter handles `BigInt` serialization automatically, so session voucher amounts are stored and retrieved without data loss.
+
+<Tip>Use the Redis store in any environment where your server may restart or where you run multiple instances behind a load balancer. Without persistent storage, active sessions are lost on restart.</Tip>
+
 ### When to use sessions vs. per-request MPP
 
 - **Sessions** are ideal for high-frequency agent calls where sub-100ms billing latency matters (e.g., chat, real-time orchestration).

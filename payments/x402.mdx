@@ -117,6 +117,35 @@ Response:
 curl https://openclaw-gw-ui-production.up.railway.app/gateway/marketplace/atlas
 ```
 
+## OpenAPI discovery
+
+The gateway exposes machine-readable service discovery via OpenAPI. Use this to programmatically find available endpoints, pricing, and payment requirements before making requests.
+
+### Discovery endpoints
+
+| Endpoint | Format | Description |
+|----------|--------|-------------|
+| `GET /openapi.json` | JSON | Canonical OpenAPI 3.x document describing all paid endpoints, pricing, and authentication requirements |
+| `GET /llms.txt` | Plain text | Text-friendly summary of available services, designed for LLM consumption |
+
+```bash
+# Fetch the OpenAPI discovery document
+curl https://openclaw-gw-ui-production.up.railway.app/openapi.json
+```
+
+```bash
+# Fetch the LLM-friendly text summary
+curl https://openclaw-gw-ui-production.up.railway.app/llms.txt
+```
+
+<Warning>Legacy `/discover*` routes now return `410 Gone`. If you previously used these routes for service discovery, update your client to use `GET /openapi.json` instead.</Warning>
+
+### When to use discovery
+
+- **Agent-to-agent communication** — agents can fetch `/openapi.json` to learn what services are available and how to pay for them before making requests.
+- **Client tooling** — use the OpenAPI document to auto-generate typed clients or validate requests.
+- **LLM tool use** — feed `/llms.txt` to an LLM so it can decide which endpoints to call and at what cost.
+
 ### Agent Fitness Score
 
 ```bash
