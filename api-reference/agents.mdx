@@ -246,7 +246,7 @@ Updates an agent's metadata including plan, AI provider, and configuration. Requ
 |-------|------|----------|-------------|
 | `plan` | string | No | Plan tier |
 | `aiProvider` | string | No | AI provider |
-| `config` | object | No | Additional configuration |
+| `config` | object | No | Additional configuration. **Shallow-merged** with the existing config — top-level keys in the request replace existing keys, but nested objects are not deep-merged. Keys not included in the request are preserved. |
 
 ### Response
 
@@ -1467,13 +1467,12 @@ When `autoProvision` is `true` or `agentType` is `business`, channel tokens are 
 
 ### Admin check
 
-Admin status is determined using the session email only. The `email` field in the request body is **not** used for admin resolution.
+Admin status is determined differently depending on whether you call the web proxy or the backend directly.
 
-1. **Session email** — the email from the authenticated session is checked against the configured `ADMIN_EMAILS`.
+- **Web proxy (`POST /api/provision`)** — the session email is checked against `ADMIN_EMAILS`. The body `email` field is not used for admin detection on the web proxy.
+- **Backend direct (`POST /api/provision` on the backend)** — the backend resolves the email from the request body `email` field first, falling back to the `x-user-email` header. This resolved email is then checked against `ADMIN_EMAILS`. When calling the backend directly, the body `email` field **is** used for admin detection.
 
-If the session email matches an admin email, the caller is treated as an admin. When the session is missing but the session email resolves to an admin, a synthetic session is created and the request proceeds. Non-admin users without a valid session receive a `401` error.
-
-<Note>The body `email` field is no longer used as a fallback for admin detection. Only the session email is checked. This is a change from previous behavior where the body email was checked when no session email was available.</Note>
+If the resolved email matches an admin email, the caller is treated as an admin. Non-admin users without a valid session receive a `401` error.
 
 <Warning>This endpoint is subject to the general rate limit of 120 requests per minute per IP.</Warning>
 
@@ -1498,11 +1497,11 @@ When the backend path succeeds and `MUX_TOKEN_ID` and `MUX_TOKEN_SECRET` are con
 | `discordBotToken` | string | Conditional | Discord bot token. At least one channel token is required unless `autoProvision` is `true` or `agentType` is `business`. |
 | `aiProvider` | string | No | AI provider (default: `openrouter`). Options: `openrouter`, `gemini`, `groq`, `anthropic`, `openai`. Each provider maps to a default model — see [AI provider defaults](#ai-provider-defaults) below. |
 | `plan` | string | No | Plan tier. Options: `solo`, `collective`, `label`, `network`. Defaults to `free` when omitted. Since `free` is not a valid plan, omitting this field returns a `400` validation error — you must explicitly specify a paid plan when calling the backend directly. |
-| `model` | string | No | AI model identifier. When omitted, the default model for the selected `aiProvider` is used (see [AI provider defaults](#ai-provider-defaults)). |
-| `skills` | string[] | No | List of skill identifiers to enable on the agent. |
-| `agentType` | string | No | Agent type. When set to `business`, the agent is provisioned as an OpenClaw-only deployment and channel tokens are not required. |
+| `model` | string | No | AI model identifier. **Web proxy only** — this field is accepted by the web proxy and used to configure the agent's model, but is not accepted by the backend provisioning route directly. When omitted, the default model for the selected `aiProvider` is used (see [AI provider defaults](#ai-provider-defaults)). |
+| `skills` | string[] | No | List of skill identifiers to enable on the agent. **Web proxy only** — this field is accepted by the web proxy but is not forwarded to the backend provisioning route. |
+| `agentType` | string | No | Agent type. Defaults to `creative`. When set to `business`, the agent is provisioned as an OpenClaw-only deployment and channel tokens are not required. Accepted values: `creative` (default), `business`. |
 | `autoProvision` | boolean | No | When `true`, the agent is provisioned as an OpenClaw-only deployment and channel tokens are not required. The onboard flow sets this automatically in deploy mode. |
-| `email` | string | No | User email address. This field is forwarded to the backend in the request payload but is **not** used for admin detection — only the session email is used for the admin check (see [admin check](#admin-check) above). The session email is sent to the backend in the `X-User-Email` header. |
+| `email` | string | No | User email address. When calling through the web proxy, this field is forwarded to the backend but is not used for admin detection (the web proxy uses the session email). When calling the backend directly, this field **is** used for admin detection — the backend resolves the email from the body first, falling back to the `X-User-Email` header, and checks it against `ADMIN_EMAILS`. See [admin check](#admin-check). |
 | `stripeSubscriptionId` | string | No | Stripe subscription ID from checkout. This field is accepted by the backend provisioning service directly. The web proxy does not forward this field — it performs its own subscription check against the database instead. |
 
 <Note>The server resolves the user email exclusively from the authenticated session. The session email is sent to the backend provisioning service in the `X-User-Email` header and the session user ID is sent in the `X-User-Id` header. The `email` field in the request body is not used for authentication or admin detection.</Note>

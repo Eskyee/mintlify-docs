@@ -223,6 +223,8 @@ GET /api/metrics/:userId/summary
 
 Requires bearer token authentication. Returns a music industry analytics summary for an agent, including revenue, bookings, fan engagement, streaming stats, and active skills.
 
+<Warning>This endpoint currently returns hardcoded placeholder data. All fields return zero or `$0.00` values. Real data integration is not yet implemented. The response shape is stable and will be populated with live data in a future release.</Warning>
+
 ### Path parameters
 
 | Parameter | Type | Description |

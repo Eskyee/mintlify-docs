@@ -36,7 +36,7 @@ Creates a team of agents using a pre-built template. Requires bearer token authe
 | `templateKey` | string | No | Key of the pre-built team template to use. Defaults to `dev_team` when omitted. See [list templates](#list-team-templates) for available options. |
 
 <Warning>The web proxy at `/api/provision/team` currently only accepts `collective` and `label` plans — requests with `plan: "network"` return a `400` error. The backend accepts all three plans. Additionally, the web proxy requires `templateKey` to be provided explicitly (it does not apply the `dev_team` default). Omitting `templateKey` through the web proxy returns a `400` error with the message `"templateKey is required"`.</Warning>
-| `customAgents` | array | No | Custom agent configurations to provision instead of (or in addition to) the template defaults. Each entry defines an agent with its own configuration. |
+| `customAgents` | array | No | Custom agent configurations to provision instead of (or in addition to) the template defaults. Each entry is an `AgentConfig` object — see [custom agent schema](#custom-agent-schema) below. |
 | `stripeSubscriptionId` | string | No | Stripe subscription ID. Can also be passed in the `x-stripe-subscription-id` header. Required for non-admin users when payment enforcement is active. |
 
 ### Response
@@ -99,13 +99,29 @@ curl -X POST https://api.agentbot.raveculture.xyz/api/provision/team \
   }'
 ```
 
+### Custom agent schema
+
+Each item in the `customAgents` array must conform to the following schema:
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | string | Yes | Agent name identifier |
+| `role` | string | Yes | Agent role (for example, `Frontend`, `Backend`, `QA`) |
+| `description` | string | Yes | Human-readable description of the agent's purpose |
+| `instruction` | string | Yes | System prompt / instruction text for the agent |
+| `model` | string | Yes | AI model identifier (for example, `openrouter/anthropic/claude-3.5-sonnet`) |
+| `tools` | string[] | Yes | List of tools available to the agent (for example, `["bash", "read", "write"]`) |
+| `memoryShared` | boolean | Yes | Whether this agent shares memory with other agents in the team |
+
+The total number of custom agents must not exceed the plan's agent limit. If `customAgents` exceeds the limit, the request returns an error.
+
 ## List team templates
 
 ```http
 GET /api/provision/team/templates
 ```
 
-Returns all available pre-built team templates and their categories. Requires bearer token authentication.
+Returns all available pre-built team templates and their categories. This endpoint does not apply authentication middleware at the route level. Authentication may be enforced at the application mount level depending on your deployment configuration.
 
 ### Response
 
@@ -150,10 +166,6 @@ Returns all available pre-built team templates and their categories. Requires be
 | `categories[].templates` | string[] | List of template keys belonging to this category |
 
 ### Errors
-
-| Code | Description |
-|------|-------------|
-| 401 | Unauthorized — missing or invalid bearer token |
 
 ## Available templates
 

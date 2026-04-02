@@ -7,7 +7,7 @@ description: "Concurrent tool orchestration for batched execution of agent tool 
 
 Execute multiple tool calls in a single request with automatic concurrency optimization. Read-only tools run in parallel while mutating tools serialize, reducing total execution time without sacrificing safety.
 
-<Note>The orchestration API requires bearer token authentication. All requests are subject to the general API rate limit of 120 requests per minute.</Note>
+<Note>The orchestration API does not apply authentication middleware at the route level. All requests are subject to the general API rate limit of 120 requests per minute. Authentication may be enforced at the application mount level depending on your deployment configuration.</Note>
 
 ## Execute batch
 
@@ -16,8 +16,6 @@ POST /api/orchestration/batch
 ```
 
 Submit a batch of tool calls for concurrent execution. The system automatically classifies each tool as read-only or mutating, partitions them into execution batches, and runs them with optimal concurrency.
-
-Requires bearer token authentication.
 
 ### Request body
 
@@ -121,7 +119,6 @@ In this example, `t1` and `t2` are read-only and run in parallel. `t3` is mutati
 |------|-------------|
 | 400 | `tools array required` — missing or empty `tools` field |
 | 400 | `Maximum 20 tools per batch` — batch size exceeds the limit |
-| 401 | Unauthorized — missing or invalid bearer token |
 | 500 | Internal server error |
 
 <Note>Individual tool call objects are not validated for required fields (`id`, `toolName`) at the API level. Malformed tool objects are passed to the executor and may produce runtime errors in the tool results.</Note>
@@ -137,8 +134,6 @@ POST /api/orchestration/partition
 ```
 
 Preview how tool calls would be partitioned without executing them. Use this to debug batch composition or estimate parallelization gains.
-
-Requires bearer token authentication.
 
 ### Request body
 
@@ -227,7 +222,6 @@ Requires bearer token authentication.
 | Code | Description |
 |------|-------------|
 | 400 | `tools array required` — missing or non-array `tools` field |
-| 401 | Unauthorized — missing or invalid bearer token |
 | 500 | Internal server error |
 
 ## Tool classification

@@ -7,7 +7,7 @@ description: "AI provider endpoints for model selection, chat completion, and co
 
 Endpoints for interacting with AI models through a unified provider layer. These endpoints are served by the backend API service, not the web application. They are available at the backend base URL, which may differ from the web API base URL depending on your deployment.
 
-<Note>These endpoints are internal backend endpoints and are not exposed through the web application's `/api` routes. All `/api/ai/*` endpoints require bearer token (API key) authentication — the auth middleware is applied at the router mount level, so requests without a valid token receive a `401` response regardless of the endpoint. The chat and cost estimation endpoints additionally require a valid subscription plan. All POST requests must include the `Content-Type: application/json` header.</Note>
+<Note>These endpoints are internal backend endpoints and are not exposed through the web application's `/api` routes. Most `/api/ai/*` endpoints require bearer token (API key) authentication. However, the health check, model listing, and per-provider model listing endpoints are **intentionally public** and do not require authentication. The chat and cost estimation endpoints additionally require a valid subscription plan. All POST requests must include the `Content-Type: application/json` header.</Note>
 
 <Warning>All `/api/ai/*` endpoints share a rate limit of 30 requests per minute per IP, not just the chat endpoint.</Warning>
 
@@ -17,7 +17,7 @@ Endpoints for interacting with AI models through a unified provider layer. These
 GET /api/ai/health
 ```
 
-Requires bearer token authentication. Returns the availability status of configured AI providers.
+**Public endpoint** — no authentication required. Returns the availability status of configured AI providers. This endpoint is intentionally unauthenticated to support status page integrations.
 
 ### Response
 
@@ -54,7 +54,7 @@ When the provider check fails, the response uses `status: "error"` and includes 
 GET /api/ai/models
 ```
 
-Requires bearer token authentication. Returns all available AI models across providers.
+**Public endpoint** — no authentication required. Returns all available AI models across providers. This endpoint is intentionally unauthenticated to support pricing and discovery pages.
 
 ### Response
 
@@ -91,7 +91,7 @@ Requires bearer token authentication. Returns all available AI models across pro
 GET /api/ai/models/:provider
 ```
 
-Requires bearer token authentication.
+**Public endpoint** — no authentication required. This endpoint is intentionally unauthenticated to support pricing and discovery pages.
 
 ### Path parameters
 
