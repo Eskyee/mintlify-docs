@@ -158,6 +158,13 @@ curl -X POST https://agentbot.raveculture.xyz/api/ai/chat \
 | `/api/agents/:id/token` | GET | Get agent gateway token |
 | `/api/instance/:userId` | GET | Get instance details (web proxy) |
 | `/api/instance/:userId/stats` | GET | Get instance stats via gateway healthcheck |
+| `/api/instance/:userId/start` | POST | Start (deploy) an agent service (web proxy) |
+| `/api/instance/:userId/stop` | POST | Stop (suspend) an agent service (web proxy) |
+| `/api/instance/:userId/restart` | POST | Restart an agent service (web proxy) |
+| `/api/instance/:userId/repair` | POST | Reconfigure and restart an agent (web proxy) |
+| `/api/instance/:userId/reset-memory` | POST | Wipe agent memory and restart (web proxy) |
+| `/api/instance/:userId/token` | GET | Get agent gateway token (web proxy) |
+| `/api/instance/:userId/update` | POST | Trigger agent image update (web proxy) |
 | `/api/agents/clone` | POST | Clone an existing agent (requires x402 payment proof) |
 | `/api/agents/clone` | GET | Clone service health check |
 | `/api/agents/definitions` | GET | List agent definitions (backend only) |
@@ -254,9 +261,9 @@ curl -X POST https://agentbot.raveculture.xyz/api/ai/chat \
 | `/api/metrics/:userId/historical` | GET | Get historical time-series metrics (backend only) |
 | `/api/metrics/:userId/performance` | GET | Get current performance metrics (backend only) |
 | `/api/metrics/:userId/summary` | GET | Get music industry metrics summary (backend only) |
-| `/api/ai/health` | GET | AI provider availability (backend only) |
-| `/api/ai/models` | GET | List available AI models (backend only) |
-| `/api/ai/models/:provider` | GET | List models for a provider (backend only) |
+| `/api/ai/health` | GET | AI provider availability (backend only, requires auth) |
+| `/api/ai/models` | GET | List available AI models (backend only, requires auth) |
+| `/api/ai/models/:provider` | GET | List models for a provider (backend only, requires auth) |
 | `/api/ai/models/select` | POST | Smart model selection for a task type (backend only) |
 | `/api/ai/chat` | POST | Universal chat completion (backend only, requires subscription plan) |
 | `/api/ai/estimate-cost` | POST | Estimate token cost (backend only) |
@@ -270,7 +277,7 @@ curl -X POST https://agentbot.raveculture.xyz/api/ai/chat \
 | `/api/render-mcp/github` | GET | Redirect to Render MCP GitHub repo (backend only) |
 | `/api/openclaw/maintenance` | GET | Get agent health status (liveness and readiness) |
 | `/api/openclaw/maintenance` | POST | Restart agent container (runs doctor and migrations on startup) |
-| `/api/openclaw-version` | GET | Get OpenClaw runtime version (web proxy, fallback `2026.4.1`) |
+| `/api/openclaw-version` | GET | Get OpenClaw runtime version (web proxy, fallback `2026.3.31`) |
 | `/api/openclaw/version` | GET | Get OpenClaw runtime version (backend only) |
 | `/api/openclaw/instances` | GET | List running agent instances (backend only, requires auth) |
 | `/api/openclaw/instances/:id/stats` | GET | Get instance container stats (backend only, requires auth) |
