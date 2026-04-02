@@ -225,7 +225,11 @@ curl -X POST https://agentbot.raveculture.xyz/api/ai/chat \
 | `/api/settings` | GET | Get current user profile |
 | `/api/settings` | POST, PATCH | Update user profile |
 | `/api/settings/password` | POST | Change password |
-| `/api/register` | POST | Create a new account |
+| `/api/register` | POST | Create a new account (includes 7-day free trial) |
+| `/api/trial` | GET | Get free trial status for the authenticated user |
+| `/api/showcase` | GET | List agents in the public showcase gallery (no auth) |
+| `/api/agents/showcase` | GET | Get showcase opt-in status for your agent |
+| `/api/agents/showcase` | PATCH | Update showcase visibility and description |
 | `/api/wallet-auth` | POST | Wallet sign in (SIWE) |
 | `/api/auth/forgot-password` | POST | Request password reset |
 | `/api/auth/reset-password` | POST | Reset password |
