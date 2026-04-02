@@ -178,6 +178,10 @@
         "href": "https://discord.gg/vTPG4vdV6D"
       },
       {
+        "label": "Dev.to",
+        "href": "https://dev.to/agentbot"
+      },
+      {
         "label": "Google Dev",
         "href": "https://g.dev/agentbot"
       },
@@ -202,7 +206,8 @@
   "footer": {
     "socials": {
       "github": "https://github.com/Eskyee/agentbot-opensource",
-      "discord": "https://discord.gg/vTPG4vdV6D"
+      "discord": "https://discord.gg/vTPG4vdV6D",
+      "devto": "https://dev.to/agentbot"
     }
   },
   "topbar": {
@@ -211,5 +216,4 @@
       "href": "https://agentbot.raveculture.xyz/signup"
     }
   }
-}Added channels to Getting Started
-Added channels to Integrations
+}
