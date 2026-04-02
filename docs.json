@@ -137,7 +137,10 @@
           "api-reference/hooks-classify",
           "api-reference/orchestration",
           "api-reference/trial",
-          "api-reference/showcase"
+          "api-reference/showcase",
+          "api-reference/admin-summary",
+          "api-reference/export",
+          "api-reference/wallet-monitor"
         ]
       },
       {
