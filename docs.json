@@ -192,7 +192,7 @@
         "href": "https://cerebralvalley.ai/u/Esky"
       },
       {
-        "label": "☕ Buy Me a Coffee",
+        "label": "\u2615 Buy Me a Coffee",
         "href": "https://buymeacoffee.com/agentbot"
       }
     ]
@@ -201,6 +201,12 @@
     "socials": {
       "github": "https://github.com/Eskyee/agentbot-opensource",
       "discord": "https://discord.gg/vTPG4vdV6D"
+    }
+  },
+  "topbar": {
+    "cta": {
+      "label": "\ud83d\ude80 Free trial \u2014 no credit card required",
+      "href": "https://agentbot.raveculture.xyz/signup"
     }
   }
 }
