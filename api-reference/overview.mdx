@@ -320,6 +320,8 @@ curl -X POST https://agentbot.raveculture.xyz/api/ai/chat \
 | `/api/underground/wallets` | POST | Create an agent wallet (backend only, requires auth) |
 | `/api/underground/wallets/:address/balance` | GET | Get agent wallet USDC balance (backend only, requires auth) |
 | `/api/underground/splits` | POST | Create and execute a royalty split (backend only, requires auth) |
+| `/api/permissions` | GET | List pending permission requests (backend only, requires auth). Accepts optional `agentId` query parameter. |
+| `/api/permissions` | POST | Submit a permission decision: `approve`, `reject`, or `approve_always` (backend only, requires auth) |
 | `/api/hooks/classify` | POST | Classify an agent tool call into a permission tier (internal, called by Docker agent hook script) |
 | `/api/orchestration/batch` | POST | Execute a batch of tool calls with concurrent optimization (backend only, requires auth) |
 | `/api/orchestration/partition` | POST | Dry-run partition of tool calls without execution (backend only, requires auth) |
