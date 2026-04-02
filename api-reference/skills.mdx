@@ -108,6 +108,66 @@ Requires session authentication. Installs a skill on an agent.
 | 404 | Agent not found or skill not found |
 | 500 | Internal error |
 
+## Create skill
+
+```http
+POST /api/skills/create
+```
+
+Requires session authentication. Creates a new custom skill in the marketplace. The skill becomes available to all users once created.
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | string | Yes | Display name of the skill. Maximum 80 characters. Must be unique across the marketplace. |
+| `description` | string | Yes | Summary of the skill's capabilities. Maximum 600 characters. |
+| `category` | string | No | Category for the skill. Maximum 40 characters. Defaults to `custom` when omitted. |
+| `code` | string | No | Skill handler code or configuration. Maximum 2000 characters. |
+
+### Response
+
+```json
+{
+  "success": true,
+  "skill": {
+    "id": "clx9abc123",
+    "name": "My Custom Skill",
+    "description": "Analyzes track mix quality",
+    "category": "custom",
+    "code": "",
+    "author": "user@example.com",
+    "downloads": 0,
+    "rating": 0,
+    "featured": false,
+    "createdAt": "2026-04-02T12:00:00.000Z",
+    "updatedAt": "2026-04-02T12:00:00.000Z"
+  }
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `skill.id` | string | Unique identifier for the created skill |
+| `skill.name` | string | Display name |
+| `skill.description` | string | Skill description |
+| `skill.category` | string | Category (defaults to `custom`) |
+| `skill.code` | string | Skill handler code |
+| `skill.author` | string | Set to the authenticated user's display name or email |
+| `skill.downloads` | number | Download count, starts at `0` |
+| `skill.rating` | number | Rating score, starts at `0` |
+| `skill.featured` | boolean | Always `false` for user-created skills |
+| `skill.createdAt` | string | ISO 8601 creation timestamp |
+| `skill.updatedAt` | string | ISO 8601 last-updated timestamp |
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | Missing `name` or `description`, or a skill with the same name already exists |
+| 401 | Unauthorized |
+| 500 | Internal error |
+
 ## Uninstall skill
 
 ```http
