@@ -1,6 +1,6 @@
 ---
 title: Maintenance API
-description: "Agent health monitoring and restart endpoints"
+description: "Agent health monitoring, restart, and factory reset endpoints"
 ---
 
 # Maintenance API
@@ -68,15 +68,35 @@ When the authenticated user has no deployed agent:
 | 200 | Health status returned (check `status` field for actual health) |
 | 401 | Unauthorized — missing or invalid session |
 
-## Restart agent
+## Restart or reset agent
 
 ```http
 POST /api/openclaw/maintenance
 ```
 
-Requires session authentication. Triggers a restart of the user's agent container. The agent automatically runs `openclaw doctor --fix` on startup, which performs health checks and applies any pending migrations.
+Requires session authentication. Triggers a restart or factory reset of the user's agent container. The `action` field in the request body determines the behavior.
 
-### Response
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `action` | string | No | The maintenance action to perform. One of `restart` or `factory-reset`. Defaults to `restart` when omitted. |
+
+### Actions
+
+#### `restart` (default)
+
+Restarts the agent container. The agent automatically runs `openclaw doctor --fix` on startup, which performs health checks and applies any pending migrations.
+
+**Request:**
+
+```json
+{
+  "action": "restart"
+}
+```
+
+**Response:**
 
 ```json
 {
@@ -85,10 +105,33 @@ Requires session authentication. Triggers a restart of the user's agent containe
 }
 ```
 
+#### `factory-reset`
+
+Pins the agent to the known-good OpenClaw image (`v2026.3.28`), reconfigures environment variables, and restarts the container with `doctor --fix`. Use this when an agent is broken after updating to an incompatible version.
+
+**Request:**
+
+```json
+{
+  "action": "factory-reset"
+}
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "message": "Factory reset complete — pinned to ghcr.io/openclaw/openclaw:2026.3.28. Agent restarting with doctor --fix.",
+  "image": "ghcr.io/openclaw/openclaw:2026.3.28"
+}
+```
+
 | Field | Type | Description |
 |-------|------|-------------|
-| `success` | boolean | `true` when the restart was initiated |
-| `message` | string | Confirmation message |
+| `success` | boolean | `true` when the action was initiated |
+| `message` | string | Confirmation message describing what happened |
+| `image` | string | *(factory-reset only)* The Docker image the agent was pinned to |
 
 ### Error responses
 
@@ -100,7 +143,7 @@ When the user has no deployed agent:
 }
 ```
 
-When the backend restart call fails:
+When a restart call fails:
 
 ```json
 {
@@ -109,15 +152,26 @@ When the backend restart call fails:
 }
 ```
 
+When a factory reset fails during the image update:
+
+```json
+{
+  "error": "Factory reset failed during update",
+  "details": {}
+}
+```
+
 | Code | Description |
 |------|-------------|
-| 200 | Restart initiated |
+| 200 | Action completed successfully |
 | 401 | Unauthorized — missing or invalid session |
 | 404 | No agent deployed for the authenticated user |
-| 500 | Internal error during the restart request |
-| 502 | Backend restart call failed |
+| 500 | Internal error during the request |
+| 502 | Backend call failed (restart or factory reset) |
 
-<Warning>Restarting an agent causes a brief period of downtime while the container reinitializes. The `openclaw doctor --fix` process runs automatically during startup and may take additional time depending on the number of pending fixes or migrations.</Warning>
+<Warning>Both `restart` and `factory-reset` cause a brief period of downtime while the container reinitializes. The `openclaw doctor --fix` process runs automatically during startup and may take additional time depending on the number of pending fixes or migrations.</Warning>
+
+<Note>Factory reset pins the agent to a known-stable release (`v2026.3.28`). After a factory reset, you can update to a newer version later through the normal update flow.</Note>
 
 ## OpenClaw runtime version
 
