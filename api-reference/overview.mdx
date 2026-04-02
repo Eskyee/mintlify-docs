@@ -245,6 +245,10 @@ curl -X POST https://agentbot.raveculture.xyz/api/ai/chat \
 | `/api/auth/farcaster/verify` | GET, POST | Verify Farcaster identity (GET returns endpoint metadata) |
 | `/api/auth/farcaster/refresh` | GET, POST | Refresh Farcaster token (GET returns endpoint metadata) |
 | `/api/auth/token-gating/verify` | GET, POST | Verify token gating access |
+| `/api/passkey/register/options` | POST | Get WebAuthn registration options (requires session) |
+| `/api/passkey/register/verify` | POST | Verify and store a new passkey (requires session) |
+| `/api/passkey/auth/options` | POST | Get WebAuthn authentication options |
+| `/api/passkey/auth/verify` | POST | Authenticate with a passkey and create a session |
 | `/api/dashboard/cost` | GET | Get aggregated cost dashboard data (by agent, model, and day) |
 | `/api/dashboard/health` | GET | Get health status of backend services (no auth) |
 | `/api/dashboard/stats` | GET | Get dashboard stats (agent counts, skills, tasks) |
