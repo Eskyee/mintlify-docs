@@ -104,6 +104,7 @@ No authentication required. Rate-limited by IP address.
 | 400 | `Message required` | The `message` field is missing from the request body |
 | 429 | `Too many requests` | IP-based rate limit exceeded |
 | 503 | `Demo unavailable — service not configured.` | The demo service is not configured on the server |
+| _varies_ | `AI service error. Please try again.` | The upstream AI provider returned an error. The HTTP status code is passed through from the provider (for example, `402` for quota issues or `422` for invalid model parameters). |
 | 500 | `Failed to get response` | An unexpected error occurred |
 
 <Note>The demo endpoint uses a fixed max token limit of 1024 and does not support streaming. For full chat capabilities, use the [AI chat endpoint](/api-reference/ai#chat-completion) with a subscription plan.</Note>
