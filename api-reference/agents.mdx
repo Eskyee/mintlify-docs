@@ -145,12 +145,12 @@ The backend returns the agent object directly without a wrapper:
   "plan": "solo",
   "subdomain": "agent_123.agents.localhost",
   "url": "https://agent_123.agents.localhost",
-   "openclawVersion": "2026.4.1",
-    "verified": false,
-    "verificationType": null,
-    "attestationUid": null,
-    "verifiedAt": null
-  }
+  "openclawVersion": "2026.3.28",
+  "verified": false,
+  "verificationType": null,
+  "attestationUid": null,
+  "verifiedAt": null
+}
 ```
 
 ### Response (web proxy)
@@ -166,7 +166,7 @@ The web proxy wraps the agent in an object:
     "plan": "solo",
     "subdomain": "agent_123.agents.localhost",
     "url": "https://agent_123.agents.localhost",
-    "openclawVersion": "2026.4.1",
+    "openclawVersion": "2026.3.28",
     "verified": false,
     "verificationType": null,
     "attestationUid": null,
@@ -840,7 +840,7 @@ POST /api/agents/:id/restart
   "status": "active",
   "healedLegacyModel": false,
   "healMessage": "skip",
-  "openclawVersion": "2026.4.1"
+  "openclawVersion": "2026.3.28"
 }
 ```
 
@@ -870,16 +870,16 @@ Triggers an image update on the backend. Before replacing the service, the endpo
 {
   "success": true,
   "status": "active",
-  "image": "ghcr.io/openclaw/openclaw:2026.4.1",
-  "previousImage": "ghcr.io/openclaw/openclaw:2026.3.28",
+  "image": "ghcr.io/openclaw/openclaw:2026.3.28",
+  "previousImage": "ghcr.io/openclaw/openclaw:2026.3.24",
   "backupPath": "/opt/agentbot/data/backups/openclaw-updates/agent_123/20260320-000000.tar.gz",
-  "openclawVersion": "2026.4.1"
+  "openclawVersion": "2026.3.28"
 }
 ```
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `image` | string | New service image. The platform default is `ghcr.io/openclaw/openclaw:2026.4.1`. |
+| `image` | string | New service image. The platform default is `ghcr.io/openclaw/openclaw:2026.3.28`. |
 | `previousImage` | string | Previous service image before the update |
 | `backupPath` | string \| null | Path to the pre-update backup archive |
 | `openclawVersion` | string | Current OpenClaw runtime version |
@@ -899,12 +899,27 @@ Triggers an image update on the backend. Before replacing the service, the endpo
 POST /api/agents/:id/repair
 ```
 
-Returns the backend response directly.
+Full reconfigure: rewrites environment variables and restarts the agent container. Fixes broken tokens, configuration corruption, and stuck containers.
+
+#### Response (backend)
+
+Returns the backend response directly:
 
 ```json
 {
   "success": true,
   "message": "Agent repaired successfully"
+}
+```
+
+#### Response (web proxy)
+
+The web proxy (`POST /api/instance/:userId/repair`) performs the repair directly via the Railway API and returns a different response shape:
+
+```json
+{
+  "success": true,
+  "status": "repaired"
 }
 ```
 
@@ -914,7 +929,11 @@ Returns the backend response directly.
 POST /api/agents/:id/reset-memory
 ```
 
-Returns the backend response directly.
+Wipes the agent's stored memory and restarts the container. The agent starts fresh.
+
+#### Response (backend)
+
+Returns the backend response directly:
 
 ```json
 {
@@ -922,6 +941,29 @@ Returns the backend response directly.
   "message": "Memory reset successfully"
 }
 ```
+
+#### Response (web proxy)
+
+The web proxy (`POST /api/instance/:userId/reset-memory`) clears agent memory records from the database and restarts the container:
+
+```json
+{
+  "success": true,
+  "status": "reset"
+}
+```
+
+### Web proxy lifecycle responses
+
+The web proxy instance endpoints (`/api/instance/:userId/{action}`) return a consistent response shape for lifecycle actions:
+
+| Action | `status` value on success |
+|--------|--------------------------|
+| `start` | `starting` |
+| `stop` | `stopped` |
+| `restart` | `restarting` |
+| `repair` | `repaired` |
+| `reset-memory` | `reset` |
 
 ### Lifecycle error responses
 
@@ -933,22 +975,40 @@ Backend lifecycle endpoints return the following shape on failure:
 }
 ```
 
-Web proxy lifecycle endpoints return a different error shape:
+Web proxy lifecycle endpoints return a different error shape with the specific error message in the `error` field:
 
 ```json
 {
   "success": false,
-  "status": "error"
+  "error": "Description of the failure"
 }
 ```
+
+<Note>The web proxy error shape uses `{ success: false, error: "..." }` with the specific error message. The `update` endpoint is an exception — it returns `{ success: false, status: "error" }` on failure instead.</Note>
 
 | Code | Source | Description |
 |------|--------|-------------|
 | 401 | Both | Unauthorized — missing or invalid authentication |
-| 403 | Both | Forbidden — authenticated user does not own this agent instance |
-| 404 | Backend | Agent not found |
-| 500 | Backend | Internal server error (for example, Railway API unavailable or service operation failed) |
-| 502 | Web proxy | Backend service unavailable |
+| 403 | Web proxy | Forbidden — authenticated user does not own this agent instance |
+| 404 | Both | Agent or instance not found |
+| 500 | Both | Internal server error (for example, Railway API unavailable or service operation failed) |
+| 502 | Both | Backend or upstream service unavailable (for example, Railway API returned an error) |
+
+## Web proxy instance endpoints
+
+The following endpoints are available at `/api/instance/:userId/{action}` and require session authentication. The `userId` parameter is the agent's instance identifier (a hex string), not the user's database ID. Ownership is verified by checking that the authenticated user's `openclawInstanceId` matches the `userId` parameter.
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/instance/:userId` | GET | Get instance details |
+| `/api/instance/:userId/stats` | GET | Get instance stats via gateway healthcheck |
+| `/api/instance/:userId/start` | POST | Start (deploy) the agent service |
+| `/api/instance/:userId/stop` | POST | Stop (suspend) the agent service |
+| `/api/instance/:userId/restart` | POST | Restart the agent service |
+| `/api/instance/:userId/repair` | POST | Reconfigure environment variables and restart |
+| `/api/instance/:userId/reset-memory` | POST | Wipe agent memory and restart |
+| `/api/instance/:userId/token` | GET | Get agent gateway token |
+| `/api/instance/:userId/update` | POST | Trigger agent image update |
 
 ## Get instance details
 
@@ -956,7 +1016,9 @@ Web proxy lifecycle endpoints return a different error shape:
 GET /api/instance/:userId
 ```
 
-Returns the current status and metadata for an agent instance.
+Returns the current status and metadata for an agent instance. Requires session authentication and ownership verification.
+
+The endpoint proxies to the backend. When the backend is unavailable or returns an error, fallback data is constructed from the `userId`.
 
 ### Response
 
@@ -968,8 +1030,26 @@ Returns the current status and metadata for an agent instance.
   "subdomain": "agentbot-agent-user_123-production.up.railway.app",
   "url": "https://agentbot-agent-user_123-production.up.railway.app",
   "plan": "solo",
-  "openclawVersion": "2026.4.1"
+  "openclawVersion": "2026.3.31"
 }
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `userId` | string | Agent instance identifier |
+| `status` | string | `running` when the backend reports `active`, otherwise the raw backend status or `unknown` |
+| `startedAt` | string | ISO 8601 timestamp from the backend, or current time as fallback |
+| `subdomain` | string | Agent subdomain from the backend, or constructed from the `userId` |
+| `url` | string | Agent URL from the backend, or constructed from the `userId` |
+| `plan` | string | Subscription plan tier from the backend, or `free` as fallback |
+| `openclawVersion` | string | OpenClaw runtime version from the backend, or `2026.3.31` as fallback |
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 403 | Forbidden — authenticated user does not own this instance |
+| 502 | Backend unavailable (fallback data is returned instead of an error) |
 ```
 
 ## Get instance stats
@@ -978,9 +1058,9 @@ Returns the current status and metadata for an agent instance.
 GET /api/instance/:userId/stats
 ```
 
-Returns instance status derived from the shared gateway healthcheck. Requires session authentication.
+Returns instance status derived from the user's OpenClaw gateway healthcheck. Requires session authentication and ownership verification.
 
-The endpoint queries the shared OpenClaw gateway for health status. CPU and memory metrics are not available from the gateway and return placeholder values.
+The endpoint first checks the user's per-instance `openclawUrl` from the database. If unavailable, it falls back to the shared gateway. CPU and memory metrics are not available from the gateway and return placeholder values.
 
 ### Response (gateway healthy)
 
@@ -996,7 +1076,7 @@ When the gateway healthcheck succeeds:
   "uptime": "active",
   "messages": null,
   "errors": null,
-   "openclawVersion": "2026.4.1"
+  "openclawVersion": "2026.3.28"
 }
 ```
 
@@ -1010,9 +1090,9 @@ When the gateway healthcheck succeeds:
 | `uptime` | string | `"active"` when the gateway is healthy |
 | `messages` | null | Reserved for future use. Always `null`. |
 | `errors` | null | Reserved for future use. Always `null`. |
-| `openclawVersion` | string | OpenClaw runtime version |
+| `openclawVersion` | string | Hardcoded OpenClaw runtime version (`2026.3.28`). Only present when the gateway is healthy. |
 
-<Note>The `cpu` and `memory` fields return placeholder values because the shared gateway does not expose per-instance resource metrics. These fields are retained for backward compatibility.</Note>
+<Note>The `cpu` and `memory` fields return placeholder values because the gateway does not expose per-instance resource metrics. These fields are retained for backward compatibility.</Note>
 
 ### Response (gateway unreachable)
 
@@ -1041,11 +1121,14 @@ When the gateway healthcheck fails:
 | `messages` | null | Always `null` |
 | `errors` | null | Always `null` |
 
+<Note>The `openclawVersion` field is not included in the unreachable response.</Note>
+
 ### Errors
 
 | Code | Description |
 |------|-------------|
 | 401 | Unauthorized — valid session required |
+| 403 | Forbidden — authenticated user does not own this instance |
 
 ## Get agent gateway token
 
@@ -1846,7 +1929,7 @@ POST /api/deployments
   "subdomain": "agent_123.agents.localhost",
   "url": "https://agent_123.agents.localhost",
   "status": "active",
-   "openclawVersion": "2026.4.1"
+  "openclawVersion": "2026.3.28"
 }
 ```
 
@@ -1874,8 +1957,8 @@ Returns the current OpenClaw runtime version. Requires bearer token authenticati
 
 ```json
 {
-  "openclawVersion": "2026.4.1",
-  "image": "ghcr.io/openclaw/openclaw:2026.4.1",
+  "openclawVersion": "2026.3.28",
+  "image": "ghcr.io/openclaw/openclaw:2026.3.28",
   "deployedAt": "2026-04-01T12:00:00Z"
 }
 ```
@@ -1898,10 +1981,10 @@ Returns all running agent services. Requires bearer token authentication.
     {
       "agentId": "agent_123",
       "name": "openclaw-agent_123",
-      "image": "ghcr.io/openclaw/openclaw:2026.4.1",
+      "image": "ghcr.io/openclaw/openclaw:2026.3.28",
       "status": "Up 2 hours",
       "createdAt": "2026-04-01 00:00:00 +0000 UTC",
-      "version": "2026.4.1",
+      "version": "2026.3.28",
       "metadata": {
         "agentId": "agent_123",
         "createdAt": "2026-03-20T00:00:00Z",
@@ -1960,9 +2043,11 @@ Returns resource usage for a specific agent service. Requires bearer token authe
 ALL /api/openclaw/proxy/:agentId/*
 ```
 
-Transparently forwards HTTP requests to the agent's internal service address. The proxy strips the `/api/openclaw/proxy/:agentId` prefix from the request path before forwarding. WebSocket upgrades are also supported and handled at the server level.
+Transparently forwards HTTP requests to the agent's internal service address. The proxy strips the `/api/openclaw/proxy/:agentId` prefix from the request path before forwarding.
 
-No additional authentication is required on the proxy itself — the agent's own token authentication handles access control.
+HTTP requests to the proxy do not require authentication — the agent's own token authentication handles access control.
+
+<Warning>WebSocket upgrades through this proxy **require bearer token authentication**. The server validates the `Authorization: Bearer <token>` header before proxying the WebSocket connection. Requests without a valid token receive a `401 Unauthorized` or `403 Forbidden` response and the socket is destroyed. This applies only to WebSocket upgrades, not to regular HTTP requests.</Warning>
 
 ### Path parameters
 

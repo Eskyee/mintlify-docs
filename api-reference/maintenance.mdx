@@ -35,7 +35,7 @@ Requires session authentication. Returns liveness and readiness status for the u
 | `railwayUrl` | string | The URL used for health probes. This is the per-user `openclawUrl` from the database when available, otherwise falls back to the constructed Railway URL (`https://agentbot-agent-{instanceId}-production.up.railway.app`). Note that the per-user URL may be stale — for gateway connections, use the shared gateway URL instead (see [`GET /api/user/openclaw`](/api-reference/agents#get-user-openclaw-instance)). |
 | `healthy` | boolean | `true` when the agent's `/healthz` endpoint responds successfully |
 | `ready` | boolean | `true` when the agent's `/readyz` endpoint responds successfully |
-| `version` | string \| null | Agent runtime version reported by `/healthz`, or `null` if unavailable |
+| `version` | string \| null | Agent runtime version reported by `/healthz`, or `null` if the health probe failed or the version is not reported |
 | `uptime` | string \| null | Agent uptime reported by `/healthz`, or `null` if unavailable |
 | `status` | string | Computed status: `healthy`, `starting`, or `unreachable` |
 
@@ -179,23 +179,23 @@ When a factory reset fails during the image update:
 GET /api/openclaw/version
 ```
 
-Returns the current OpenClaw runtime version and container image. No authentication required.
+Returns the current OpenClaw runtime version and container image. Requires bearer token authentication (the `/api/openclaw` router applies the `authenticate` middleware to all non-proxy routes).
 
 ### Response
 
 ```json
 {
-  "openclawVersion": "2026.4.1",
-  "image": "ghcr.io/openclaw/openclaw:2026.4.1",
+  "openclawVersion": "2026.3.28",
+  "image": "ghcr.io/openclaw/openclaw:2026.3.28",
   "deployedAt": "2026-04-01T12:00:00Z"
 }
 ```
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `openclawVersion` | string | Current OpenClaw runtime version |
+| `openclawVersion` | string | Current OpenClaw runtime version (currently `2026.3.28`) |
 | `image` | string | Docker image used for new agent containers |
-| `deployedAt` | string | ISO 8601 timestamp of when the version info was served |
+| `deployedAt` | string | ISO 8601 timestamp of when the version info was served (returns the current server time, not the actual deployment time) |
 
 ## List OpenClaw instances
 
@@ -203,7 +203,7 @@ Returns the current OpenClaw runtime version and container image. No authenticat
 GET /api/openclaw/instances
 ```
 
-Returns all running OpenClaw agent containers with their image, status, and metadata. No authentication required.
+Returns all running OpenClaw agent containers with their image, status, and metadata. Requires bearer token authentication.
 
 ### Response
 
@@ -213,10 +213,10 @@ Returns all running OpenClaw agent containers with their image, status, and meta
     {
       "agentId": "agent_123",
       "name": "openclaw-agent_123",
-      "image": "ghcr.io/openclaw/openclaw:2026.4.1",
+      "image": "ghcr.io/openclaw/openclaw:2026.3.28",
       "status": "Up 2 days",
       "createdAt": "2026-04-01T00:00:00Z",
-      "version": "2026.4.1",
+      "version": "2026.3.28",
       "metadata": {}
     }
   ],
@@ -248,7 +248,7 @@ Returns all running OpenClaw agent containers with their image, status, and meta
 GET /api/openclaw/instances/:id/stats
 ```
 
-Returns live resource usage for a specific OpenClaw container. No authentication required.
+Returns live resource usage for a specific OpenClaw container. Requires bearer token authentication.
 
 ### Path parameters
 
@@ -300,9 +300,11 @@ Returns live resource usage for a specific OpenClaw container. No authentication
 ALL /api/openclaw/proxy/:agentId/*
 ```
 
-Transparent HTTP proxy to a running OpenClaw container. Forwards all HTTP methods to the container's internal address on port 18789. No authentication is required on the proxy itself — the OpenClaw instance's own token authentication handles access control.
+Transparent HTTP proxy to a running OpenClaw container. Forwards all HTTP methods to the container's internal address on port 18789. HTTP requests do not require authentication on the proxy itself — the OpenClaw instance's own token authentication handles access control.
 
-<Note>WebSocket upgrades for the proxy are handled separately at the server level. The proxy rewrites the request path by stripping the `/api/openclaw/proxy/:agentId` prefix before forwarding.</Note>
+<Warning>WebSocket upgrades through the proxy require bearer token authentication. The server validates the `Authorization: Bearer <token>` header before establishing the WebSocket connection. This is handled at the server level, separate from the HTTP proxy middleware.</Warning>
+
+<Note>The proxy rewrites the request path by stripping the `/api/openclaw/proxy/:agentId` prefix before forwarding.</Note>
 
 ### Path parameters
 
