@@ -72,6 +72,30 @@ An HTTP `500` is returned only when an unexpected error occurs while collecting 
 | 200 | Health check succeeded. Check the `health` field for `healthy`, `degraded`, or `unhealthy`. |
 | 500 | Unexpected error collecting health metrics. |
 
+## Platform version
+
+```http
+GET /api/version
+```
+
+No authentication required. Returns the current platform version string read from the embedded `VERSION` file.
+
+### Response
+
+```json
+{
+  "version": "v0.1.0"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `version` | string | Platform version identifier. Falls back to `v0.0.0` when the version file cannot be read. |
+
+| Code | Description |
+|------|-------------|
+| 200 | Version returned |
+
 ## Backend health check
 
 ```http

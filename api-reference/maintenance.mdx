@@ -197,6 +197,38 @@ Returns the current OpenClaw runtime version and container image. Requires beare
 | `image` | string | Docker image used for new agent containers |
 | `deployedAt` | string | ISO 8601 timestamp of when the version info was served (returns the current server time, not the actual deployment time) |
 
+## OpenClaw runtime version (web proxy)
+
+```http
+GET /api/openclaw-version
+```
+
+No authentication required. Proxies to the backend `GET /api/openclaw/version` endpoint using the internal API key. Returns the OpenClaw runtime version, container image, and deployment timestamp.
+
+When the backend is unreachable or returns an error, the endpoint returns a fallback version of `2026.3.31`.
+
+### Response
+
+```json
+{
+  "openclawVersion": "2026.3.31",
+  "image": "ghcr.io/openclaw/openclaw:2026.3.31",
+  "deployedAt": "2026-04-01T12:00:00Z"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `openclawVersion` | string | OpenClaw runtime version from the backend. Falls back to `2026.3.31` when the backend is unavailable or returns an error. |
+| `image` | string \| undefined | Docker image identifier. Only present when the backend responds successfully. |
+| `deployedAt` | string \| undefined | ISO 8601 deployment timestamp. Only present when the backend responds successfully. |
+
+<Note>This endpoint uses an 8-second request timeout when calling the backend. If the backend does not respond within that window, the fallback version is returned.</Note>
+
+| Code | Description |
+|------|-------------|
+| 200 | Version returned (check `openclawVersion` for actual value — may be a fallback) |
+
 ## List OpenClaw instances
 
 ```http
