@@ -43,6 +43,7 @@
         "pages": [
           "index",
           "quickstart",
+          "channels",
           "models",
           "installation",
           "build",
@@ -62,6 +63,7 @@
       {
         "group": "Integrations",
         "pages": [
+          "channels",
           "integrations/telegram",
           "integrations/discord",
           "integrations/whatsapp",
@@ -209,4 +211,5 @@
       "href": "https://agentbot.raveculture.xyz/signup"
     }
   }
-}
+}Added channels to Getting Started
+Added channels to Integrations
