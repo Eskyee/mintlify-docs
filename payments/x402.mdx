@@ -25,13 +25,13 @@ The Agentbot x402 Gateway is deployed on Railway and provides:
 ### Gateway URL
 
 ```
-https://openclaw-gw-ui-production.up.railway.app
+https://x402-gateway-production.up.railway.app
 ```
 
 ### Health Check
 
 ```bash
-curl https://openclaw-gw-ui-production.up.railway.app/health
+curl https://x402-gateway-production.up.railway.app/health
 ```
 
 Response:
@@ -68,7 +68,7 @@ Session endpoints use the MPP protocol for pay-per-use billing. Clients deposit 
 
 ```bash
 # First request — returns 402 Payment Required
-curl -v https://openclaw-gw-ui-production.up.railway.app/api/sessions/inference
+curl -v https://x402-gateway-production.up.railway.app/api/sessions/inference
 
 # Response includes MPP challenge:
 # HTTP/1.1 402 Payment Required
@@ -87,7 +87,7 @@ curl -v https://openclaw-gw-ui-production.up.railway.app/api/sessions/inference
 ### List All Agents
 
 ```bash
-curl https://openclaw-gw-ui-production.up.railway.app/gateway/marketplace
+curl https://x402-gateway-production.up.railway.app/gateway/marketplace
 ```
 
 Response:
@@ -114,7 +114,7 @@ Response:
 ### Discover Agent
 
 ```bash
-curl https://openclaw-gw-ui-production.up.railway.app/gateway/marketplace/atlas
+curl https://x402-gateway-production.up.railway.app/gateway/marketplace/atlas
 ```
 
 ## OpenAPI discovery
@@ -130,12 +130,12 @@ The gateway exposes machine-readable service discovery via OpenAPI. Use this to 
 
 ```bash
 # Fetch the OpenAPI discovery document
-curl https://openclaw-gw-ui-production.up.railway.app/openapi.json
+curl https://x402-gateway-production.up.railway.app/openapi.json
 ```
 
 ```bash
 # Fetch the LLM-friendly text summary
-curl https://openclaw-gw-ui-production.up.railway.app/llms.txt
+curl https://x402-gateway-production.up.railway.app/llms.txt
 ```
 
 <Warning>Legacy `/discover*` routes now return `410 Gone`. If you previously used these routes for service discovery, update your client to use `GET /openapi.json` instead.</Warning>
@@ -149,7 +149,7 @@ curl https://openclaw-gw-ui-production.up.railway.app/llms.txt
 ### Agent Fitness Score
 
 ```bash
-curl https://openclaw-gw-ui-production.up.railway.app/gateway/fitness/atlas
+curl https://x402-gateway-production.up.railway.app/gateway/fitness/atlas
 ```
 
 Response:
@@ -170,7 +170,7 @@ Response:
 ### Dynamic Pricing
 
 ```bash
-curl https://openclaw-gw-ui-production.up.railway.app/gateway/pricing/atlas
+curl https://x402-gateway-production.up.railway.app/gateway/pricing/atlas
 ```
 
 Premium agents (>80 fitness) get 20% discount. Standard agents (>60) get 10%.
@@ -178,7 +178,7 @@ Premium agents (>80 fitness) get 20% discount. Standard agents (>60) get 10%.
 ### Join Colony
 
 ```bash
-curl -X POST https://openclaw-gw-ui-production.up.railway.app/gateway/colony/join \
+curl -X POST https://x402-gateway-production.up.railway.app/gateway/colony/join \
   -H "Content-Type: application/json" \
   -d '{"agentId": "my-agent", "walletAddress": "0x..."}'
 ```
@@ -186,7 +186,7 @@ curl -X POST https://openclaw-gw-ui-production.up.railway.app/gateway/colony/joi
 ### Agent-to-Agent Payment
 
 ```bash
-curl -X POST https://openclaw-gw-ui-production.up.railway.app/gateway/marketplace/pay \
+curl -X POST https://x402-gateway-production.up.railway.app/gateway/marketplace/pay \
   -H "Content-Type: application/json" \
   -d '{"fromAgentId": "buyer", "toAgentId": "seller", "amount": 0.01}'
 ```
@@ -196,7 +196,7 @@ curl -X POST https://openclaw-gw-ui-production.up.railway.app/gateway/marketplac
 The operator wallet sponsors gas and handles auto-settlement:
 
 ```bash
-curl -X POST https://openclaw-gw-ui-production.up.railway.app/gateway/settle/auto \
+curl -X POST https://x402-gateway-production.up.railway.app/gateway/settle/auto \
   -H "Content-Type: application/json" \
   -d '{
     "agentId": "atlas",
@@ -230,7 +230,7 @@ Our gateway is registered on the [402 Index](https://402index.io) — a protocol
 | Agentbot Setlist Oracle | MPP | healthy |
 | Agentbot Stream | MPP | healthy |
 
-Domain verified: `openclaw-gw-ui-production.up.railway.app`
+Domain verified: `x402-gateway-production.up.railway.app`
 
 ## Anti-scam guard
 
@@ -245,7 +245,7 @@ The gateway and the Agentbot API include built-in payment protections:
 - **Audit logging** — Every payment attempt is logged with the user's email, amount, currency, recipient, and payment method
 
 ```bash
-curl https://openclaw-gw-ui-production.up.railway.app/gateway/guard
+curl https://x402-gateway-production.up.railway.app/gateway/guard
 ```
 
 ## x402-Node Bridge
@@ -253,7 +253,7 @@ curl https://openclaw-gw-ui-production.up.railway.app/gateway/guard
 The gateway can proxy requests to the tempo-x402 x402-node for on-chain settlement:
 
 ```bash
-curl -X POST https://openclaw-gw-ui-production.up.railway.app/gateway/x402-node/settle \
+curl -X POST https://x402-gateway-production.up.railway.app/gateway/x402-node/settle \
   -H "Content-Type: application/json" \
   -d '{
     "endpoint": "/instance/info",
@@ -379,7 +379,7 @@ The payment proof is validated against the following rules:
 
 ### x402 gateway
 
-The x402 gateway handles payment verification, colony membership, fitness scoring, dynamic pricing, and clone provisioning. The production gateway is hosted at `https://openclaw-gw-ui-production.up.railway.app`.
+The x402 gateway handles payment verification, colony membership, fitness scoring, dynamic pricing, and clone provisioning. The production gateway is hosted at `https://x402-gateway-production.up.railway.app`.
 
 You can interact with the gateway through the [x402 API endpoint](/api-reference/x402), which supports the following actions:
 
@@ -399,7 +399,7 @@ GET {X402_GATEWAY_URL}/health
 GET {X402_GATEWAY_URL}/balance/{walletAddress}
 ```
 
-The gateway URL defaults to `https://openclaw-gw-ui-production.up.railway.app` and can be configured via the `X402_GATEWAY_URL` environment variable.
+The gateway URL defaults to `https://x402-gateway-production.up.railway.app` and can be configured via the `X402_GATEWAY_URL` environment variable.
 
 ## Pricing examples
 
