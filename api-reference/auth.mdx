@@ -5,7 +5,7 @@ description: "Authentication API endpoints for user management and identity veri
 
 # Authentication API
 
-Manage user authentication, password resets, wallet sign-in, Farcaster identity, and token gating.
+Manage user authentication, password resets, passkey (WebAuthn) login, wallet sign-in, Farcaster identity, and token gating.
 
 ## Auth middleware
 
@@ -172,6 +172,150 @@ A `Set-Cookie` header is included with the `agentbot-session` token. The cookie 
 | 500 | Login failed |
 
 <Note>This endpoint replaced the previous NextAuth credentials callback (`/api/auth/callback/credentials`). If you are migrating from an older integration, update your sign-in requests to use `/api/auth/login`.</Note>
+
+## Passkey authentication
+
+Passkey (WebAuthn) endpoints let users register hardware or platform authenticators and sign in without a password. Registration requires an active session; authentication does not.
+
+### Register a passkey — get options
+
+```http
+POST /api/passkey/register/options
+```
+
+Requires session authentication. Returns WebAuthn registration options that the client passes to `navigator.credentials.create()`.
+
+#### Response
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `options` | object | WebAuthn `PublicKeyCredentialCreationOptions` to pass to the browser credentials API |
+| `challenge` | string | Server-generated challenge. Send this back in the verify request. |
+
+```json
+{
+  "options": {
+    "rp": { "id": "agentbot.raveculture.xyz", "name": "Agentbot" },
+    "user": { "id": "...", "name": "user@example.com", "displayName": "John Doe" },
+    "challenge": "...",
+    "excludeCredentials": [],
+    "attestation": "none",
+    "authenticatorSelection": { "userVerification": "required" },
+    "timeout": 60000
+  },
+  "challenge": "base64url-encoded-challenge"
+}
+```
+
+#### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | Unauthorized — no active session |
+
+### Register a passkey — verify
+
+```http
+POST /api/passkey/register/verify
+```
+
+Requires session authentication. Verifies the WebAuthn attestation response and stores the new passkey credential.
+
+#### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `credential` | object | Yes | The credential object returned by `navigator.credentials.create()` |
+| `challenge` | string | Yes | The challenge returned by the registration options endpoint |
+| `label` | string | No | A human-readable name for the passkey (defaults to `"Passkey"`) |
+
+#### Response
+
+```json
+{
+  "ok": true
+}
+```
+
+#### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | Missing credential or challenge, challenge not found or expired, passkey already registered, or verification failed |
+| 401 | Unauthorized — no active session |
+
+### Authenticate with a passkey — get options
+
+```http
+POST /api/passkey/auth/options
+```
+
+Returns WebAuthn authentication options for an existing user. No session is required — the user is identified by email.
+
+#### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `identifier` | string | Yes | User email address (case-insensitive) |
+
+#### Response
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `options` | object | WebAuthn `PublicKeyCredentialRequestOptions` to pass to `navigator.credentials.get()` |
+| `challenge` | string | Server-generated challenge. Send this back in the verify request. |
+
+```json
+{
+  "options": {
+    "allowCredentials": [{ "id": "...", "type": "public-key" }],
+    "rpId": "agentbot.raveculture.xyz",
+    "userVerification": "required",
+    "timeout": 60000
+  },
+  "challenge": "base64url-encoded-challenge"
+}
+```
+
+#### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | Missing identifier |
+| 404 | Account not found, or no passkeys registered for the account |
+
+### Authenticate with a passkey — verify
+
+```http
+POST /api/passkey/auth/verify
+```
+
+Verifies a WebAuthn assertion and creates a session. On success, sets the `agentbot-session` cookie.
+
+#### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `response` | object | Yes | The assertion response from `navigator.credentials.get()`. Must include `id` (credential ID) and `signCount`. |
+| `challenge` | string | Yes | The challenge returned by the authentication options endpoint |
+
+#### Response
+
+```json
+{
+  "ok": true
+}
+```
+
+A `Set-Cookie` header is included with the `agentbot-session` token. The cookie is `HttpOnly`, `SameSite=Lax`, scoped to `/`, and expires after 30 days.
+
+#### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | Missing response or challenge, or invalid/expired challenge |
+| 401 | Passkey verification failed |
+| 404 | Passkey not recognized |
 
 ## Get session
 
