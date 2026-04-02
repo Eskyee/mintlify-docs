@@ -72,7 +72,7 @@ Two webhook endpoints handle Stripe events:
 
 ## Pricing plans
 
-All plans are billed monthly in GBP. A paid subscription is required to provision and use agents — there is no free tier.
+All plans are billed monthly in GBP. A paid subscription is required to provision and use agents — there is no free tier. New subscriptions start with a **7-day free trial** before the first charge.
 
 <Warning>Attempting to provision an agent without an active paid subscription returns an error. The web proxy returns `403 Forbidden` with the message `Active subscription required. Please purchase a plan to deploy.` Admin users bypass this check. All non-admin users must subscribe to a plan before creating agents.</Warning>
 
@@ -145,7 +145,7 @@ GET /api/stripe/checkout?plan={plan_id}
 
 <Note>The `plan` parameter uses internal plan IDs. The billing page maps these to display names: `solo` is shown as "Solo", `collective` as "Collective", `label` as "Label", and `network` as "Network".</Note>
 
-The endpoint redirects the user to Stripe's hosted checkout page. On successful payment, the user is redirected to `/checkout/success` with the Stripe session ID and plan as query parameters. On cancellation, the user returns to the pricing page.
+The endpoint redirects the user to Stripe's hosted checkout page. All new subscriptions include a **7-day free trial** — the first charge occurs after the trial period ends. On successful checkout, the user is redirected to `/checkout/success` with the Stripe session ID and plan as query parameters. On cancellation, the user returns to the pricing page.
 
 <Note>
 Admin users (configured via `ADMIN_EMAILS`) skip the Stripe checkout flow entirely and are redirected straight to onboarding. No payment is required for admin accounts.

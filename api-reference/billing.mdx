@@ -233,9 +233,9 @@ These apply to all billing POST actions:
 GET /api/stripe/checkout
 ```
 
-Redirects to a Stripe checkout session for subscribing to a plan. This endpoint uses the `solo`, `collective`, `label`, and `network` plan names with GBP pricing. Admin users (configured via `ADMIN_EMAILS`) bypass Stripe and are redirected directly to the onboarding page.
+Redirects to a Stripe checkout session for subscribing to a plan. This endpoint uses the `solo`, `collective`, `label`, and `network` plan names with GBP pricing. All new subscriptions include a **7-day free trial** — the first charge occurs after the trial period ends. Admin users (configured via `ADMIN_EMAILS`) bypass Stripe and are redirected directly to the onboarding page.
 
-<Note>The checkout plans (`solo`, `collective`, `label`, `network`) are the primary subscription path for agent provisioning. Admin users (configured via `ADMIN_EMAILS`) bypass Stripe entirely.</Note>
+<Note>The checkout plans (`solo`, `collective`, `label`, `network`) are the primary subscription path for agent provisioning. All plans start with a 7-day free trial. Admin users (configured via `ADMIN_EMAILS`) bypass Stripe entirely.</Note>
 
 ### Query parameters
 
@@ -254,7 +254,7 @@ Redirects to a Stripe checkout session for subscribing to a plan. This endpoint 
 
 ### Response
 
-On success, redirects (303) to the Stripe checkout URL. After payment completes, Stripe redirects the user to `/checkout/success?session_id={CHECKOUT_SESSION_ID}&plan={plan}`. On error, redirects to the pricing page with an error query parameter.
+On success, redirects (303) to the Stripe checkout URL. The checkout session includes a 7-day free trial — the user enters payment details but is not charged until the trial ends. After checkout completes, Stripe redirects the user to `/checkout/success?session_id={CHECKOUT_SESSION_ID}&plan={plan}`. On error, redirects to the pricing page with an error query parameter.
 
 | Redirect | Description |
 |----------|-------------|
