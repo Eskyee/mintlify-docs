@@ -135,7 +135,9 @@
           "api-reference/bridge",
           "api-reference/permissions",
           "api-reference/hooks-classify",
-          "api-reference/orchestration"
+          "api-reference/orchestration",
+          "api-reference/trial",
+          "api-reference/showcase"
         ]
       },
       {

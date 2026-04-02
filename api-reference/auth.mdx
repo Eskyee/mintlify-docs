@@ -83,6 +83,8 @@ Protected by bot detection. Automated or non-browser requests may be rejected.
 
 <Note>Registration does not create a session. After a successful sign-up, the client must call [`POST /api/auth/login`](#sign-in) to authenticate.</Note>
 
+New accounts automatically receive a 7-day free trial. You can check trial status using the [trial API](/api-reference/trial).
+
 ### Request body
 
 | Field | Type | Required | Description |
@@ -101,6 +103,8 @@ Protected by bot detection. Automated or non-browser requests may be rejected.
   "name": "John Doe"
 }
 ```
+
+<Note>The response does not include trial information. Use [`GET /api/trial`](/api-reference/trial) to retrieve the trial status after registration.</Note>
 
 ### Errors
 
