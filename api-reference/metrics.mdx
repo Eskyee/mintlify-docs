@@ -7,11 +7,133 @@ description: "Endpoints for retrieving agent performance metrics and music indus
 
 Retrieve agent performance data, historical metrics, and music industry analytics.
 
-## Base URL
+## System stats
 
+```http
+GET /api/stats
 ```
-https://agentbot.raveculture.xyz/api/metrics
+
+Requires session authentication. Returns server-level resource usage, in-process counters, health classification, and deployment metadata.
+
+<Note>The in-process counters (`messages` and `errors`) are held in memory and reset when the web application restarts. They are not persisted to a database.</Note>
+
+### Response
+
+```json
+{
+  "cpu": 12.5,
+  "memory": 67.3,
+  "uptime": 3600,
+  "messages": 0,
+  "errors": 0,
+  "health": "healthy",
+  "timestamp": "2026-04-03T12:00:00.000Z",
+  "deployment": {
+    "provider": "vercel",
+    "environment": "production",
+    "region": "iad1",
+    "deploymentUrl": "https://agentbot.vercel.app",
+    "commitSha": "abc123def456",
+    "commitRef": "main",
+    "commitMessage": "Improve dashboard stats",
+    "deploymentId": "dpl_abc123",
+    "target": "production",
+    "projectProductionUrl": "agentbot.vercel.app"
+  },
+  "runtime": {
+    "node": "v22.14.0",
+    "platform": "linux",
+    "arch": "x64",
+    "heapUsedMb": 85.3,
+    "heapTotalMb": 128.0,
+    "rssMb": 156.2,
+    "externalMb": 2.1
+  }
+}
 ```
+
+### Response fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `cpu` | number | CPU usage percentage (0–100), derived from the system load average divided by the number of CPU cores |
+| `memory` | number | Memory usage percentage (0–100) |
+| `uptime` | number | Seconds since the web application process started |
+| `messages` | number | In-process message counter. Resets on restart. |
+| `errors` | number | In-process error counter. Resets on restart. |
+| `health` | string | Overall health classification: `healthy`, `degraded`, or `unhealthy` |
+| `timestamp` | string | ISO 8601 timestamp of the stats snapshot |
+| `deployment.provider` | string | Hosting provider: `vercel` when running on Vercel, `node` otherwise |
+| `deployment.environment` | string | Deployment environment (for example `production`, `preview`, `development`). Falls back to `NODE_ENV` or `unknown`. |
+| `deployment.region` | string \| null | Deployment region identifier, or `null` when not available |
+| `deployment.deploymentUrl` | string \| null | Public deployment URL, or `null` when not running on Vercel |
+| `deployment.commitSha` | string \| null | Git commit SHA of the deployed build, or `null` when not available |
+| `deployment.commitRef` | string \| null | Git branch or tag of the deployed build, or `null` when not available |
+| `deployment.commitMessage` | string \| null | Git commit message of the deployed build, or `null` when not available |
+| `deployment.deploymentId` | string \| null | Vercel deployment identifier, or `null` when not running on Vercel |
+| `deployment.target` | string \| null | Vercel target environment (for example `production`, `preview`), or `null` when not running on Vercel |
+| `deployment.projectProductionUrl` | string \| null | Production URL configured for the Vercel project, or `null` when not running on Vercel |
+| `runtime.node` | string | Node.js version |
+| `runtime.platform` | string | Operating system platform (for example `linux`, `darwin`) |
+| `runtime.arch` | string | CPU architecture (for example `x64`, `arm64`) |
+| `runtime.heapUsedMb` | number | V8 heap memory in use, in megabytes |
+| `runtime.heapTotalMb` | number | Total V8 heap size, in megabytes |
+| `runtime.rssMb` | number | Resident set size of the process, in megabytes |
+| `runtime.externalMb` | number | Memory used by C++ objects bound to JavaScript objects, in megabytes |
+
+The `health` field is computed from CPU and memory thresholds:
+
+| Value | Condition |
+|-------|-----------|
+| `healthy` | CPU ≤ 70% and memory ≤ 70% and errors ≤ 5 |
+| `degraded` | CPU > 70% or memory > 70% or errors > 5 (but below the unhealthy threshold) |
+| `unhealthy` | CPU > 85% or memory > 85% or errors > 10 |
+
+### Error response
+
+On failure, the endpoint returns HTTP `500` with zeroed counters and `health: "unhealthy"`:
+
+```json
+{
+  "cpu": 0,
+  "memory": 0,
+  "uptime": 0,
+  "messages": 0,
+  "errors": 1,
+  "health": "unhealthy",
+  "timestamp": "2026-04-03T12:00:00.000Z",
+  "deployment": {
+    "provider": "vercel",
+    "environment": "production",
+    "region": null,
+    "deploymentUrl": null,
+    "commitSha": null,
+    "commitRef": null,
+    "commitMessage": null,
+    "deploymentId": null,
+    "target": null,
+    "projectProductionUrl": null
+  },
+  "runtime": {
+    "node": "v22.14.0",
+    "platform": "linux",
+    "arch": "x64",
+    "heapUsedMb": 0,
+    "heapTotalMb": 0,
+    "rssMb": 0,
+    "externalMb": 0
+  }
+}
+```
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | Unauthorized — no valid session |
+| 500 | Failed to collect system stats. Returns zeroed fallback data (see above). |
+
+---
 
 ## Platform metrics
 
@@ -170,7 +292,6 @@ Requires bearer token authentication. Returns time-series metrics for an agent o
 | Code | Description |
 |------|-------------|
 | 401 | Unauthorized — missing or invalid bearer token |
-| 403 | Forbidden — invalid API key |
 | 500 | Failed to fetch historical metrics |
 
 ## Performance metrics
@@ -212,7 +333,6 @@ Requires bearer token authentication. Returns current real-time performance data
 | Code | Description |
 |------|-------------|
 | 401 | Unauthorized — missing or invalid bearer token |
-| 403 | Forbidden — invalid API key |
 | 500 | Failed to fetch performance data |
 
 ## Metrics summary
@@ -296,5 +416,4 @@ Requires bearer token authentication. Returns a music industry analytics summary
 | Code | Description |
 |------|-------------|
 | 401 | Unauthorized — missing or invalid bearer token |
-| 403 | Forbidden — invalid API key |
 | 500 | Failed to fetch metrics summary |

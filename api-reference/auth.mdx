@@ -658,9 +658,27 @@ Requires session authentication. Returns the current user profile.
   "name": "John Doe",
   "plan": "solo",
   "credits": 0,
-  "twoFactorEnabled": false
+  "twoFactorEnabled": false,
+  "openclaw": {
+    "managed": true,
+    "instanceId": "inst_abc123",
+    "url": "https://openclaw.example.com"
+  }
 }
 ```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | User identifier |
+| `email` | string | User email address |
+| `name` | string | Display name |
+| `plan` | string | Current subscription plan (`solo`, `team`, etc.) |
+| `credits` | number | Remaining referral credits balance |
+| `twoFactorEnabled` | boolean | Whether two-factor authentication is enabled |
+| `openclaw` | object | OpenClaw instance details |
+| `openclaw.managed` | boolean | Always `true` for platform-managed instances |
+| `openclaw.instanceId` | string \| null | OpenClaw instance identifier, or `null` if not provisioned |
+| `openclaw.url` | string \| null | OpenClaw instance URL, or `null` if not provisioned |
 
 ### Errors
 
@@ -712,7 +730,12 @@ PATCH /api/settings
   "name": "Updated Name",
   "plan": "solo",
   "credits": 100,
-  "twoFactorEnabled": false
+  "twoFactorEnabled": false,
+  "openclaw": {
+    "managed": true,
+    "instanceId": "inst_abc123",
+    "url": "https://openclaw.example.com"
+  }
 }
 ```
 
@@ -721,9 +744,13 @@ PATCH /api/settings
 | `id` | string | User identifier |
 | `email` | string | User email address |
 | `name` | string | Display name |
-| `plan` | string | Current subscription plan |
-| `credits` | number | Remaining credits balance |
+| `plan` | string | Current subscription plan (`solo`, `team`, etc.) |
+| `credits` | number | Remaining referral credits balance |
 | `twoFactorEnabled` | boolean | Whether two-factor authentication is enabled |
+| `openclaw` | object | OpenClaw instance details |
+| `openclaw.managed` | boolean | Always `true` for platform-managed instances |
+| `openclaw.instanceId` | string \| null | OpenClaw instance identifier, or `null` if not provisioned |
+| `openclaw.url` | string \| null | OpenClaw instance URL, or `null` if not provisioned |
 
 ## Change password
 

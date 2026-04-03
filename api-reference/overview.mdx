@@ -217,6 +217,8 @@ curl -X POST https://agentbot.raveculture.xyz/api/ai/chat \
 | `/api/bankr/balances` | GET | Get wallet balances from the Bankr trading service |
 | `/api/bankr/prompt` | POST | Send a natural-language prompt to the Bankr trading agent |
 | `/api/bankr/prompt` | GET | Poll the status of an asynchronous Bankr agent job |
+| `/api/deployments` | GET | List active deployments (admin only) |
+| `/api/deployments` | POST | Create a deployment by forwarding to the provisioning endpoint (requires session) |
 | `/api/provision` | GET | Get provisioning stats (requires bridge secret) |
 | `/api/provision` | POST | Provision agent with channel tokens or as OpenClaw-only deployment (requires auth) |
 | `/api/user/openclaw` | GET | Get the authenticated user's OpenClaw URL, instance ID, and gateway token |
@@ -252,6 +254,7 @@ curl -X POST https://agentbot.raveculture.xyz/api/ai/chat \
 | `/api/dashboard/cost` | GET | Get aggregated cost dashboard data (by agent, model, and day) |
 | `/api/dashboard/health` | GET | Get health status of backend services (no auth) |
 | `/api/dashboard/stats` | GET | Get dashboard stats (agent counts, skills, tasks) |
+| `/api/stats` | GET | Get system stats (CPU, memory, uptime, health, deployment info) |
 | `/api/billing` | GET | Get billing info |
 | `/api/billing` | POST | Billing actions (`create-checkout`, `enable-byok`, `disable-byok`, `get-usage`, `buy-credits`) |
 | `/api/subscriptions/deploy` | POST | Activate a subscription tier for deployment (backend only, requires auth) |
@@ -288,7 +291,7 @@ curl -X POST https://agentbot.raveculture.xyz/api/ai/chat \
 | `/api/openclaw/instances` | GET | List running agent instances (backend only, requires auth) |
 | `/api/openclaw/instances/:id/stats` | GET | Get instance container stats (backend only, requires auth) |
 | `/api/openclaw/proxy/:agentId/*` | ALL | Proxy HTTP and WebSocket requests to an agent instance (backend only) |
-| `/api/deployments` | POST | Deploy an agent container (backend only, requires auth) |
+| `/api/deployments` | POST | Deploy an agent container (backend only, requires bearer token auth) |
 | `/api/models` | GET | List available OpenRouter AI models |
 | `/api/coinbase` | GET | Get Coinbase CDP configuration and supported features |
 | `/api/coinbase` | POST | Coinbase CDP wallet actions (create_wallet, get_balance, create_payment, onramp) |

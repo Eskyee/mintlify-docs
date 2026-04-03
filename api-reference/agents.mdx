@@ -95,7 +95,7 @@ Creates a new agent with an auto-generated ID and stores its metadata on disk. R
 | `name` | string | Yes | Agent name |
 | `config` | object | No | Agent configuration |
 | `config.plan` | string | No | Plan tier (for example, `solo`, `collective`, `label`, `network`). Defaults to `free` when omitted. Note that `free` is not a standard plan tier and may not be recognized by other endpoints. |
-| `config.aiProvider` | string | No | AI provider (for example, `openrouter`, `anthropic`) |
+| `config.aiProvider` | string | No | AI provider (for example, `openrouter`, `anthropic`). Defaults to `openrouter`. |
 | `config.stripeSubscriptionId` | string | No | Stripe subscription ID. Required for non-admin users — requests without this field receive a `402` error with code `PAYMENT_REQUIRED`. |
 
 ### Response (201 Created)
@@ -1148,6 +1148,7 @@ Returns the gateway token for the agent. If no token exists, a new cryptographic
 
 | Code | Description |
 |------|-------------|
+| 403 | Forbidden — you do not own this agent |
 | 404 | Agent not found |
 | 500 | Failed to get token |
 
@@ -1634,7 +1635,7 @@ When the Railway fallback handles the request, the response has a different shap
 
 <Note>The Railway path does not return `subdomain`, `streamKey`, or `liveStreamId`. These fields are only available when the backend Express service handles the request. The `status` field is `deploying` (not `active`) because the Railway service is created asynchronously. The Railway path creates a service domain with `targetPort: 18789` so that Railway's HTTP proxy routes incoming requests directly to the OpenClaw gateway port. The start command writes an `openclaw.json` with a top-level `env` section (containing `OPENROUTER_API_KEY`) and configures the gateway in local mode with device auth disabled and chat completions enabled before launching on port 18789.</Note>
 
-<Note>On a successful provision through either path, the proxy persists the `openclawUrl` and `openclawInstanceId` to the user record in the database. You can retrieve these values later using [`GET /api/user/openclaw`](#get-user-openclaw-instance). Note that the stored `openclawUrl` is no longer used for gateway routing — the platform always uses the shared gateway URL instead. The `openclawInstanceId` remains the primary identifier for the agent instance.</Note>
+<Note>On a successful provision through either path, the proxy persists the agent in two places: it updates the user record with the `openclawUrl` and `openclawInstanceId`, and it upserts an `Agent` record with the agent's name, model, status, WebSocket URL, tier, and configuration metadata. The agent name is set to "OpenClaw Agent" when `agentType` is `business`, or "Agentbot Agent" otherwise. The agent status is normalized before saving — an `active` status from the backend is stored as `running`. You can retrieve the user-level values later using [`GET /api/user/openclaw`](#get-user-openclaw-instance), and the agent record is returned by [`GET /api/agents`](#list-agents). The stored `openclawUrl` is no longer used for gateway routing — the platform always uses the shared gateway URL instead. The `openclawInstanceId` remains the primary identifier for the agent instance.</Note>
 
 ### Full backend response
 
@@ -1944,6 +1945,31 @@ If the agent service is already running, returns the existing deployment details
 | 400 | `agentId is required`, `Invalid agentId`, or `telegramToken is required` |
 | 401 | Unauthorized |
 | 500 | Deployment failed. When the Railway API is not reachable, the error message indicates that provisioning is unavailable. Check the [backend health endpoint](/api-reference/health#backend-health-check) to verify Railway API availability before deploying. |
+
+## Create deployment (web)
+
+```http
+POST /api/deployments
+```
+
+Creates a new agent deployment by forwarding the request to the provisioning endpoint. Requires session authentication. Unlike the [backend deploy endpoint](#deploy-agent-backend) which uses bearer token auth, this endpoint uses session cookies and is intended for web dashboard use.
+
+The request body is forwarded as-is to `POST /api/provision`. See [provision with channel tokens](#provision-with-channel-tokens) for the full list of accepted fields.
+
+### Request body
+
+The request body accepts the same fields as `POST /api/provision`. An empty body is allowed — the endpoint will forward it to the provisioning endpoint which applies its own defaults and validation.
+
+### Response
+
+Returns the response from the provisioning endpoint with the same status code.
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | Unauthorized — no valid session |
+| 500 | `Failed to create deployment` — the provisioning endpoint could not be reached or returned an invalid response |
 
 ## OpenClaw version (backend)
 
@@ -2347,6 +2373,16 @@ Requires session authentication.
 
 <Warning>The `topic` parameter was removed. Conversation context is no longer passed through this endpoint. If you need to route messages to a specific conversation, use the [gateway chat proxy](/api-reference/gateway#gateway-chat-proxy) which supports a `sessionKey` parameter.</Warning>
 
+### Gateway URL resolution
+
+The endpoint resolves the agent's gateway URL using the following priority:
+
+1. The user's persisted `openclawUrl` from the database (set during provisioning or via settings)
+2. A derived Railway hostname based on the agent ID (`https://agentbot-agent-{agentId}-production.up.railway.app`)
+3. The platform default gateway URL
+
+If the agent has a personality configured in memory, the endpoint injects a system prompt before the user message. The personality type determines the system prompt content (for example, `basement`, `selector`, `ar`, `road`, or `label`).
+
 ### Response (200)
 
 ```json
@@ -2355,6 +2391,7 @@ Requires session authentication.
   "message": "Hello!",
   "agent": "my-agent",
   "reply": "Hi there! How can I help you today?",
+  "response": "Hi there! How can I help you today?",
   "model": "openclaw/default",
   "usage": {
     "prompt_tokens": 12,
@@ -2371,6 +2408,7 @@ Requires session authentication.
 | `message` | string | The original message that was sent |
 | `agent` | string | Name of the agent that processed the message |
 | `reply` | string | The agent's response |
+| `response` | string | Alias for `reply`. Contains the same content. Included for backward compatibility with clients that read `response` instead of `reply`. |
 | `model` | string | Model identifier used by the gateway for the completion |
 | `usage` | object | Token usage statistics from the upstream completion |
 | `usage.prompt_tokens` | number | Input tokens consumed |

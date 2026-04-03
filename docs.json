@@ -122,7 +122,6 @@
           "api-reference/log-tail",
           "api-reference/colony",
           "api-reference/workflows",
-          "api-reference/swarms",
           "api-reference/underground",
           "api-reference/invite",
           "api-reference/web-summarizer",
@@ -143,7 +142,8 @@
           "api-reference/showcase",
           "api-reference/admin-summary",
           "api-reference/export",
-          "api-reference/wallet-monitor"
+          "api-reference/wallet-monitor",
+          "api-reference/market-intel"
         ]
       },
       {
