@@ -228,6 +228,8 @@ Preview how tool calls would be partitioned without executing them. Use this to 
 | 403 | Forbidden — invalid bearer token |
 | 500 | Internal server error |
 
+<Note>Unlike the batch endpoint, the partition endpoint does not reject empty arrays or enforce a maximum tool limit. An empty `tools` array returns an empty `batches` array.</Note>
+
 ## Tool classification
 
 Each tool is classified as `readonly` (parallelizable) or `mutating` (must serialize). Unknown tools default to `mutating` as a safety measure.
