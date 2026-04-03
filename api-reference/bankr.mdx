@@ -194,3 +194,41 @@ The response shape is determined by the Bankr API and contains the current job s
 | 401 | Unauthorized — no valid session |
 | 500 | Bankr API request failed |
 | 503 | No Bankr API key configured. Response includes `needsKey: true`. |
+
+## Mint asset
+
+```http
+POST /api/bankr-mint
+```
+
+<Warning>**Temporarily unavailable.** Bankr minting is offline while an upstream dependency issue is resolved. All requests currently return `503` with code `FEATURE_UNAVAILABLE`. No authentication is required (the endpoint fails before auth is checked).</Warning>
+
+Mints an asset through the Bankr SDK on the specified blockchain network.
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `walletAddress` | string | Yes | The wallet address to mint the asset to |
+| `assetName` | string | Yes | Name of the asset to mint |
+| `network` | string | No | Blockchain network to mint on. Defaults to `base`. |
+
+### Response (503 — feature unavailable)
+
+While the feature is offline, all requests return:
+
+```json
+{
+  "error": "Bankr minting is coming soon.",
+  "code": "FEATURE_UNAVAILABLE",
+  "details": "The Bankr minting feature is temporarily offline while we upgrade dependencies. Check back shortly."
+}
+```
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | Missing `walletAddress` or `assetName` in request body |
+| 500 | Internal server error |
+| 503 | Feature temporarily unavailable (`code: "FEATURE_UNAVAILABLE"`) |
