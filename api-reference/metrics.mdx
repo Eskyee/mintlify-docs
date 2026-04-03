@@ -34,7 +34,20 @@ Requires session authentication. Returns server-level resource usage, in-process
     "region": "iad1",
     "deploymentUrl": "https://agentbot.vercel.app",
     "commitSha": "abc123def456",
-    "commitRef": "main"
+    "commitRef": "main",
+    "commitMessage": "Improve dashboard stats",
+    "deploymentId": "dpl_abc123",
+    "target": "production",
+    "projectProductionUrl": "agentbot.vercel.app"
+  },
+  "runtime": {
+    "node": "v22.14.0",
+    "platform": "linux",
+    "arch": "x64",
+    "heapUsedMb": 85.3,
+    "heapTotalMb": 128.0,
+    "rssMb": 156.2,
+    "externalMb": 2.1
   }
 }
 ```
@@ -56,6 +69,17 @@ Requires session authentication. Returns server-level resource usage, in-process
 | `deployment.deploymentUrl` | string \| null | Public deployment URL, or `null` when not running on Vercel |
 | `deployment.commitSha` | string \| null | Git commit SHA of the deployed build, or `null` when not available |
 | `deployment.commitRef` | string \| null | Git branch or tag of the deployed build, or `null` when not available |
+| `deployment.commitMessage` | string \| null | Git commit message of the deployed build, or `null` when not available |
+| `deployment.deploymentId` | string \| null | Vercel deployment identifier, or `null` when not running on Vercel |
+| `deployment.target` | string \| null | Vercel target environment (for example `production`, `preview`), or `null` when not running on Vercel |
+| `deployment.projectProductionUrl` | string \| null | Production URL configured for the Vercel project, or `null` when not running on Vercel |
+| `runtime.node` | string | Node.js version |
+| `runtime.platform` | string | Operating system platform (for example `linux`, `darwin`) |
+| `runtime.arch` | string | CPU architecture (for example `x64`, `arm64`) |
+| `runtime.heapUsedMb` | number | V8 heap memory in use, in megabytes |
+| `runtime.heapTotalMb` | number | Total V8 heap size, in megabytes |
+| `runtime.rssMb` | number | Resident set size of the process, in megabytes |
+| `runtime.externalMb` | number | Memory used by C++ objects bound to JavaScript objects, in megabytes |
 
 The `health` field is computed from CPU and memory thresholds:
 
@@ -84,7 +108,20 @@ On failure, the endpoint returns HTTP `500` with zeroed counters and `health: "u
     "region": null,
     "deploymentUrl": null,
     "commitSha": null,
-    "commitRef": null
+    "commitRef": null,
+    "commitMessage": null,
+    "deploymentId": null,
+    "target": null,
+    "projectProductionUrl": null
+  },
+  "runtime": {
+    "node": "v22.14.0",
+    "platform": "linux",
+    "arch": "x64",
+    "heapUsedMb": 0,
+    "heapTotalMb": 0,
+    "rssMb": 0,
+    "externalMb": 0
   }
 }
 ```
