@@ -1945,6 +1945,31 @@ If the agent service is already running, returns the existing deployment details
 | 401 | Unauthorized |
 | 500 | Deployment failed. When the Railway API is not reachable, the error message indicates that provisioning is unavailable. Check the [backend health endpoint](/api-reference/health#backend-health-check) to verify Railway API availability before deploying. |
 
+## Create deployment (web)
+
+```http
+POST /api/deployments
+```
+
+Creates a new agent deployment by forwarding the request to the provisioning endpoint. Requires session authentication. Unlike the [backend deploy endpoint](#deploy-agent-backend) which uses bearer token auth, this endpoint uses session cookies and is intended for web dashboard use.
+
+The request body is forwarded as-is to `POST /api/provision`. See [provision with channel tokens](#provision-with-channel-tokens) for the full list of accepted fields.
+
+### Request body
+
+The request body accepts the same fields as `POST /api/provision`. An empty body is allowed — the endpoint will forward it to the provisioning endpoint which applies its own defaults and validation.
+
+### Response
+
+Returns the response from the provisioning endpoint with the same status code.
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | Unauthorized — no valid session |
+| 500 | `Failed to create deployment` — the provisioning endpoint could not be reached or returned an invalid response |
+
 ## OpenClaw version (backend)
 
 ```http
