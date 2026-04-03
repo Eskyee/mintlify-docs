@@ -3,6 +3,8 @@ description: "Agentbot build process and deployment"
 
 # Build & Deployment
 
+<img src="https://indigo-decent-condor-546.mypinata.cloud/ipfs/bafybeibstpvk6pqo23ks3vork3yzr6ns5mdeltkv5snrkpgxn3j6pkgoau" alt="Agentbot build and deployment" height="360" style={{borderRadius: '12px', width: '100%', objectFit: 'cover', marginBottom: '24px'}} />
+
 ## Vercel Setup
 
 ### Project Settings
@@ -40,6 +42,9 @@ cd web && npm run dev
 # Production build
 cd web && npm run build
 
+# Production runtime
+cd web && node .next/standalone/server.js
+
 # Lint
 cd web && npm run lint
 ```
@@ -63,8 +68,8 @@ vercel --prod --yes
 
 The build includes:
 1. Prisma client generation
-2. TypeScript compilation
-3. Next.js static generation
+2. Next.js webpack production build
+3. Standalone server output for runtime deploys
 
 ### Common Issues
 
