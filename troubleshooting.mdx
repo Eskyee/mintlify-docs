@@ -7,6 +7,8 @@ description: "Common issues and how to fix them."
 
 Common issues when building, deploying, and running Agentbot agents.
 
+<img src="https://indigo-decent-condor-546.mypinata.cloud/ipfs/bafybeibstpvk6pqo23ks3vork3yzr6ns5mdeltkv5snrkpgxn3j6pkgoau" alt="Agentbot troubleshooting" height="360" style={{borderRadius: '12px', width: '100%', objectFit: 'cover', marginBottom: '24px'}} />
+
 ## Installation Issues
 
 <AccordionGroup>
@@ -120,12 +122,12 @@ If you're hitting limits, check for memory leaks in custom skills or upgrade you
 <Accordion icon="bug" title="Skills not loading">
 
 ```bash
-# List installed skills
-GET /api/agents/{id}/skills
+# Open the user-facing skills surface
+GET /dashboard/skills
 
-# Reinstall a skill
-POST /api/agents/{id}/skills
-{ "skillId": "weather" }
+# Marketplace/API install flow
+POST /api/skills
+{ "skill": "weather" }
 ```
 
 Skills are loaded at agent startup. If a skill fails to load, the agent will start without it and log the error.

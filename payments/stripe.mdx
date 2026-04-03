@@ -7,6 +7,8 @@ description: "Accept credit card payments for monthly subscriptions and one-time
 
 Accept credit card payments for monthly subscriptions and one-time credit purchases. All plans are billed monthly — yearly billing is not available.
 
+<img src="https://indigo-decent-condor-546.mypinata.cloud/ipfs/bafybeibstpvk6pqo23ks3vork3yzr6ns5mdeltkv5snrkpgxn3j6pkgoau" alt="Agentbot Stripe billing" height="360" style={{borderRadius: '12px', width: '100%', objectFit: 'cover', marginBottom: '24px'}} />
+
 ## Accepted payment methods
 
 Stripe checkout accepts the following payment methods:
@@ -140,9 +142,9 @@ GET /api/stripe/checkout?plan={plan_id}
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `plan` | string | Yes | One of `solo`, `collective`, `label`, or `network` |
+| `plan` | string | Yes | One of `solo`, `collective`, or `label` for the public self-serve checkout flow |
 
-<Note>The `plan` parameter uses internal plan IDs. The billing page maps these to display names: `solo` is shown as "Solo", `collective` as "Collective", `label` as "Label", and `network` as "Network".</Note>
+<Note>The public billing flow uses the `solo`, `collective`, and `label` plan IDs. Custom and white-label arrangements are handled separately through sales and are not part of the normal self-serve Stripe checkout flow.</Note>
 
 The endpoint redirects the user to Stripe's hosted checkout page. All new subscriptions include a **7-day free trial** — the first charge occurs after the trial period ends. On successful checkout, the user is redirected to `/checkout/success` with the Stripe session ID and plan as query parameters. On cancellation, the user returns to the pricing page.
 
@@ -236,6 +238,8 @@ window.location.href = '/api/stripe/credits?price=price_xxx'
 ## Billing API
 
 Manage billing, subscriptions, and usage programmatically. All billing endpoints require authentication with a valid JWT token.
+
+<Warning>The billing API may still expose legacy internal plan aliases such as `starter`, `pro`, `scale`, and `network` in some responses for backward compatibility. Treat the public checkout and pricing flow as the source of truth for customer-facing plan names.</Warning>
 
 ```bash
 curl -X GET https://agentbot.sh/api/billing \

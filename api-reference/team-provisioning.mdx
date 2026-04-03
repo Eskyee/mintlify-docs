@@ -5,7 +5,7 @@ description: Provision multi-agent teams with pre-built templates across music, 
 
 # Team provisioning API
 
-Provision coordinated multi-agent teams for Collective, Label, and Network plan tiers. Each agent in the team receives its own container service, provisioned asynchronously in the background.
+Provision coordinated multi-agent teams for the Collective and Label tiers. Each agent in the team receives its own container service, provisioned asynchronously in the background.
 
 <Note>Team provisioning requires a Collective plan or higher. Solo plan users are limited to single-agent provisioning via [`POST /api/provision`](/api-reference/agents#provision-with-channel-tokens).</Note>
 
@@ -18,7 +18,8 @@ Each plan tier determines how many agents are provisioned in a single team:
 | `solo` | 1 (team provisioning not available) |
 | `collective` | 3 |
 | `label` | 10 |
-| `network` | Unlimited |
+
+<Note>The live web flow currently exposes team deployment for `collective` and `label`. Any `network` handling described here reflects backend/internal compatibility rather than the current public product surface.</Note>
 
 ## Provision a team
 
@@ -32,7 +33,7 @@ Creates a team of agents using a pre-built template. Requires bearer token authe
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `plan` | string | Yes | Plan tier. Must be one of `collective`, `label`, or `network`. |
+| `plan` | string | Yes | Plan tier. In the live web flow this is `collective` or `label`. |
 | `templateKey` | string | No | Key of the pre-built team template to use. Defaults to `dev_team` when omitted. See [list templates](#list-team-templates) for available options. |
 
 <Warning>The web proxy at `/api/provision/team` currently only accepts `collective` and `label` plans — requests with `plan: "network"` return a `400` error. The backend accepts all three plans. Additionally, the web proxy requires `templateKey` to be provided explicitly (it does not apply the `dev_team` default). Omitting `templateKey` through the web proxy returns a `400` error with the message `"templateKey is required"`.</Warning>
@@ -81,7 +82,7 @@ Creates a team of agents using a pre-built template. Requires bearer token authe
 
 | Code | Description |
 |------|-------------|
-| 400 | Invalid JSON body or missing/invalid `plan`. The `plan` field must be one of `collective`, `label`, or `network`. The response includes an `available_templates` array listing valid template keys. Note: the error message in the response currently reads "Team provisioning requires collect, label, or network plan" (a known typo for "collective"). |
+| 400 | Invalid JSON body or missing/invalid `plan`. The live web flow expects `collective` or `label`. The response includes an `available_templates` array listing valid template keys. Note: one backend error string still says "collect, label, or network plan" (a known typo/legacy message). |
 | 401 | Unauthorized — missing or invalid bearer token, or missing user context |
 | 402 | Payment required — no `stripeSubscriptionId` provided and the caller is not an admin. The response body includes `code: "PAYMENT_REQUIRED"`. |
 | 402 | Agent limit reached for this plan. The response body includes `code: "AGENT_LIMIT_REACHED"` along with `current` (current agent count) and `limit` (maximum allowed) fields. |

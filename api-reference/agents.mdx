@@ -7,6 +7,8 @@ description: "Create, manage, and interact with agents"
 
 Create, manage, and interact with agents.
 
+<img src="https://indigo-decent-condor-546.mypinata.cloud/ipfs/bafkreiec4xih75nginbmhmicbk3t5i4amubxbndil2ntzpiupsmj2mlwpy" alt="Agentbot agents API" height="360" style={{borderRadius: '12px', width: '100%', objectFit: 'cover', marginBottom: '24px'}} />
+
 <Note>All agent endpoints that require authentication are scoped to the authenticated user's data through [row-level security](/security#row-level-security). You can only access agents that belong to your account.</Note>
 
 <Warning>Authentication tokens (such as channel tokens and gateway tokens) are never included in agent API responses. Tokens are write-only secrets — they are stored server-side at provisioning time but are stripped from all subsequent read operations (list, get, and provision responses).</Warning>
@@ -78,7 +80,7 @@ The web proxy wraps the response in an object:
 | `count` | number | Total number of agents returned |
 | `status` | string | Response status (`ok`) |
 
-<Note>The backend and web proxy return different response shapes. The backend returns a flat array with `created`, `subdomain`, and `url` fields. The web proxy wraps the data in an `agents` key and includes `name`, `model`, `websocketUrl`, `createdAt`, and `updatedAt` fields.</Note>
+<Note>The backend and web proxy return different response shapes. For most Agentbot users, the web proxy shape is the one that matters because it is what the dashboard and authenticated web flows consume.</Note>
 
 ## Create agent
 
@@ -94,7 +96,7 @@ Creates a new agent with an auto-generated ID and stores its metadata on disk. R
 |-------|------|----------|-------------|
 | `name` | string | Yes | Agent name |
 | `config` | object | No | Agent configuration |
-| `config.plan` | string | No | Plan tier (for example, `solo`, `collective`, `label`, `network`). Defaults to `free` when omitted. Note that `free` is not a standard plan tier and may not be recognized by other endpoints. |
+| `config.plan` | string | No | Plan tier (for example, `solo`, `collective`, or `label`). Older backend paths may still mention legacy/internal values, but the public product plans are `solo`, `collective`, and `label`. |
 | `config.aiProvider` | string | No | AI provider (for example, `openrouter`, `anthropic`). Defaults to `openrouter`. |
 | `config.stripeSubscriptionId` | string | No | Stripe subscription ID. Required for non-admin users — requests without this field receive a `402` error with code `PAYMENT_REQUIRED`. |
 
