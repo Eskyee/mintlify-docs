@@ -23,7 +23,7 @@ Requires session authentication. Returns liveness and readiness status for the u
   "railwayUrl": "https://agentbot-agent-abc123-production.up.railway.app",
   "healthy": true,
   "ready": true,
-  "version": "2026.4.1",
+  "version": "2026.4.2",
   "uptime": "2d 5h",
   "status": "healthy"
 }
@@ -107,7 +107,7 @@ Restarts the agent container. The agent automatically runs `openclaw doctor --fi
 
 #### `factory-reset`
 
-Pins the agent to the known-good OpenClaw image (`v2026.3.28`), reconfigures environment variables, and restarts the container with `doctor --fix`. Use this when an agent is broken after updating to an incompatible version.
+Pins the agent to the known-good OpenClaw image (`v2026.4.2`), reconfigures environment variables, and restarts the container with `doctor --fix`. Use this when an agent is broken after updating to an incompatible version.
 
 **Request:**
 
@@ -122,8 +122,8 @@ Pins the agent to the known-good OpenClaw image (`v2026.3.28`), reconfigures env
 ```json
 {
   "success": true,
-  "message": "Factory reset complete — pinned to ghcr.io/openclaw/openclaw:2026.3.28. Agent restarting with doctor --fix.",
-  "image": "ghcr.io/openclaw/openclaw:2026.3.28"
+  "message": "Factory reset complete — pinned to ghcr.io/openclaw/openclaw:2026.4.2. Agent restarting with doctor --fix.",
+  "image": "ghcr.io/openclaw/openclaw:2026.4.2"
 }
 ```
 
@@ -171,7 +171,7 @@ When a factory reset fails during the image update:
 
 <Warning>Both `restart` and `factory-reset` cause a brief period of downtime while the container reinitializes. The `openclaw doctor --fix` process runs automatically during startup and may take additional time depending on the number of pending fixes or migrations.</Warning>
 
-<Note>Factory reset pins the agent to a known-stable release (`v2026.3.28`). After a factory reset, you can update to a newer version later through the normal update flow.</Note>
+<Note>Factory reset pins the agent to a known-stable release (`v2026.4.2`). After a factory reset, you can update to a newer version later through the normal update flow.</Note>
 
 ## OpenClaw runtime version
 
@@ -185,15 +185,15 @@ Returns the current OpenClaw runtime version and container image. Requires beare
 
 ```json
 {
-  "openclawVersion": "2026.3.28",
-  "image": "ghcr.io/openclaw/openclaw:2026.3.28",
+  "openclawVersion": "2026.4.2",
+  "image": "ghcr.io/openclaw/openclaw:2026.4.2",
   "deployedAt": "2026-04-01T12:00:00Z"
 }
 ```
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `openclawVersion` | string | Current OpenClaw runtime version (currently `2026.3.28`) |
+| `openclawVersion` | string | Current OpenClaw runtime version (currently `2026.4.2`) |
 | `image` | string | Docker image used for new agent containers |
 | `deployedAt` | string | ISO 8601 timestamp of when the version info was served (returns the current server time, not the actual deployment time) |
 
@@ -245,10 +245,10 @@ Returns all running OpenClaw agent containers with their image, status, and meta
     {
       "agentId": "agent_123",
       "name": "openclaw-agent_123",
-      "image": "ghcr.io/openclaw/openclaw:2026.3.28",
+      "image": "ghcr.io/openclaw/openclaw:2026.4.2",
       "status": "Up 2 days",
       "createdAt": "2026-04-01T00:00:00Z",
-      "version": "2026.3.28",
+      "version": "2026.4.2",
       "metadata": {}
     }
   ],
