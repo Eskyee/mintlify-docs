@@ -308,13 +308,13 @@ The `join-colony` and `pay` actions require a valid NextAuth session. When the s
 ### Check gateway health
 
 ```bash
-curl https://agentbot.raveculture.xyz/api/x402
+curl https://agentbot.sh/api/x402
 ```
 
 ### Join colony
 
 ```bash
-curl -X POST https://agentbot.raveculture.xyz/api/x402 \
+curl -X POST https://agentbot.sh/api/x402 \
   -H "Content-Type: application/json" \
   -H "Cookie: next-auth.session-token=YOUR_SESSION" \
   -d '{
@@ -327,7 +327,7 @@ curl -X POST https://agentbot.raveculture.xyz/api/x402 \
 ### Get fitness score
 
 ```bash
-curl -X POST https://agentbot.raveculture.xyz/api/x402 \
+curl -X POST https://agentbot.sh/api/x402 \
   -H "Content-Type: application/json" \
   -d '{
     "agentId": "inst_abc123",
@@ -338,7 +338,7 @@ curl -X POST https://agentbot.raveculture.xyz/api/x402 \
 The `agentId` is optional. When omitted, it defaults to `atlas`:
 
 ```bash
-curl -X POST https://agentbot.raveculture.xyz/api/x402 \
+curl -X POST https://agentbot.sh/api/x402 \
   -H "Content-Type: application/json" \
   -d '{"action": "fitness"}'
 ```
@@ -346,7 +346,7 @@ curl -X POST https://agentbot.raveculture.xyz/api/x402 \
 ### Get pricing
 
 ```bash
-curl -X POST https://agentbot.raveculture.xyz/api/x402 \
+curl -X POST https://agentbot.sh/api/x402 \
   -H "Content-Type: application/json" \
   -d '{
     "agentId": "inst_abc123",
@@ -357,7 +357,7 @@ curl -X POST https://agentbot.raveculture.xyz/api/x402 \
 ### List endpoints
 
 ```bash
-curl -X POST https://agentbot.raveculture.xyz/api/x402 \
+curl -X POST https://agentbot.sh/api/x402 \
   -H "Content-Type: application/json" \
   -d '{"action": "endpoints"}'
 ```
@@ -365,7 +365,7 @@ curl -X POST https://agentbot.raveculture.xyz/api/x402 \
 ### Make a payment
 
 ```bash
-curl -X POST https://agentbot.raveculture.xyz/api/x402 \
+curl -X POST https://agentbot.sh/api/x402 \
   -H "Content-Type: application/json" \
   -H "Cookie: next-auth.session-token=YOUR_SESSION" \
   -d '{

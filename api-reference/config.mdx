@@ -182,7 +182,7 @@ Restores a previous configuration from a backup for the authenticated user. The 
 
 ```bash
 # Save a new configuration (requires authentication)
-curl -X POST https://agentbot.raveculture.xyz/api/config \
+curl -X POST https://agentbot.sh/api/config \
   -H "Content-Type: application/json" \
   -H "Cookie: session=YOUR_SESSION_TOKEN" \
   -d '{
@@ -216,7 +216,7 @@ curl -X POST https://agentbot.raveculture.xyz/api/config \
   }'
 
 # Restore from a backup (requires authentication)
-curl -X PUT https://agentbot.raveculture.xyz/api/config \
+curl -X PUT https://agentbot.sh/api/config \
   -H "Content-Type: application/json" \
   -H "Cookie: session=YOUR_SESSION_TOKEN" \
   -d '{ "backupId": "bkp_initial" }'

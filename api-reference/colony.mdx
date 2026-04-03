@@ -32,7 +32,7 @@ Requires session authentication. Returns colony tree data, agent fitness ranking
 Returns the full colony tree with fitness rankings, agent metadata, and root node soul state.
 
 ```bash
-curl -X GET "https://agentbot.raveculture.xyz/api/colony/status?action=tree" \
+curl -X GET "https://agentbot.sh/api/colony/status?action=tree" \
   -H "Cookie: session=YOUR_SESSION_TOKEN"
 ```
 
@@ -220,7 +220,7 @@ curl -X GET "https://agentbot.raveculture.xyz/api/colony/status?action=tree" \
 Returns the full cognitive state of the soul service.
 
 ```bash
-curl -X GET "https://agentbot.raveculture.xyz/api/colony/status?action=soul" \
+curl -X GET "https://agentbot.sh/api/colony/status?action=soul" \
   -H "Cookie: session=YOUR_SESSION_TOKEN"
 ```
 
@@ -329,7 +329,7 @@ curl -X GET "https://agentbot.raveculture.xyz/api/colony/status?action=soul" \
 Returns diagnostic data including failure patterns, stagnation risk, and capability bottlenecks.
 
 ```bash
-curl -X GET "https://agentbot.raveculture.xyz/api/colony/status?action=diagnostics" \
+curl -X GET "https://agentbot.sh/api/colony/status?action=diagnostics" \
   -H "Cookie: session=YOUR_SESSION_TOKEN"
 ```
 

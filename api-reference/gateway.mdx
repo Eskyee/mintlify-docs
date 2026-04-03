@@ -219,7 +219,7 @@ Requires session authentication.
 ### Example
 
 ```bash
-curl -X POST https://agentbot.raveculture.xyz/api/gateway/chat \
+curl -X POST https://agentbot.sh/api/gateway/chat \
   -H "Content-Type: application/json" \
   -H "Cookie: next-auth.session-token=YOUR_SESSION" \
   -d '{"message": "What is my agent status?", "sessionKey": "main"}'
@@ -291,7 +291,7 @@ Requires session authentication. Returns a combined view of gateway health, acti
 ### Example
 
 ```bash
-curl -X GET https://agentbot.raveculture.xyz/api/gateway/status \
+curl -X GET https://agentbot.sh/api/gateway/status \
   -H "Cookie: next-auth.session-token=YOUR_SESSION"
 ```
 
@@ -306,7 +306,7 @@ The production gateway is a standalone service deployed on Railway that exposes 
 | `OPENCLAW_GATEWAY_TOKEN` | Auto-generated | Bearer token for authenticating requests. If not set, a 64-character hex token is generated at startup. |
 | `PORT` | `8080` | Port the gateway listens on |
 | `AGENTBOT_API_URL` | `https://agentbot-prod-production.up.railway.app` | Backend API URL the gateway proxies to |
-| `CONTROL_UI_ORIGIN` | `https://agentbot.raveculture.xyz` | Allowed origin for the gateway control UI. Used to populate `gateway.controlUi.allowedOrigins`. |
+| `CONTROL_UI_ORIGIN` | `https://agentbot.sh` | Allowed origin for the gateway control UI. Used to populate `gateway.controlUi.allowedOrigins`. |
 | `SKIP_SERVICE_READINESS` | `false` | When set to `true`, the gateway starts immediately without waiting for the backend API health check. |
 | `SERVICE_HEALTH_URL` | `{AGENTBOT_API_URL}/health` | URL the gateway polls at startup to confirm the backend API is available. Derived from `AGENTBOT_API_URL` by default. |
 
@@ -407,7 +407,7 @@ Model aliases are configured for convenience:
 | `gateway.auth.rateLimit.windowMs` | `60000` | Rate limit window (1 minute) |
 | `gateway.auth.rateLimit.lockoutMs` | `300000` | Lockout duration (5 minutes) |
 | `gateway.http.endpoints.chatCompletions.enabled` | `true` | OpenAI-compatible chat completions endpoint is enabled |
-| `gateway.controlUi.allowedOrigins` | `["https://agentbot.raveculture.xyz"]` | Permitted WebSocket origins. Populated from the `CONTROL_UI_ORIGIN` environment variable. |
+| `gateway.controlUi.allowedOrigins` | `["https://agentbot.sh"]` | Permitted WebSocket origins. Populated from the `CONTROL_UI_ORIGIN` environment variable. |
 | `gateway.controlUi.dangerouslyDisableDeviceAuth` | `false` | Device auth is enabled on the production gateway. |
 | `gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback` | `false` | Host header fallback is disabled on the production gateway. |
 | `gateway.reload.mode` | `hybrid` | Configuration reload strategy |
@@ -690,7 +690,7 @@ The response follows the OpenAI embeddings format. The exact shape depends on th
 ### Route a request to the agent plugin (Stripe)
 
 ```bash
-curl -X POST https://agentbot.raveculture.xyz/api/v1/gateway \
+curl -X POST https://agentbot.sh/api/v1/gateway \
   -H "Content-Type: application/json" \
   -H "X-Plugin-Id: agent" \
   -H "Cookie: next-auth.session-token=YOUR_SESSION" \
@@ -700,7 +700,7 @@ curl -X POST https://agentbot.raveculture.xyz/api/v1/gateway \
 ### Route a request with MPP payment
 
 ```bash
-curl -X POST https://agentbot.raveculture.xyz/api/v1/gateway \
+curl -X POST https://agentbot.sh/api/v1/gateway \
   -H "Content-Type: application/json" \
   -H "X-Plugin-Id: generate-text" \
   -H "Authorization: Payment {\"scheme\":\"Payment\",\"transaction\":\"0x76...\",\"challengeNonce\":\"abc123\"}" \
@@ -710,7 +710,7 @@ curl -X POST https://agentbot.raveculture.xyz/api/v1/gateway \
 ### Route a request with session-based billing
 
 ```bash
-curl -X POST https://agentbot.raveculture.xyz/api/v1/gateway \
+curl -X POST https://agentbot.sh/api/v1/gateway \
   -H "Content-Type: application/json" \
   -H "X-Plugin-Id: agent" \
   -H "X-Payment-Method: session" \
@@ -729,19 +729,19 @@ X-Session-Remaining: 9.95
 ### List available models (OpenAI-compatible)
 
 ```bash
-curl https://agentbot.raveculture.xyz/v1/models
+curl https://agentbot.sh/v1/models
 ```
 
 ### Retrieve a specific model
 
 ```bash
-curl https://agentbot.raveculture.xyz/v1/models/openrouter/openai/gpt-4o-mini
+curl https://agentbot.sh/v1/models/openrouter/openai/gpt-4o-mini
 ```
 
 ### Generate embeddings
 
 ```bash
-curl -X POST https://agentbot.raveculture.xyz/v1/embeddings \
+curl -X POST https://agentbot.sh/v1/embeddings \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -d '{"input": "Hello world", "model": "openai/text-embedding-3-small"}'

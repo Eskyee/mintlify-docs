@@ -871,7 +871,7 @@ Triggers an image update on the backend. Before replacing the service, the endpo
   "success": true,
   "status": "active",
   "image": "ghcr.io/openclaw/openclaw:2026.4.2",
-  "previousImage": "ghcr.io/openclaw/openclaw:2026.3.28",
+  "previousImage": "ghcr.io/openclaw/openclaw:2026.4.2",
   "backupPath": "/opt/agentbot/data/backups/openclaw-updates/agent_123/20260320-000000.tar.gz",
   "openclawVersion": "2026.4.2"
 }
@@ -1030,7 +1030,7 @@ The endpoint proxies to the backend. When the backend is unavailable or returns 
   "subdomain": "agentbot-agent-user_123-production.up.railway.app",
   "url": "https://agentbot-agent-user_123-production.up.railway.app",
   "plan": "solo",
-  "openclawVersion": "2026.3.31"
+  "openclawVersion": "2026.4.2"
 }
 ```
 
@@ -1042,7 +1042,7 @@ The endpoint proxies to the backend. When the backend is unavailable or returns 
 | `subdomain` | string | Agent subdomain from the backend, or constructed from the `userId` |
 | `url` | string | Agent URL from the backend, or constructed from the `userId` |
 | `plan` | string | Subscription plan tier from the backend, or `free` as fallback |
-| `openclawVersion` | string | OpenClaw runtime version from the backend, or `2026.3.31` as fallback |
+| `openclawVersion` | string | OpenClaw runtime version from the backend, or `2026.4.2` as fallback |
 
 ### Errors
 
@@ -1076,7 +1076,7 @@ When the gateway healthcheck succeeds:
   "uptime": "active",
   "messages": null,
   "errors": null,
-  "openclawVersion": "2026.3.28"
+  "openclawVersion": "2026.4.2"
 }
 ```
 
@@ -1090,7 +1090,7 @@ When the gateway healthcheck succeeds:
 | `uptime` | string | `"active"` when the gateway is healthy |
 | `messages` | null | Reserved for future use. Always `null`. |
 | `errors` | null | Reserved for future use. Always `null`. |
-| `openclawVersion` | string | Hardcoded OpenClaw runtime version (`2026.3.28`). Only present when the gateway is healthy. |
+| `openclawVersion` | string | Hardcoded OpenClaw runtime version (`2026.4.2`). Only present when the gateway is healthy. |
 
 <Note>The `cpu` and `memory` fields return placeholder values because the gateway does not expose per-instance resource metrics. These fields are retained for backward compatibility.</Note>
 
@@ -1604,8 +1604,8 @@ When the backend Express service handles the request, the proxy returns a filter
 {
   "success": true,
   "userId": "a1b2c3d4e5",
-  "subdomain": "dj-a1b2c3d4e5.agentbot.raveculture.xyz",
-  "url": "https://dj-a1b2c3d4e5.agentbot.raveculture.xyz",
+  "subdomain": "dj-a1b2c3d4e5.agentbot.sh",
+  "url": "https://dj-a1b2c3d4e5.agentbot.sh",
   "streamKey": "sk-ab12-cd34-ef56",
   "liveStreamId": "x7k9m2p4q1"
 }
@@ -1660,8 +1660,8 @@ When calling the backend provisioning service directly, the response includes ad
   "liveStreamId": "x7k9m2p4q1",
   "rtmpServer": "rtmps://live.mux.com/app",
   "playbackUrl": "https://image.mux.com/x7k9m2p4q1/playlist.m3u8",
-  "subdomain": "dj-a1b2c3d4e5.agentbot.raveculture.xyz",
-  "url": "https://dj-a1b2c3d4e5.agentbot.raveculture.xyz",
+  "subdomain": "dj-a1b2c3d4e5.agentbot.sh",
+  "url": "https://dj-a1b2c3d4e5.agentbot.sh",
   "hls": {
     "playlistUrl": "https://image.mux.com/x7k9m2p4q1/playlist.m3u8"
   },
@@ -2101,7 +2101,7 @@ Returns the authenticated user's OpenClaw URL, instance ID, and gateway token. T
 
 ```json
 {
-  "openclawUrl": "https://dj-a1b2c3d4e5.agentbot.raveculture.xyz",
+  "openclawUrl": "https://dj-a1b2c3d4e5.agentbot.sh",
   "openclawInstanceId": "inst_a1b2c3d4e5",
   "gatewayToken": "ogt_abc123..."
 }

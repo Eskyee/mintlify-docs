@@ -113,13 +113,13 @@ npx @agentbot/mcp-server deploy --skills weather,web-search --verify
 | Variable | Description |
 |----------|-------------|
 | `AGENTBOT_API_KEY` | Your Agentbot API key (required) |
-| `AGENTBOT_BASE_URL` | Base URL (default: `https://api.agentbot.raveculture.xyz`) |
+| `AGENTBOT_BASE_URL` | Base URL (default: `https://agentbot.sh`) |
 | `AGENTBOT_TIMEOUT` | Request timeout in ms (default: `30000`) |
 | `AGENTBOT_DEBUG` | Enable debug logging (`true`/`false`) |
 
 ## Authentication
 
-Generate an API key from the [Agentbot dashboard](https://agentbot.raveculture.xyz/dashboard/keys). The key grants read/write access to your agents and skills — keep it secure.
+Generate an API key from the [Agentbot dashboard](https://agentbot.sh/dashboard/keys). The key grants read/write access to your agents and skills — keep it secure.
 
 <Note>
 MCP uses the same API key as the REST API. One key works across all integrations.

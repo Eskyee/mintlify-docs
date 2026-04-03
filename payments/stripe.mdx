@@ -51,7 +51,7 @@ Two webhook endpoints handle Stripe events:
 #### Subscription webhook
 
 1. Go to **Developers → Webhooks**
-2. Add endpoint: `https://agentbot.raveculture.xyz/api/webhooks/stripe`
+2. Add endpoint: `https://agentbot.sh/api/webhooks/stripe`
 3. Select events:
    - `checkout.session.completed`
    - `customer.subscription.created`
@@ -63,7 +63,7 @@ Two webhook endpoints handle Stripe events:
 
 #### Wallet top-up webhook
 
-1. Add a second endpoint: `https://agentbot.raveculture.xyz/api/wallet/top-up`
+1. Add a second endpoint: `https://agentbot.sh/api/wallet/top-up`
 2. Select events:
    - `checkout.session.completed`
 3. Copy webhook secret and add to Agentbot as `STRIPE_WEBHOOK_SECRET`
@@ -239,7 +239,7 @@ window.location.href = '/api/stripe/credits?price=price_xxx'
 Manage billing, subscriptions, and usage programmatically. All billing endpoints require authentication with a valid JWT token.
 
 ```bash
-curl -X GET https://agentbot.raveculture.xyz/api/billing \
+curl -X GET https://agentbot.sh/api/billing \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
 

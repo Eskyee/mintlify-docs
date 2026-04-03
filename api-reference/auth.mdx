@@ -197,7 +197,7 @@ Requires session authentication. Returns WebAuthn registration options that the 
 ```json
 {
   "options": {
-    "rp": { "id": "agentbot.raveculture.xyz", "name": "Agentbot" },
+    "rp": { "id": "agentbot.sh", "name": "Agentbot" },
     "user": { "id": "...", "name": "user@example.com", "displayName": "John Doe" },
     "challenge": "...",
     "excludeCredentials": [],
@@ -271,7 +271,7 @@ Returns WebAuthn authentication options for an existing user. No session is requ
 {
   "options": {
     "allowCredentials": [{ "id": "...", "type": "public-key" }],
-    "rpId": "agentbot.raveculture.xyz",
+    "rpId": "agentbot.sh",
     "userVerification": "required",
     "timeout": 60000
   },

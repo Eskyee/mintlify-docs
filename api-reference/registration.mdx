@@ -20,7 +20,7 @@ Returns the Home mode installation shell script. No authentication required. The
 This script automates the setup of a self-hosted agent container. Pipe it to your shell to begin the Home mode installation:
 
 ```bash
-curl -sSL https://api.agentbot.raveculture.xyz/install | bash
+curl -sSL https://agentbot.sh/install | bash
 ```
 
 ## Link script
@@ -34,7 +34,7 @@ Returns the Link mode setup shell script. No authentication required. The respon
 This script connects an existing OpenClaw instance to the Agentbot platform. Pipe it to your shell to begin the Link mode setup:
 
 ```bash
-curl -sSL https://api.agentbot.raveculture.xyz/link | bash
+curl -sSL https://agentbot.sh/link | bash
 ```
 
 ## Validate API key
@@ -102,7 +102,7 @@ Registers a Home mode installation. Requires identity headers (`x-user-email`, `
 {
   "success": true,
   "message": "Home installation registered",
-  "dashboardUrl": "https://agentbot.raveculture.xyz/dashboard"
+  "dashboardUrl": "https://agentbot.sh/dashboard"
 }
 ```
 
@@ -136,7 +136,7 @@ Registers a Link mode installation that connects an existing OpenClaw instance. 
 {
   "success": true,
   "message": "OpenClaw instance linked",
-  "dashboardUrl": "https://agentbot.raveculture.xyz/dashboard"
+  "dashboardUrl": "https://agentbot.sh/dashboard"
 }
 ```
 

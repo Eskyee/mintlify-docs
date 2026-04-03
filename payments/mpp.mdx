@@ -130,7 +130,7 @@ const result = await mppFetch({
   plugin: 'agent',
   body: { messages: [{ role: 'user', content: 'Hello' }] },
   privateKey: '0xYOUR_PRIVATE_KEY',
-  baseUrl: 'https://agentbot.raveculture.xyz',
+  baseUrl: 'https://agentbot.sh',
   testnet: false,
 });
 
@@ -147,7 +147,7 @@ if (result.success) {
 | `plugin` | string | Yes | — | Plugin ID to call |
 | `body` | object | Yes | — | Request body forwarded to the plugin |
 | `privateKey` | string | Yes | — | Hex-encoded private key for signing Tempo transactions |
-| `baseUrl` | string | No | `https://agentbot.raveculture.xyz` | Agentbot instance URL |
+| `baseUrl` | string | No | `https://agentbot.sh` | Agentbot instance URL |
 | `stream` | boolean | No | `false` | Request a streaming response |
 | `testnet` | boolean | No | `false` | Use Tempo testnet instead of mainnet |
 
@@ -169,7 +169,7 @@ You can check whether an endpoint supports MPP payments:
 import { checkMppSupport } from '@agentbot/sdk';
 
 const { supported } = await checkMppSupport(
-  'https://agentbot.raveculture.xyz/api/v1/gateway'
+  'https://agentbot.sh/api/v1/gateway'
 );
 ```
 

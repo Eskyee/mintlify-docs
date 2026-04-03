@@ -10,7 +10,7 @@ Complete API reference for Agentbot.
 ## Base URL
 
 ```
-https://agentbot.raveculture.xyz/api
+https://agentbot.sh/api
 ```
 
 ## Authentication
@@ -26,7 +26,7 @@ Most web API endpoints use cookie-based session authentication via NextAuth. Sig
 You can generate API keys from the dashboard. Include your key in the `Authorization` header:
 
 ```bash
-curl -X GET https://agentbot.raveculture.xyz/api/agents \
+curl -X GET https://agentbot.sh/api/agents \
   -H "Authorization: Bearer YOUR_API_KEY"
 ```
 
@@ -91,7 +91,7 @@ All POST and PUT requests that include a JSON body must set the `Content-Type` h
 Request bodies are limited to **1 MB**. Requests exceeding this limit are rejected before reaching the endpoint handler.
 
 ```bash
-curl -X POST https://agentbot.raveculture.xyz/api/ai/chat \
+curl -X POST https://agentbot.sh/api/ai/chat \
   -H "Content-Type: application/json" \
   -H "x-user-plan: solo" \
   -H "x-stripe-subscription-id: sub_123" \
@@ -286,7 +286,7 @@ curl -X POST https://agentbot.raveculture.xyz/api/ai/chat \
 | `/api/version` | GET | Get platform version (no auth) |
 | `/api/openclaw/maintenance` | GET | Get agent health status (liveness and readiness) |
 | `/api/openclaw/maintenance` | POST | Restart agent container (runs doctor and migrations on startup) |
-| `/api/openclaw-version` | GET | Get OpenClaw runtime version (web proxy, fallback `2026.3.31`) |
+| `/api/openclaw-version` | GET | Get OpenClaw runtime version (web proxy, fallback `2026.4.2`) |
 | `/api/openclaw/version` | GET | Get OpenClaw runtime version (backend only) |
 | `/api/openclaw/instances` | GET | List running agent instances (backend only, requires auth) |
 | `/api/openclaw/instances/:id/stats` | GET | Get instance container stats (backend only, requires auth) |

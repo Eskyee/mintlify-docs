@@ -82,7 +82,7 @@ When the gateway is unreachable, the endpoint returns HTTP `200` with an empty j
 ### Example
 
 ```bash
-curl -X GET https://agentbot.raveculture.xyz/api/cron \
+curl -X GET https://agentbot.sh/api/cron \
   -H "Cookie: next-auth.session-token=YOUR_SESSION"
 ```
 
@@ -139,7 +139,7 @@ Adds a new cron job to the gateway.
 ### Example
 
 ```bash
-curl -X POST https://agentbot.raveculture.xyz/api/cron \
+curl -X POST https://agentbot.sh/api/cron \
   -H "Content-Type: application/json" \
   -H "Cookie: next-auth.session-token=YOUR_SESSION" \
   -d '{
@@ -183,6 +183,6 @@ Removes a cron job from the gateway.
 ### Example
 
 ```bash
-curl -X DELETE "https://agentbot.raveculture.xyz/api/cron?jobId=heartbeat" \
+curl -X DELETE "https://agentbot.sh/api/cron?jobId=heartbeat" \
   -H "Cookie: next-auth.session-token=YOUR_SESSION"
 ```

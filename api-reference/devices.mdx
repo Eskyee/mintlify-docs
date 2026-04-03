@@ -125,7 +125,7 @@ Approve, deny, or revoke a device. The action must be valid for the device's cur
 ### Example: approve a device
 
 ```bash
-curl -X POST https://agentbot.raveculture.xyz/api/devices \
+curl -X POST https://agentbot.sh/api/devices \
   -H "Content-Type: application/json" \
   -d '{
     "deviceId": "dev_pending_1",
@@ -136,7 +136,7 @@ curl -X POST https://agentbot.raveculture.xyz/api/devices \
 ### Example: revoke a device
 
 ```bash
-curl -X POST https://agentbot.raveculture.xyz/api/devices \
+curl -X POST https://agentbot.sh/api/devices \
   -H "Content-Type: application/json" \
   -d '{
     "deviceId": "dev_approved_1",

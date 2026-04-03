@@ -168,7 +168,7 @@
     "links": [
       {
         "label": "Agentbot",
-        "href": "https://agentbot.raveculture.xyz"
+        "href": "https://agentbot.sh"
       },
       {
         "label": "GitHub",
@@ -214,7 +214,7 @@
   "topbar": {
     "cta": {
       "label": "\ud83d\ude80 Free trial \u2014 no credit card required",
-      "href": "https://agentbot.raveculture.xyz/signup"
+      "href": "https://agentbot.sh/signup"
     }
   }
 }
