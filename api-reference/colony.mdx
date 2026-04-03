@@ -167,7 +167,7 @@ curl -X GET "https://agentbot.raveculture.xyz/api/colony/status?action=tree" \
 | `children` | number | Number of child agents |
 | `parent` | string \| null | Parent agent wallet address, or `null` for root agents and when identity data is unavailable |
 | `walletAddress` | string \| null | Agent wallet address, or `null` when identity data is unavailable |
-| `status` | string | Agent status (`active` or `stale`) |
+| `status` | string | Agent status. One of `active`, `stale`, or `culling`. |
 | `createdAt` | string | ISO 8601 creation timestamp. Falls back to the current time when identity data is unavailable. |
 | `url` | string | Soul service URL for this agent |
 | `endpoints` | array | Available service endpoints with slug, description, and price |

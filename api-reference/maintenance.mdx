@@ -205,21 +205,21 @@ GET /api/openclaw-version
 
 No authentication required. Proxies to the backend `GET /api/openclaw/version` endpoint using the internal API key. Returns the OpenClaw runtime version, container image, and deployment timestamp.
 
-When the backend is unreachable or returns an error, the endpoint returns a fallback version of `2026.3.31`.
+When the backend is unreachable or returns an error, the endpoint returns a fallback version of `2026.4.2`.
 
 ### Response
 
 ```json
 {
-  "openclawVersion": "2026.3.31",
-  "image": "ghcr.io/openclaw/openclaw:2026.3.31",
+  "openclawVersion": "2026.4.2",
+  "image": "ghcr.io/openclaw/openclaw:2026.4.2",
   "deployedAt": "2026-04-01T12:00:00Z"
 }
 ```
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `openclawVersion` | string | OpenClaw runtime version from the backend. Falls back to `2026.3.31` when the backend is unavailable or returns an error. |
+| `openclawVersion` | string | OpenClaw runtime version from the backend. Falls back to `2026.4.2` when the backend is unavailable or returns an error. |
 | `image` | string \| undefined | Docker image identifier. Only present when the backend responds successfully. |
 | `deployedAt` | string \| undefined | ISO 8601 deployment timestamp. Only present when the backend responds successfully. |
 
