@@ -19,6 +19,8 @@ GET /api/ai/health
 
 Requires bearer token authentication. Returns the availability status of configured AI providers.
 
+<Note>The `/health`, `/models`, and `/models/:provider` endpoints were originally designed to be public (as indicated by source code comments), but mount-level authentication on the `/api/ai` router requires a bearer token for all requests. If you need unauthenticated model discovery, use the OpenAI-compatible `/v1/models` endpoint instead.</Note>
+
 ### Response
 
 ```json

@@ -122,7 +122,7 @@ The total number of custom agents must not exceed the plan's agent limit. If `cu
 GET /api/provision/team/templates
 ```
 
-Returns all available pre-built team templates and their categories. This endpoint does not apply authentication middleware at the route level. Authentication may be enforced at the application mount level depending on your deployment configuration.
+Returns all available pre-built team templates and their categories. Authentication is enforced at the application mount level. All requests must include a valid `Authorization: Bearer <token>` header.
 
 ### Response
 
