@@ -2347,6 +2347,16 @@ Requires session authentication.
 
 <Warning>The `topic` parameter was removed. Conversation context is no longer passed through this endpoint. If you need to route messages to a specific conversation, use the [gateway chat proxy](/api-reference/gateway#gateway-chat-proxy) which supports a `sessionKey` parameter.</Warning>
 
+### Gateway URL resolution
+
+The endpoint resolves the agent's gateway URL using the following priority:
+
+1. The user's persisted `openclawUrl` from the database (set during provisioning or via settings)
+2. A derived Railway hostname based on the agent ID (`https://agentbot-agent-{agentId}-production.up.railway.app`)
+3. The platform default gateway URL
+
+If the agent has a personality configured in memory, the endpoint injects a system prompt before the user message. The personality type determines the system prompt content (for example, `basement`, `selector`, `ar`, `road`, or `label`).
+
 ### Response (200)
 
 ```json
@@ -2355,6 +2365,7 @@ Requires session authentication.
   "message": "Hello!",
   "agent": "my-agent",
   "reply": "Hi there! How can I help you today?",
+  "response": "Hi there! How can I help you today?",
   "model": "openclaw/default",
   "usage": {
     "prompt_tokens": 12,
@@ -2371,6 +2382,7 @@ Requires session authentication.
 | `message` | string | The original message that was sent |
 | `agent` | string | Name of the agent that processed the message |
 | `reply` | string | The agent's response |
+| `response` | string | Alias for `reply`. Contains the same content. Included for backward compatibility with clients that read `response` instead of `reply`. |
 | `model` | string | Model identifier used by the gateway for the completion |
 | `usage` | object | Token usage statistics from the upstream completion |
 | `usage.prompt_tokens` | number | Input tokens consumed |

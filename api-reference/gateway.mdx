@@ -167,7 +167,7 @@ Sends a chat message to the caller's deployed agent through the OpenClaw Gateway
 
 <Info>The primary chat endpoint [`POST /api/chat`](/api-reference/agents#send-message) now uses the OpenAI-compatible REST API (`POST /v1/chat/completions`) instead of WebSocket. This WebSocket-based endpoint is retained as a fallback for gateways that do not have `chatCompletions` enabled. For new integrations, prefer `POST /api/chat`.</Info>
 
-This endpoint retrieves the gateway token dynamically from the backend API rather than relying on a single environment variable. The gateway URL is always the shared platform gateway — per-user `openclawUrl` values from the database are no longer used for routing.
+This endpoint retrieves the gateway token dynamically from the backend API rather than relying on a single environment variable. The gateway URL is derived from the agent ID (`wss://agentbot-agent-{agentId}-production.up.railway.app`). Per-user `openclawUrl` values from the database are not used for WebSocket routing.
 
 Requires session authentication.
 
@@ -306,6 +306,9 @@ The production gateway is a standalone service deployed on Railway that exposes 
 | `OPENCLAW_GATEWAY_TOKEN` | Auto-generated | Bearer token for authenticating requests. If not set, a 64-character hex token is generated at startup. |
 | `PORT` | `8080` | Port the gateway listens on |
 | `AGENTBOT_API_URL` | `https://agentbot-prod-production.up.railway.app` | Backend API URL the gateway proxies to |
+| `CONTROL_UI_ORIGIN` | `https://agentbot.raveculture.xyz` | Allowed origin for the gateway control UI. Used to populate `gateway.controlUi.allowedOrigins`. |
+| `SKIP_SERVICE_READINESS` | `false` | When set to `true`, the gateway starts immediately without waiting for the backend API health check. |
+| `SERVICE_HEALTH_URL` | `{AGENTBOT_API_URL}/health` | URL the gateway polls at startup to confirm the backend API is available. Derived from `AGENTBOT_API_URL` by default. |
 
 ### OpenClaw configuration `env` section
 
@@ -404,9 +407,9 @@ Model aliases are configured for convenience:
 | `gateway.auth.rateLimit.windowMs` | `60000` | Rate limit window (1 minute) |
 | `gateway.auth.rateLimit.lockoutMs` | `300000` | Lockout duration (5 minutes) |
 | `gateway.http.endpoints.chatCompletions.enabled` | `true` | OpenAI-compatible chat completions endpoint is enabled |
-| `gateway.controlUi.allowedOrigins` | `["*"]` | Permitted WebSocket origins |
-| `gateway.controlUi.dangerouslyDisableDeviceAuth` | `true` | Device auth disabled for headless deployment |
-| `gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback` | `true` | Host header fallback for reverse-proxy environments |
+| `gateway.controlUi.allowedOrigins` | `["https://agentbot.raveculture.xyz"]` | Permitted WebSocket origins. Populated from the `CONTROL_UI_ORIGIN` environment variable. |
+| `gateway.controlUi.dangerouslyDisableDeviceAuth` | `false` | Device auth is enabled on the production gateway. |
+| `gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback` | `false` | Host header fallback is disabled on the production gateway. |
 | `gateway.reload.mode` | `hybrid` | Configuration reload strategy |
 | `gateway.reload.debounceMs` | `300` | Debounce interval for configuration reloads in milliseconds |
 
