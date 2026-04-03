@@ -9,6 +9,8 @@ The usage tracking system records per-event token consumption and tool execution
 
 <Note>The usage tracker records events to a PostgreSQL database whenever an AI completion or tool call is made. The endpoints below are read-only query APIs for retrieving aggregated usage data.</Note>
 
+<Info>The live, user-facing endpoints on this page are `GET /api/dashboard/cost` and `GET /api/dashboard/stats`. The lower query endpoints are roadmap/spec documentation only and are not linked from the main navigation.</Info>
+
 ## Test usage logging (deprecated)
 
 <Warning>This endpoint was removed in the March 2026 security audit and is no longer available. Requests to this path return `404`. Use the [cost dashboard](#cost-dashboard) endpoint to verify that usage tracking is working.</Warning>
@@ -192,7 +194,7 @@ On failure, the endpoint returns a fallback response with zeroed-out values inst
 
 ---
 
-<Info>The remaining endpoints on this page are planned for a future release. They are not yet available. Usage events are recorded internally but these query APIs have not been deployed. This section documents the intended specification for reference.</Info>
+<Warning>The remaining endpoints below are not live on Agentbot. They are kept here as internal roadmap/spec documentation only.</Warning>
 
 All query endpoints below require bearer token authentication and are served by the backend API.
 
