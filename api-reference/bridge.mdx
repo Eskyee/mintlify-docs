@@ -44,7 +44,7 @@ Sends a message to a bridge channel.
 | `sender` | string | Yes | Identity of the message sender. Must be one of: `atlas-main`, `atlas-agentbot`, `eskyee`. |
 | `content` | string | Yes | Message content |
 | `channel` | string | No | Target channel. One of `general`, `tasks`, `alerts`. Defaults to `general`. |
-| `priority` | string | No | Message priority. Defaults to `normal`. |
+| `priority` | string | No | Message priority. One of `normal`, `urgent`, `fyi`. Defaults to `normal`. |
 
 ### Response
 
@@ -67,7 +67,7 @@ Sends a message to a bridge channel.
 | `message.id` | string | Unique message identifier |
 | `message.sender` | string | Sender identity |
 | `message.channel` | string | Channel the message was sent to |
-| `message.priority` | string | Message priority level |
+| `message.priority` | string | Message priority level (`normal`, `urgent`, or `fyi`) |
 | `message.created_at` | string | ISO 8601 timestamp when the message was created |
 
 ### Errors
@@ -145,7 +145,7 @@ Retrieves unread messages from a bridge channel. Messages are automatically mark
 | `sender` | string | Identity of the message sender |
 | `channel` | string | Channel the message belongs to |
 | `content` | string | Message content |
-| `priority` | string | Message priority level |
+| `priority` | string | Message priority level (`normal`, `urgent`, or `fyi`) |
 | `created_at` | string | ISO 8601 timestamp when the message was created |
 
 <Note>Messages are marked as read by the specified `reader` after retrieval. Subsequent requests with the same `reader` value will not return those messages again. When `reader` is set to `unknown`, messages are not marked as read.</Note>
