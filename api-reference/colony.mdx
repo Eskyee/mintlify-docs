@@ -9,6 +9,8 @@ Retrieve colony status, agent fitness rankings, and soul service diagnostics.
 
 The colony endpoint proxies requests to the soul service, which provides cognitive architecture data for agents including plan-driven reasoning, fitness scoring, and colony coordination.
 
+The endpoint automatically attempts multiple soul service hosts. If the primary host is unavailable, a fallback host is tried. When a fallback host is used, the response includes `degraded: true` along with `error` and `detail` fields. The `root.serviceUrl` field reflects whichever host actually served the request.
+
 ## Get colony status
 
 ```http
@@ -148,6 +150,9 @@ curl -X GET "https://agentbot.raveculture.xyz/api/colony/status?action=tree" \
 | `fittest` | object \| null | Agent with the highest fitness score, or `null` when the colony has no agents |
 | `cull_queue` | number | Number of agents with fitness below 40, eligible for culling |
 | `agents` | array | All agents in the colony including root, children, and peers |
+| `degraded` | boolean | Optional. `true` when the primary soul host was unavailable and a fallback host was used. Omitted when the primary host responds normally. |
+| `error` | string | Optional. Error message describing the failure. Present only when `degraded` is `true`. |
+| `detail` | string | Optional. Underlying error detail (e.g., `Connection refused`). Present only when `degraded` is `true`. |
 | `root` | object | Root node details including soul cognitive state and colony rank |
 
 **Agent fields:**
@@ -370,7 +375,7 @@ curl -X GET "https://agentbot.raveculture.xyz/api/colony/status?action=diagnosti
 
 ### Soul service unavailable
 
-When the soul service cannot be reached, the endpoint returns HTTP `200` with a degraded response. The `degraded` field is set to `true` and all colony fields use safe default values so clients can render a fallback UI without special error handling.
+When no healthy soul host can be reached (including the fallback), the endpoint returns HTTP `200` with a degraded response. The `degraded` field is set to `true` and all colony fields use safe default values so clients can render a fallback UI without special error handling. The `root.serviceUrl` is set to the fallback host URL.
 
 ```json
 {
@@ -414,7 +419,7 @@ When the soul service cannot be reached, the endpoint returns HTTP `200` with a 
 | `root.dashboardUrl` | string | Soul dashboard URL (replaces the former top-level `dashboard_url`) |
 | `root.serviceUrl` | string | Soul service URL (replaces the former top-level `soul_url`) |
 
-<Note>Prior to this change, a soul service failure returned HTTP `503` with top-level `soul_url` and `dashboard_url` fields. The endpoint now returns HTTP `200` with the full colony response shape (zeroed out) so that clients do not need to handle a separate error status code. The `soul_url` and `dashboard_url` fields have been moved into the `root` object as `serviceUrl` and `dashboardUrl` respectively.</Note>
+<Note>The endpoint tries each configured soul host in order and uses the first healthy one. A host is considered healthy when its `/soul/status` path returns a JSON object containing an `active` field within 4 seconds. If no host passes the health check, the degraded response is returned. Prior to this change, only a single soul host was attempted and a failure returned HTTP `503` with top-level `soul_url` and `dashboard_url` fields. The endpoint now returns HTTP `200` with the full colony response shape (zeroed out) so that clients do not need to handle a separate error status code.</Note>
 
 ### Unknown action
 
