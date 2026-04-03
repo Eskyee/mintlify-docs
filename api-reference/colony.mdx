@@ -370,15 +370,51 @@ curl -X GET "https://agentbot.raveculture.xyz/api/colony/status?action=diagnosti
 
 ### Soul service unavailable
 
-When the soul service cannot be reached, the endpoint returns HTTP `503`:
+When the soul service cannot be reached, the endpoint returns HTTP `200` with a degraded response. The `degraded` field is set to `true` and all colony fields use safe default values so clients can render a fallback UI without special error handling.
 
 ```json
 {
+  "colony_size": 0,
+  "avg_fitness": 0,
+  "fittest": null,
+  "cull_queue": 0,
+  "agents": [],
+  "degraded": true,
   "error": "Soul service unavailable",
   "detail": "Connection refused",
-  "soul_url": "https://borg-0-production.up.railway.app"
+  "root": {
+    "address": "0x0000000000000000000000000000000000000000",
+    "designation": null,
+    "dashboardUrl": "https://soul-dashboard.example.com",
+    "serviceUrl": "https://soul.example.com",
+    "fitness": null,
+    "wallet_balance": null,
+    "clone_available": false,
+    "clone_price": "0",
+    "soul": {
+      "active": false,
+      "dormant": false,
+      "total_cycles": 0,
+      "mode": "unavailable",
+      "active_plan": null,
+      "free_energy": null,
+      "brain": null,
+      "transformer": null
+    },
+    "colony": null
+  }
 }
 ```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `degraded` | boolean | `true` when the soul service is unreachable |
+| `error` | string | Error message describing the failure |
+| `detail` | string | Underlying error detail (for example, `Connection refused`) |
+| `root.dashboardUrl` | string | Soul dashboard URL (replaces the former top-level `dashboard_url`) |
+| `root.serviceUrl` | string | Soul service URL (replaces the former top-level `soul_url`) |
+
+<Note>Prior to this change, a soul service failure returned HTTP `503` with top-level `soul_url` and `dashboard_url` fields. The endpoint now returns HTTP `200` with the full colony response shape (zeroed out) so that clients do not need to handle a separate error status code. The `soul_url` and `dashboard_url` fields have been moved into the `root` object as `serviceUrl` and `dashboardUrl` respectively.</Note>
 
 ### Unknown action
 
@@ -392,7 +428,6 @@ When an unrecognized `action` parameter is provided, the endpoint returns HTTP `
 
 | Code | Description |
 |------|-------------|
-| 200 | Colony data retrieved |
+| 200 | Colony data retrieved (also returned when the soul service is unavailable, with `degraded: true`) |
 | 400 | Unknown action parameter |
 | 401 | Unauthorized — no valid session |
-| 503 | Soul service unavailable |
