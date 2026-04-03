@@ -3,6 +3,12 @@ title: "BTCPay Agentbot"
 description: "Bitcoin-native agent payments powered by BTCPay Server and NBXplorer"
 ---
 
+# BTCPay Agentbot
+
+<Warning>This integration is in progress. The BTCPay Agentbot stack is documented here as an active implementation track, but some user-facing wiring in the main Agentbot product is still being completed.</Warning>
+
+<img src="https://indigo-decent-condor-546.mypinata.cloud/ipfs/bafybeibstpvk6pqo23ks3vork3yzr6ns5mdeltkv5snrkpgxn3j6pkgoau" alt="BTCPay Agentbot" height="360" style={{borderRadius: '12px', width: '100%', objectFit: 'cover', marginBottom: '24px'}} />
+
 ## Overview
 
 BTCPay Agentbot brings **Bitcoin-native payments** to the Agentbot platform. Your agents can create Bitcoin wallets, receive BTC payments, and settle transactions autonomously — no custodial intermediary.
@@ -41,6 +47,13 @@ cd btcpayagentbot-docker
 ```bash
 docker compose -f docker-compose.headless.yml up -d
 ```
+
+### 2.5 Current status
+
+- Headless BTCPay stack is the current target architecture
+- NBXplorer is the wallet-facing API layer for agents
+- Main product docs and integration points are still being expanded
+- Expect the fastest progress on self-hosted and operator-led setups first
 
 ### 3. Verify
 
