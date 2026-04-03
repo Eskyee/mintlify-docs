@@ -220,7 +220,7 @@ All web frontend responses include the following security headers:
 
 | Header | Value | Purpose |
 |--------|-------|---------|
-| `Content-Security-Policy` | Restrictive policy with `default-src 'self'` and `script-src 'self'` (no `unsafe-eval`) | Limits sources for scripts, styles, images, and connections. Scripts are restricted to same-origin only — `unsafe-eval` is not permitted. |
+| `Content-Security-Policy` | Restrictive policy with `default-src 'self'`, `base-uri 'self'`, `object-src 'none'`, `form-action 'self'`, and `upgrade-insecure-requests` | Limits sources for scripts, styles, images, and connections. Restricts `<base>` tags and form targets to same-origin, blocks plugin content, and forces HTTPS for subresource requests. |
 | `X-Frame-Options` | `DENY` | Prevents clickjacking by blocking iframe embedding |
 | `X-Content-Type-Options` | `nosniff` | Prevents MIME type sniffing |
 | `Referrer-Policy` | `strict-origin-when-cross-origin` | Limits referrer information sent to external sites |
