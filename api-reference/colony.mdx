@@ -82,6 +82,8 @@ curl -X GET "https://agentbot.raveculture.xyz/api/colony/status?action=tree" \
   "root": {
     "address": "0x1234...5678",
     "designation": "Atlas Prime",
+    "dashboardUrl": "https://soul-dashboard.example.com",
+    "serviceUrl": "https://soul.example.com",
     "fitness": {
       "total": 0.85,
       "prediction": 0.78,
@@ -161,15 +163,15 @@ curl -X GET "https://agentbot.raveculture.xyz/api/colony/status?action=tree" \
 | `specialization` | string | Agent specialization niche |
 | `children` | number | Number of child agents |
 | `parent` | string \| null | Parent agent wallet address, or `null` for root agents and when identity data is unavailable |
-| `walletAddress` | string \| null | Agent wallet address, or `null` when identity data is unavailable |
-| `status` | string | Agent status (`active` or `stale`) |
+| `walletAddress` | string | Agent wallet address. Falls back to the zero address (`0x0000000000000000000000000000000000000000`) when identity data is unavailable. |
+| `status` | string | Agent status. One of `active`, `stale`, or `culling`. |
 | `createdAt` | string | ISO 8601 creation timestamp. Falls back to the current time when identity data is unavailable. |
 | `url` | string | Soul service URL for this agent |
 | `endpoints` | array | Available service endpoints with slug, description, and price |
 | `uptime` | number | Uptime in seconds |
 | `version` | string | Soul service version |
 
-<Note>When the root node has not yet registered its identity, fields such as `id`, `parent`, `walletAddress`, and `createdAt` use safe fallback values. The `id` defaults to `"borg-root"`, `parent` and `walletAddress` default to `null`, and `createdAt` defaults to the current timestamp. The `root.address` falls back to the zero address (`0x0000000000000000000000000000000000000000`) and `root.wallet_balance` returns `{ "formatted": "0.00", "token": "USDC.e" }`. When the colony contains no agents, `fittest` returns `null` and `avg_fitness` returns `0`.</Note>
+<Note>When the root node has not yet registered its identity, fields such as `id`, `parent`, `walletAddress`, and `createdAt` use safe fallback values. The `id` defaults to `"borg-root"`, `parent` defaults to `null`, `walletAddress` defaults to the zero address (`0x0000000000000000000000000000000000000000`), and `createdAt` defaults to the current timestamp. The `root.address` falls back to the zero address and `root.wallet_balance` returns `{ "formatted": "0.00", "token": "USDC.e" }`. When the colony contains no agents, `fittest` returns `null` and `avg_fitness` returns `0`. Agent status can be `active`, `stale`, or `culling` — the `culling` status indicates an agent in a failed or error state that may be removed from the colony.</Note>
 
 **Root fields (`root`):**
 
@@ -177,6 +179,8 @@ curl -X GET "https://agentbot.raveculture.xyz/api/colony/status?action=tree" \
 |-------|------|-------------|
 | `address` | string | Root node wallet address. Falls back to the zero address when identity data is unavailable. |
 | `designation` | string \| null | Root node display name |
+| `dashboardUrl` | string | URL for the soul dashboard UI |
+| `serviceUrl` | string | URL of the soul service backing the root node |
 | `fitness` | object \| null | Multi-dimensional fitness scores with `total`, `prediction`, and `execution` |
 | `wallet_balance` | object \| null | Wallet balance with `formatted` amount and `token` symbol. Returns `{ "formatted": "0.00", "token": "USDC.e" }` when identity data is unavailable. |
 | `clone_available` | boolean | Whether this node can create clones |
@@ -376,7 +380,8 @@ When the soul service cannot be reached, the endpoint returns HTTP `503`:
 {
   "error": "Soul service unavailable",
   "detail": "Connection refused",
-  "soul_url": "https://borg-0-production.up.railway.app"
+  "soul_url": "https://borg-0-production.up.railway.app",
+  "dashboard_url": "https://soul-dashboard.example.com"
 }
 ```
 

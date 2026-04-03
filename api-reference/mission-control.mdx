@@ -7,7 +7,7 @@ description: "Monitor your agent fleet with real-time graphs, execution traces, 
 
 Mission control provides a real-time view of your agent fleet. Use these endpoints to visualize agent relationships, trace execution activity, attribute costs per agent, and track talent bookings.
 
-<Note>All four mission control endpoints require bearer token (API key) authentication and accept a `userId` query parameter. The backend returns `401` for unauthenticated requests. The web proxy uses session authentication and resolves the user ID from the session before forwarding to these backend endpoints — the web proxy layer returns safe default responses (empty data with a `200` status) for unauthenticated requests instead of forwarding the `401`.</Note>
+<Note>All four mission control endpoints require session authentication. The user ID is resolved from the session automatically. Unauthenticated requests receive safe default responses (empty data with a `200` status) for the graph, traces, costs, and bookings endpoints.</Note>
 
 ## Fleet graph
 
@@ -19,13 +19,7 @@ Returns a constellation graph of your agent fleet as a set of nodes and edges. E
 
 ### Authentication
 
-Requires bearer token authentication.
-
-### Query parameters
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `userId` | number | Yes | The user ID to fetch the fleet graph for |
+Requires session authentication.
 
 ### Response
 
@@ -73,7 +67,14 @@ Requires bearer token authentication.
   ],
   "timestamp": "2026-03-22T12:00:00.000Z",
   "source": "soul",
-  "nodeCount": 1
+  "nodeCount": 1,
+  "stats": {
+    "totalAgents": 2,
+    "activeAgents": 2,
+    "idleAgents": 0,
+    "offlineAgents": 0
+  },
+  "dashboardUrl": "https://soul-dashboard.example.com"
 }
 ```
 
@@ -95,7 +96,14 @@ When no souls are reachable, the response uses the fallback shape with minimal n
   ],
   "edges": [],
   "timestamp": "2026-03-22T12:00:00.000Z",
-  "source": "fallback"
+  "source": "fallback",
+  "stats": {
+    "totalAgents": 0,
+    "activeAgents": 0,
+    "idleAgents": 0,
+    "offlineAgents": 1
+  },
+  "dashboardUrl": "https://soul-dashboard.example.com"
 }
 ```
 
@@ -117,7 +125,14 @@ When the request is unauthenticated (no valid session), the web proxy returns a 
   ],
   "edges": [],
   "timestamp": "2026-03-22T12:00:00.000Z",
-  "source": "unauthenticated"
+  "source": "unauthenticated",
+  "stats": {
+    "totalAgents": 0,
+    "activeAgents": 0,
+    "idleAgents": 0,
+    "offlineAgents": 1
+  },
+  "dashboardUrl": "https://soul-dashboard.example.com"
 }
 ```
 
@@ -162,6 +177,12 @@ When the request is unauthenticated (no valid session), the web proxy returns a 
 | `timestamp` | string | ISO 8601 timestamp of the response |
 | `source` | string | Data source. `"soul"` for live data, `"fallback"` when no souls are reachable, `"unauthenticated"` when no valid session is present |
 | `nodeCount` | number | Number of live soul nodes fetched. Only present when `source` is `"soul"` |
+| `stats` | object | Aggregate fleet statistics |
+| `stats.totalAgents` | number | Total number of agents in the graph |
+| `stats.activeAgents` | number | Number of agents with `active` status |
+| `stats.idleAgents` | number | Number of agents with `idle` status |
+| `stats.offlineAgents` | number | Number of agents with `offline` status |
+| `dashboardUrl` | string | URL for the soul dashboard UI |
 
 ### Errors
 
@@ -182,13 +203,7 @@ Returns up to 20 of the most recent execution traces for your agent fleet, sorte
 
 ### Authentication
 
-Requires bearer token authentication.
-
-### Query parameters
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `userId` | number | Yes | The user ID to fetch execution traces for |
+Requires session authentication.
 
 ### Response
 
@@ -269,19 +284,67 @@ The web proxy returns a `200` response with an empty array `[]` for unauthentica
 GET /api/mission-control/fleet/costs
 ```
 
-Returns a cost breakdown for your agent fleet. Requires bearer token authentication. The web proxy uses session authentication and resolves the user ID from the session before forwarding to this backend endpoint. Returns a default empty response for unauthenticated requests.
+Returns a cost breakdown for your agent fleet based on your subscription plan. Costs are split evenly across active agents. Requires session authentication. Returns a default empty response for unauthenticated requests.
 
 ### Authentication
 
-Requires bearer token authentication.
-
-### Query parameters
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `userId` | number | Yes | The user ID to fetch cost data for |
+Requires session authentication.
 
 ### Response
+
+```json
+{
+  "costs": [
+    {
+      "agentId": "agent_abc123",
+      "agentName": "Atlas",
+      "status": "active",
+      "tier": "pro",
+      "monthlyCost": 14.5,
+      "createdAt": "2026-03-01T00:00:00.000Z"
+    }
+  ],
+  "totalSpend": 69,
+  "managedAiCost": 69,
+  "coordinationRevenue": 0,
+  "plan": "collective",
+  "agentCount": 3,
+  "activeAgents": 2,
+  "monthsActive": 1
+}
+```
+
+### Response fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `costs` | array | Per-agent cost breakdown |
+| `costs[].agentId` | string | Agent identifier |
+| `costs[].agentName` | string | Agent display name |
+| `costs[].status` | string | Agent status (for example `active`, `running`, `pending`) |
+| `costs[].tier` | string | Agent tier |
+| `costs[].monthlyCost` | number | Monthly cost attributed to this agent in USD. Plan cost is split evenly across active agents. |
+| `costs[].createdAt` | string | ISO 8601 timestamp when the agent was created |
+| `totalSpend` | number | Total spend in USD since subscription start (monthly plan cost multiplied by months active) |
+| `managedAiCost` | number | Monthly plan cost in USD |
+| `coordinationRevenue` | number | Revenue from agent-to-agent coordination. Currently always `0`. |
+| `plan` | string | User's current subscription plan (for example `solo`, `collective`, `label`, `network`) |
+| `agentCount` | number | Total number of agents in the fleet |
+| `activeAgents` | number | Number of agents in `active` or `running` status |
+| `monthsActive` | number | Number of months since subscription start (minimum 1) |
+
+### Plan costs
+
+| Plan | Monthly cost (USD) |
+|------|--------------------|
+| `solo` | 29 |
+| `collective` | 69 |
+| `label` | 149 |
+| `network` | 499 |
+
+### Unauthenticated response
+
+When no valid session is present, the endpoint returns a `200` with default empty data:
 
 ```json
 {
@@ -292,23 +355,11 @@ Requires bearer token authentication.
 }
 ```
 
-### Response fields
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `costs` | array | List of cost line items. Currently returns an empty array while real data wiring is in progress |
-| `totalSpend` | number | Total spend across the fleet |
-| `managedAiCost` | number | AI model usage cost |
-| `coordinationRevenue` | number | Revenue from agent coordination |
-
 ### Errors
 
-| Code | Source | Description |
-|------|--------|-------------|
-| 401 | Backend | Unauthorized — missing or invalid bearer token |
-| 500 | Backend | Internal server error |
-
-The web proxy returns a `200` response with `{ costs: [] }` for unauthenticated requests instead of forwarding the backend `401`.
+| Code | Description |
+|------|-------------|
+| 200 | Cost data returned (check response for empty defaults when unauthenticated) |
 
 ## Talent bookings
 
@@ -316,23 +367,25 @@ The web proxy returns a `200` response with `{ costs: [] }` for unauthenticated 
 GET /api/mission-control/fleet/bookings
 ```
 
-Returns active booking requests for your agent fleet. Requires bearer token authentication. The web proxy uses session authentication and resolves the user ID from the session before forwarding to this backend endpoint. Returns a default empty response for unauthenticated requests.
+Returns pending agent booking requests for your fleet. A booking represents an agent that has been provisioned but whose container is not yet ready. Requires session authentication. Returns a default empty response for unauthenticated requests.
 
 ### Authentication
 
-Requires bearer token authentication.
-
-### Query parameters
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `userId` | number | Yes | The user ID to fetch booking data for |
+Requires session authentication.
 
 ### Response
 
 ```json
 {
-  "bookings": []
+  "bookings": [
+    {
+      "id": "agent_abc123",
+      "agentName": "Atlas",
+      "status": "pending",
+      "tier": "pro",
+      "createdAt": "2026-03-22T12:00:00.000Z"
+    }
+  ]
 }
 ```
 
@@ -340,13 +393,25 @@ Requires bearer token authentication.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `bookings` | array | List of booking objects. Currently returns an empty array while real data wiring is in progress |
+| `bookings` | array | List of pending agent bookings (up to 10, sorted by creation date descending) |
+| `bookings[].id` | string | Agent identifier |
+| `bookings[].agentName` | string | Agent display name |
+| `bookings[].status` | string | Agent status. Always `pending` for booking entries. |
+| `bookings[].tier` | string | Agent tier |
+| `bookings[].createdAt` | string | ISO 8601 timestamp when the agent was created |
+
+### Unauthenticated response
+
+When no valid session is present, the endpoint returns a `200` with an empty bookings array:
+
+```json
+{
+  "bookings": []
+}
+```
 
 ### Errors
 
-| Code | Source | Description |
-|------|--------|-------------|
-| 401 | Backend | Unauthorized — missing or invalid bearer token |
-| 500 | Backend | Internal server error |
-
-The web proxy returns a `200` response with `{ bookings: [] }` for unauthenticated requests instead of forwarding the backend `401`.
+| Code | Description |
+|------|-------------|
+| 200 | Bookings data returned (check response for empty defaults when unauthenticated) |
