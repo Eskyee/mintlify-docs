@@ -884,7 +884,7 @@ Triggers an image update on the backend. Before replacing the service, the endpo
 | `image` | string | New service image. The platform default is `ghcr.io/openclaw/openclaw:2026.4.2`. |
 | `previousImage` | string | Previous service image before the update |
 | `backupPath` | string \| null | Path to the pre-update backup archive |
-| `openclawVersion` | string | Current OpenClaw runtime version |
+| `openclawVersion` | string | OpenClaw runtime version derived from the target image tag. For example, if the image is `ghcr.io/openclaw/openclaw:2026.4.2`, the version is `2026.4.2`. |
 
 <Note>When the new service fails to start, the endpoint reverts to `previousImage`. The caller still receives a `500` error, but the agent is restored to its prior working state. The pre-update backup remains available at `backupPath` for manual recovery if needed.</Note>
 
@@ -966,6 +966,7 @@ The web proxy instance endpoints (`/api/instance/:userId/{action}`) return a con
 | `restart` | `restarting` |
 | `repair` | `repaired` |
 | `reset-memory` | `reset` |
+| `update` | `updating` |
 
 ### Lifecycle error responses
 
@@ -988,6 +989,25 @@ Web proxy lifecycle endpoints return a different error shape with the specific e
 
 <Note>The web proxy error shape uses `{ success: false, error: "..." }` with the specific error message. The `update` endpoint is an exception — it returns `{ success: false, status: "error" }` on failure instead.</Note>
 
+The web proxy `update` endpoint (`POST /api/instance/:userId/update`) updates the agent service to the platform's default image and triggers a redeployment directly via the Railway API. It resolves the actual Railway service before acting and no longer proxies through the backend.
+
+**Web proxy update response:**
+
+```json
+{
+  "success": true,
+  "status": "updating",
+  "image": "ghcr.io/openclaw/openclaw:2026.4.2",
+  "openclawVersion": "2026.4.2"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `status` | string | `updating` — the image update and redeployment have been initiated |
+| `image` | string | The platform default image that the service was updated to |
+| `openclawVersion` | string | OpenClaw version derived from the default image tag |
+
 | Code | Source | Description |
 |------|--------|-------------|
 | 401 | Both | Unauthorized — missing or invalid authentication |
@@ -995,10 +1015,15 @@ Web proxy lifecycle endpoints return a different error shape with the specific e
 | 404 | Both | Agent or instance not found |
 | 500 | Both | Internal server error (for example, Railway API unavailable or service operation failed) |
 | 502 | Both | Backend or upstream service unavailable (for example, Railway API returned an error) |
+| 503 | Web proxy | Managed runtime controls are disabled. Returned when `ENABLE_OPENCLAW_CONTROLS` or `NEXT_PUBLIC_ENABLE_OPENCLAW_CONTROLS` is set to `false`. |
 
 ## Web proxy instance endpoints
 
 The following endpoints are available at `/api/instance/:userId/{action}` and require session authentication. The `userId` parameter is the agent's instance identifier (a hex string), not the user's database ID. Ownership is verified by checking that the authenticated user's `openclawInstanceId` matches the `userId` parameter.
+
+Lifecycle actions (`start`, `stop`, `restart`, `repair`, `reset-memory`, `update`) resolve the actual Railway service before acting. The service is resolved using the user's `openclawInstanceId` and `openclawUrl` fields from the database. This ensures that control actions target the correct managed service even when the stored instance identifier differs from the Railway service ID.
+
+When managed runtime controls are disabled (via the `ENABLE_OPENCLAW_CONTROLS` or `NEXT_PUBLIC_ENABLE_OPENCLAW_CONTROLS` environment variables set to `false`), lifecycle write operations (`start`, `stop`, `restart`, `repair`, `reset-memory`, `update`) return `503` with the message: `Managed runtime controls are temporarily disabled until the Railway control path is fully verified.` Read-only endpoints (`GET /api/instance/:userId` and `GET /api/instance/:userId/stats`) are not affected by this setting.
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
@@ -1044,7 +1069,7 @@ The endpoint proxies to the backend. When the backend is unavailable or returns 
 | `subdomain` | string | Agent subdomain from the backend, or constructed from the `userId` |
 | `url` | string | Agent URL from the backend, or constructed from the `userId` |
 | `plan` | string | Subscription plan tier from the backend, or `free` as fallback |
-| `openclawVersion` | string | OpenClaw runtime version from the backend, or `2026.4.2` as fallback |
+| `openclawVersion` | string | OpenClaw runtime version from the backend, or the version derived from the configured image tag as fallback |
 
 ### Errors
 
@@ -1092,7 +1117,7 @@ When the gateway healthcheck succeeds:
 | `uptime` | string | `"active"` when the gateway is healthy |
 | `messages` | null | Reserved for future use. Always `null`. |
 | `errors` | null | Reserved for future use. Always `null`. |
-| `openclawVersion` | string | Hardcoded OpenClaw runtime version (`2026.4.2`). Only present when the gateway is healthy. |
+| `openclawVersion` | string | OpenClaw runtime version derived from the configured image tag. Only present when the gateway is healthy. |
 
 <Note>The `cpu` and `memory` fields return placeholder values because the gateway does not expose per-instance resource metrics. These fields are retained for backward compatibility.</Note>
 
@@ -1153,6 +1178,25 @@ Returns the gateway token for the agent. If no token exists, a new cryptographic
 | 403 | Forbidden — you do not own this agent |
 | 404 | Agent not found |
 | 500 | Failed to get token |
+
+### Web proxy token endpoint
+
+```http
+GET /api/instance/:userId/token
+```
+
+Returns the shared gateway token. The web proxy reads the token from a shared token file on disk, falling back to the `OPENCLAW_GATEWAY_TOKEN` environment variable. It no longer proxies the request to the backend.
+
+```json
+{
+  "token": "a1b2c3d4e5f6..."
+}
+```
+
+| Code | Description |
+|------|-------------|
+| 403 | Forbidden — authenticated user does not own this instance |
+| 503 | No gateway token configured — no shared token file or `OPENCLAW_GATEWAY_TOKEN` environment variable is set |
 
 ## Agent verification
 
