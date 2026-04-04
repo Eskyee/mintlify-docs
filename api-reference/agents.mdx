@@ -320,12 +320,12 @@ The web proxy exposes the same `DELETE /api/agents/:id` path but uses session au
 
 If neither check matches, the endpoint returns `404`.
 
-When ownership is confirmed, the endpoint makes a best-effort call to the backend to stop and remove the container, then performs database cleanup:
+When ownership is confirmed, the endpoint performs the following cleanup:
 
-- If an `Agent` row exists, it is deleted (cascading to related data such as memories, files, and skills).
-- The user's `openclawInstanceId` and `openclawUrl` fields are always cleared, regardless of whether an `Agent` row existed. This allows the user to re-provision a new agent.
+1. **Railway service deletion** — the endpoint resolves the agent's Railway service using the agent ID and the user's persisted `openclawUrl`, then deletes the Railway service. This permanently stops and removes the container. If the Railway service does not exist or the deletion fails, the error is non-fatal and the endpoint proceeds with database cleanup.
+2. **Database cleanup** — if an `Agent` row exists, it is deleted (cascading to related data such as memories, files, and skills). The user's `openclawInstanceId` and `openclawUrl` fields are always cleared, regardless of whether an `Agent` row existed. This allows the user to re-provision a new agent.
 
-If the backend is unreachable when the delete is initiated, the database cleanup still proceeds. The container may need to be cleaned up separately.
+If the Railway service cannot be reached when the delete is initiated, the database cleanup still proceeds. The Railway service may need to be cleaned up separately.
 
 #### Response
 
@@ -1769,9 +1769,15 @@ When the backend path succeeds and `MUX_TOKEN_ID` and `MUX_TOKEN_SECRET` are con
 
 ### Response
 
-The response shape depends on which provisioning path succeeds.
+The response shape depends on which provisioning path succeeds. The web proxy attempts three paths in order:
 
-#### Backend path response
+1. **Path 1 — Backend Express service** — sends a `POST /api/provision` request to the backend. This path handles container creation, channel configuration, and streaming setup.
+2. **Path 1.5 — Backend Railway proxy** — sends a `POST /api/railway/provision` request to the backend. This path creates a Railway service directly through the backend, bypassing Cloudflare WAF restrictions that block requests originating from Vercel serverless functions. See [Railway provisioning proxy](#railway-provisioning-proxy-internal) for the backend endpoint specification.
+3. **Path 2 — Railway direct** — calls the Railway GraphQL API directly from the web proxy. This path is a last resort because requests from Vercel infrastructure may be blocked by Cloudflare.
+
+The proxy tries each path in order and returns the response from the first one that succeeds. If all paths fail, a `502` error is returned.
+
+#### Backend path response (path 1)
 
 When the backend Express service handles the request, the proxy returns a filtered subset:
 
@@ -1788,9 +1794,31 @@ When the backend Express service handles the request, the proxy returns a filter
 
 <Note>The backend path returns `success`, `userId`, `subdomain`, `url`, `streamKey`, and `liveStreamId`. The full response shape from the backend provisioning service is shown below.</Note>
 
-#### Railway direct path response
+#### Backend Railway proxy response (path 1.5)
 
-When the Railway fallback handles the request, the response has a different shape:
+When the backend Railway proxy handles the request, the response has the same shape as the Railway direct path:
+
+```json
+{
+  "success": true,
+  "userId": "a1b2c3d4e5",
+  "url": "https://agentbot-agent-a1b2c3d4e5-production.up.railway.app",
+  "status": "deploying"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `success` | boolean | Whether the provisioning request was accepted |
+| `userId` | string | The generated agent ID (forwarded from the backend proxy response) |
+| `url` | string | The Railway domain URL for the agent |
+| `status` | string | `deploying` — the Railway service has been created and deployment is in progress |
+
+<Note>This path produces the same response shape as the Railway direct path. The difference is that the Railway GraphQL API calls are made from the backend (which runs on non-Vercel infrastructure) instead of from the web proxy. This avoids Cloudflare WAF blocks that affect Vercel-originating requests to the Railway API.</Note>
+
+#### Railway direct path response (path 2)
+
+When the Railway direct fallback handles the request, the response has a different shape:
 
 ```json
 {
@@ -1931,6 +1959,77 @@ The `aiProviderConfig` object returned in the provision response uses different 
 Each provider includes a fallback model in the service config that is used automatically when the primary model is unavailable or returns an error.
 
 <Note>`minimax` is available as a fallback in the provider configuration map but is not currently accepted as a value for the `aiProvider` request parameter. Passing `minimax` as `aiProvider` returns a `400` validation error. This provider may be enabled in a future release.</Note>
+
+## Railway provisioning proxy (internal)
+
+```http
+POST /api/railway/provision
+```
+
+An internal backend endpoint that provisions agent services on Railway. This endpoint exists because requests from Vercel serverless functions are blocked by Cloudflare WAF on the Railway API (`backboard.railway.app`). The backend runs on Railway (or other non-Vercel infrastructure), so its outbound requests to the Railway API are not blocked.
+
+This endpoint is called by the web proxy as part of the [provisioning flow](#provision-with-channel-tokens) (path 1.5) and is not intended for direct client use.
+
+<Note>This is an internal endpoint authenticated with a bearer token (`INTERNAL_API_KEY`). It is not accessible to end users.</Note>
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `agentId` | string | Yes | Agent identifier. Must be a 16-character lowercase hexadecimal string (matching the pattern `^[0-9a-f]{16}$`). |
+| `plan` | string | No | Plan tier. Options: `underground`, `solo`, `collective`, `label`, `network`. Defaults to `solo` when omitted. |
+
+### Provisioning steps
+
+When the endpoint receives a valid request, it performs the following operations via the Railway GraphQL API:
+
+1. **Create service** — creates a new Railway service named `agentbot-agent-{agentId}` using the configured container image.
+2. **Configure resources** — sets the start command, memory limit, and CPU limit based on the plan tier.
+3. **Inject environment variables** — writes the agent's environment variables (gateway token, API URLs, database URL, and encryption keys) to the Railway service.
+4. **Generate domain** — creates a public Railway domain for the service. If domain generation fails, the URL falls back to `https://agentbot-agent-{agentId}.up.railway.app`.
+5. **Trigger deploy** — initiates the service deployment.
+
+### Plan resource limits
+
+| Plan | Memory | CPU |
+|------|--------|-----|
+| `underground` | 2 GB | 1 vCPU |
+| `solo` | 2 GB | 1 vCPU |
+| `collective` | 4 GB | 2 vCPU |
+| `label` | 8 GB | 4 vCPU |
+| `network` | 16 GB | 4 vCPU |
+
+Plans not in this list default to `solo` limits.
+
+### Response
+
+```json
+{
+  "success": true,
+  "agentId": "a1b2c3d4e5f67890",
+  "url": "https://agentbot-agent-a1b2c3d4e5f67890-production.up.railway.app",
+  "serviceId": "srv_abc123",
+  "status": "deploying"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `success` | boolean | Whether the provisioning succeeded |
+| `agentId` | string | The agent identifier |
+| `url` | string | The public URL for the agent service |
+| `serviceId` | string | The Railway service ID |
+| `status` | string | Always `deploying` — the service has been created and deployment triggered, but may not be ready to receive traffic |
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | `agentId required` — the `agentId` field is missing or not a string |
+| 400 | `Invalid agentId format` — the `agentId` does not match the expected 16-character hex pattern |
+| 401 | Unauthorized — missing or invalid bearer token |
+| 502 | Railway provision failed. The error message from the Railway API is included in the response. |
+| 503 | `Railway not configured on this backend` — the `RAILWAY_API_KEY` environment variable is not set |
 
 ## Provisioning template defaults
 
