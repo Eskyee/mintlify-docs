@@ -226,7 +226,7 @@ When a restart or factory reset fails:
 | 401 | Unauthorized — missing or invalid session |
 | 404 | No agent deployed for the authenticated user |
 | 500 | Internal error during the restart or factory reset |
-| 503 | Managed runtime controls are disabled |
+| 503 | Managed runtime controls are disabled, or the required Railway configuration (environment, project, or service) could not be resolved. When Railway configuration is the cause, the response body contains a descriptive error message. |
 
 <Warning>Both `restart` and `factory-reset` cause a brief period of downtime while the container reinitializes. The `openclaw doctor --fix` process runs automatically during startup and may take additional time depending on the number of pending fixes or migrations.</Warning>
 
