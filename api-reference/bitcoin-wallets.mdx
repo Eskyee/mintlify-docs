@@ -7,6 +7,8 @@ description: "Register watch-only Bitcoin wallets for your agents and query addr
 
 The Bitcoin wallets API lets you register watch-only Bitcoin wallets for your agents, generate receive addresses, check balances, and view transaction history. Wallets are backed by NBXplorer and derivation schemes are encrypted at rest.
 
+<Info>The Bitcoin wallet backend operates on **mainnet**. All addresses, balances, and transactions returned by these endpoints are for the Bitcoin mainnet network.</Info>
+
 <Note>All Bitcoin wallet endpoints require an authenticated session. The frontend proxies requests to the backend with a 10-second timeout. If the Bitcoin backend (NBXplorer) is unreachable, affected endpoints return `502`.</Note>
 
 ## Authentication
