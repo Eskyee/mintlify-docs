@@ -278,6 +278,8 @@ curl -X POST https://agentbot.sh/api/ai/chat \
 | `/api/ai/models/select` | POST | Smart model selection for a task type (backend only) |
 | `/api/ai/chat` | POST | Universal chat completion (backend only, requires subscription plan) |
 | `/api/ai/estimate-cost` | POST | Estimate token cost (backend only) |
+| `/api/mcp/:skillId` | POST | Activate a skill-embedded MCP server |
+| `/api/mcp/:skillId` | DELETE | Deactivate a skill-embedded MCP server |
 | `/api/render-mcp/health` | GET | Render MCP gateway health check (backend only) |
 | `/api/render-mcp/info` | GET | Render MCP server metadata (backend only) |
 | `/api/render-mcp/setup` | GET | Render MCP setup instructions (backend only) |
