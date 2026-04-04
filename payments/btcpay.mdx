@@ -29,7 +29,7 @@ Agent Wallets (NBXplorer)
 
 | Component | Image | Port | Purpose |
 |-----------|-------|------|---------|
-| `agentbot_bitcoind` | `btcpayserver/bitcoin:29.1` | 43782 | Bitcoin node (testnet/mainnet) |
+| `agentbot_bitcoind` | `btcpayserver/bitcoin:29.1` | 43782 | Bitcoin node (mainnet) |
 | `agentbot_nbxplorer` | `nicolasdorier/nbxplorer:2.6.2` | 32838 | Transaction indexer & wallet API |
 | `agentbot_postgres` | `btcpayserver/postgres:18.1-1` | 5432 | Database for NBXplorer |
 
@@ -75,7 +75,7 @@ curl -s --user btcrpc:btcpayserver4ever \
 The headless stack uses these environment variables in `.env`:
 
 ```bash
-NBITCOIN_NETWORK=testnet      # testnet or mainnet
+NBITCOIN_NETWORK=mainnet      # mainnet (default) or testnet
 BTCPAYGEN_CRYPTO1=btc         # Bitcoin only
 BTCPAYGEN_REVERSEPROXY=none   # No UI proxy
 ```
@@ -120,7 +120,7 @@ The underlying NBXplorer REST API is also available directly at `http://localhos
 
 - **Non-custodial** — You control the keys
 - **Pruned nodes** — Minimal storage footprint
-- **Testnet-first** — Develop safely before mainnet
+- **Mainnet by default** — Production environment runs on Bitcoin mainnet; switch to testnet for development
 - **Hash verification** — UTXO snapshots verified against trusted hashes
 - **Isolated network** — Headless stack has no public-facing UI
 
