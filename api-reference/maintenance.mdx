@@ -232,6 +232,69 @@ When a restart or factory reset fails:
 
 <Note>Factory reset pins the agent to the platform's configured default image. After a factory reset, you can update to a newer version later through the normal update flow.</Note>
 
+## Ensure OpenClaw compatibility
+
+```http
+POST /api/openclaw/ensure-compatibility
+```
+
+Requires session authentication. Checks and migrates the authenticated user's agent setup for compatibility with OpenClaw 2026.4.2. This endpoint applies any necessary fixes automatically, including plugin config migration, agent pairing scope corrections, and token generation.
+
+### Response
+
+```json
+{
+  "compatible": true,
+  "fixes": [
+    "Migrated x_search plugin config",
+    "Fixed agent pairing scope"
+  ],
+  "errors": [],
+  "message": "Applied 2 compatibility fixes"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `compatible` | boolean | `true` when the user's setup is compatible with OpenClaw 2026.4.2 after applying any fixes |
+| `fixes` | string[] | List of compatibility fixes that were applied. Empty when no fixes were needed. |
+| `errors` | string[] | List of errors encountered during the compatibility check. Empty on success. |
+| `message` | string | Summary message describing the result |
+
+### Response when no fixes are needed
+
+```json
+{
+  "compatible": true,
+  "fixes": [],
+  "errors": [],
+  "message": "No fixes needed"
+}
+```
+
+### Error response
+
+When the compatibility check itself fails:
+
+```json
+{
+  "compatible": false,
+  "fixes": [],
+  "errors": ["Description of the error"],
+  "message": "Failed to ensure compatibility"
+}
+```
+
+| Code | Description |
+|------|-------------|
+| 200 | Compatibility check completed (inspect `compatible` and `fixes` for details) |
+| 401 | Unauthorized — missing or invalid session |
+| 500 | Internal error during the compatibility check |
+
+<Note>This endpoint is idempotent. Calling it multiple times applies only the fixes that have not already been applied. After all fixes are applied, subsequent calls return an empty `fixes` array.</Note>
+
+---
+
 ## OpenClaw runtime version
 
 ```http
@@ -287,6 +350,77 @@ When the backend is unreachable or returns an error, the endpoint returns a fall
 | Code | Description |
 |------|-------------|
 | 200 | Version returned (check `openclawVersion` for actual value — may be a fallback) |
+
+## Heal gateway token
+
+```http
+POST /api/support/heal-token
+```
+
+Requires session authentication. Auto-heals (regenerates) the gateway token for the authenticated user's OpenClaw agent. When the user has no existing token, the endpoint generates a new one automatically instead of only checking for an existing token.
+
+The endpoint also checks gateway health and sends support alerts when token generation fails or the gateway is degraded.
+
+### Response
+
+```json
+{
+  "healed": true,
+  "token": "a1b2c3...64-char-hex",
+  "isNew": true,
+  "health": {
+    "name": "OpenClaw Gateway",
+    "status": "ok",
+    "detail": "ok"
+  },
+  "message": "New gateway token generated successfully"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `healed` | boolean | `true` when the token was successfully validated or regenerated |
+| `token` | string | The user's gateway token (64-character hex string) |
+| `isNew` | boolean | `true` when a new token was generated, `false` when an existing token was validated |
+| `health` | object | Gateway health check result |
+| `health.name` | string | Name of the checked service |
+| `health.status` | string | Gateway status: `ok`, `degraded`, or `down` |
+| `health.detail` | string | Additional detail about the health check result |
+| `message` | string | Human-readable description of what happened |
+
+### Response when token generation fails
+
+```json
+{
+  "healed": false,
+  "message": "Failed to generate gateway token. Support has been alerted.",
+  "health": {
+    "name": "OpenClaw Gateway",
+    "status": "ok",
+    "detail": "ok"
+  }
+}
+```
+
+### Error response
+
+```json
+{
+  "healed": false,
+  "message": "Internal error during token healing",
+  "error": "Description of the error"
+}
+```
+
+| Code | Description |
+|------|-------------|
+| 200 | Token healed or validated successfully |
+| 401 | Unauthorized — missing or invalid session |
+| 500 | Token generation failed or internal error |
+
+<Note>This endpoint replaces the previous behavior where users had to manually refresh their pairing token. Tokens are now auto-generated when missing. The generated token is a 64-character hex string stored per-user in the database with a graceful fallback to the shared gateway token.</Note>
+
+---
 
 ## List OpenClaw instances
 
