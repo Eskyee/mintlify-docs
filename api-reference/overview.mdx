@@ -158,7 +158,7 @@ curl -X POST https://agentbot.sh/api/ai/chat \
 | `/api/agents/:id/repair` | POST | Repair an agent |
 | `/api/agents/:id/reset-memory` | POST | Reset agent memory |
 | `/api/agents/:id/token` | GET | Get agent gateway token |
-| `/api/instance/:userId` | GET | Get instance details (web proxy) |
+| `/api/instance/:userId` | GET | Get instance runtime state by probing the agent directly |
 | `/api/instance/:userId/stats` | GET | Get instance stats via gateway healthcheck |
 | `/api/instance/:userId/start` | POST | Start (deploy) an agent service (web proxy) |
 | `/api/instance/:userId/stop` | POST | Stop (suspend) an agent service (web proxy) |
@@ -253,6 +253,7 @@ curl -X POST https://agentbot.sh/api/ai/chat \
 | `/api/passkey/register/verify` | POST | Verify and store a new passkey (requires session) |
 | `/api/passkey/auth/options` | POST | Get WebAuthn authentication options |
 | `/api/passkey/auth/verify` | POST | Authenticate with a passkey and create a session |
+| `/api/dashboard/bootstrap` | GET | Get lightweight user and runtime shell data for the dashboard (session auth) |
 | `/api/dashboard/cost` | GET | Get aggregated cost dashboard data (by agent, model, and day) |
 | `/api/dashboard/health` | GET | Get health status of backend services (no auth) |
 | `/api/dashboard/stats` | GET | Get dashboard stats (agent counts, skills, tasks) |
