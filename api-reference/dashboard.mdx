@@ -13,13 +13,7 @@ Retrieve consolidated dashboard data, analytics trends, cost breakdowns, and age
 GET /api/dashboard/data
 ```
 
-Requires session authentication. Returns all core dashboard data in a single request. This endpoint runs on the Edge Runtime for low-latency responses and uses CDN-level caching with a 5-second stale-while-revalidate window.
-
-### Response headers
-
-| Header | Value | Description |
-|--------|-------|-------------|
-| `Cache-Control` | `public, s-maxage=5, stale-while-revalidate=30` | CDN cache for 5 seconds, serve stale for up to 30 seconds while revalidating |
+Requires session authentication. Returns all core dashboard data in a single request. This endpoint uses the standard Node.js runtime and is marked `force-dynamic` so responses are never statically cached.
 
 ### Response
 
