@@ -158,6 +158,8 @@ curl -X POST https://agentbot.sh/api/ai/chat \
 | `/api/agents/:id/repair` | POST | Repair an agent |
 | `/api/agents/:id/reset-memory` | POST | Reset agent memory |
 | `/api/agents/:id/token` | GET | Get agent gateway token |
+| `/api/agents/:id/sync` | POST | Sync agent skills, memories, and files to the gateway |
+| `/api/agents/user/:userId` | GET | Get agents for a user (internal, used by Edge Runtime) |
 | `/api/instance/:userId` | GET | Get instance runtime state by probing the agent directly |
 | `/api/instance/:userId/stats` | GET | Get instance stats via gateway healthcheck |
 | `/api/instance/:userId/start` | POST | Start (deploy) an agent service (web proxy) |
@@ -224,6 +226,7 @@ curl -X POST https://agentbot.sh/api/ai/chat \
 | `/api/provision` | GET | Get provisioning stats (requires bridge secret) |
 | `/api/provision` | POST | Provision agent with channel tokens or as OpenClaw-only deployment (requires auth) |
 | `/api/user/openclaw` | GET | Get the authenticated user's OpenClaw URL, instance ID, and gateway token |
+| `/api/registration/token` | GET | Get gateway token for a user (internal, used by Edge Runtime) |
 | `/api/validate-key` | POST | Validate an API key (backend only) |
 | `/api/register-home` | POST | Register a Home mode installation (backend only, requires identity headers) |
 | `/api/register-link` | POST | Register a Link mode installation (backend only, requires identity headers) |
@@ -253,7 +256,7 @@ curl -X POST https://agentbot.sh/api/ai/chat \
 | `/api/passkey/register/verify` | POST | Verify and store a new passkey (requires session) |
 | `/api/passkey/auth/options` | POST | Get WebAuthn authentication options |
 | `/api/passkey/auth/verify` | POST | Authenticate with a passkey and create a session |
-| `/api/dashboard/data` | GET | Get all dashboard data in a single optimized request (session auth, Edge Runtime) |
+| `/api/dashboard/data` | GET | Get all dashboard data in a single optimized request (session auth, Edge Runtime, CDN-cached for 5s) |
 | `/api/dashboard/analytics` | GET | Get deployment trends, channel activity, and skill analytics (session auth) |
 | `/api/dashboard/bootstrap` | GET | Get lightweight user and runtime shell data for the dashboard (session auth) |
 | `/api/dashboard/cost` | GET | Get aggregated cost dashboard data (by agent, model, and day) |

@@ -373,6 +373,8 @@ Admin status is determined by checking the session email against `ADMIN_EMAILS`.
 | 429 | Agent limit reached for your plan (web proxy). Response includes `current` (agent count) and `limit` fields. Limits: `starter` 1, `pro` 3, `enterprise` 100. Users without a recognized plan default to a limit of 1. The backend returns `402` with code `AGENT_LIMIT_REACHED` for the same condition. |
 | 500 | Failed to provision agent |
 
+<Note>When an agent is provisioned, the complete agent state — including installed skills, stored memories, and uploaded files — is deployed to the OpenClaw gateway. If the initial deployment fails, you can retry using the [sync endpoint](#sync-agent-to-gateway).</Note>
+
 ## Clone agent
 
 ```http
@@ -1197,6 +1199,95 @@ Returns the shared gateway token. The web proxy reads the token from a shared to
 |------|-------------|
 | 403 | Forbidden — authenticated user does not own this instance |
 | 503 | No gateway token configured — no shared token file or `OPENCLAW_GATEWAY_TOKEN` environment variable is set |
+
+## Sync agent to gateway
+
+```http
+POST /api/agents/:id/sync
+```
+
+Syncs an agent's data — including skills, memories, and files — to the OpenClaw gateway. Use this endpoint to manually resync an agent after a failed deployment or to push the latest agent state to the gateway.
+
+Requires session authentication and ownership of the agent.
+
+### Path parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `id` | string | Agent identifier |
+
+### Response
+
+```json
+{
+  "success": true,
+  "agentId": "agent_123",
+  "gatewayId": "gw_456",
+  "deployedAt": "2026-04-04T06:00:00Z",
+  "details": {}
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `success` | boolean | Whether the sync completed successfully |
+| `agentId` | string | Agent identifier |
+| `gatewayId` | string | Gateway-side identifier for the synced agent |
+| `deployedAt` | string | ISO 8601 timestamp of when the sync completed |
+| `details` | object | Additional sync details (contents vary by deployment) |
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | Unauthorized |
+| 500 | Sync failed. The response includes an `error` field set to `Sync failed` and a `details` field with the specific failure reason. |
+
+<Note>This endpoint is useful when skill installations, memory updates, or file uploads did not propagate to the gateway. The sync operation pushes the complete agent state (skills, memories, files) to the gateway in a single request.</Note>
+
+## Get agents by user (internal)
+
+```http
+GET /api/agents/user/:userId
+```
+
+Returns agents belonging to a specific user. This is an internal API used by the Edge Runtime dashboard and is not intended for direct client use.
+
+### Path parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `userId` | string | User identifier |
+
+### Response
+
+Returns an array of agent objects:
+
+```json
+[
+  {
+    "id": "agent_123",
+    "status": "running",
+    "name": "My Agent",
+    "tier": "solo"
+  }
+]
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `[].id` | string | Agent identifier |
+| `[].status` | string | Current agent status |
+| `[].name` | string | Agent name |
+| `[].tier` | string | Subscription tier |
+
+<Note>This endpoint returns at most one agent (the most recently created). It is used internally by the Edge Runtime dashboard to avoid direct database access from edge functions.</Note>
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 500 | Failed to fetch agents |
 
 ## Agent verification
 
