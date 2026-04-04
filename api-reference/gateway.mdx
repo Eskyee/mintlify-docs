@@ -298,22 +298,169 @@ curl -X GET https://agentbot.sh/api/gateway/status \
 
 ## Production gateway service
 
-The production gateway is a standalone service deployed on Railway that exposes an OpenAI-compatible chat completions endpoint. It runs separately from the per-agent containers and uses its own configuration file.
+The production gateway is a standalone Express wrapper deployed on Railway that manages the OpenClaw gateway process. It handles auto-configuration from environment variables, process lifecycle with exponential-backoff restart, health monitoring, and persistent storage on a Railway volume at `/data`. The wrapper proxies HTTP and WebSocket traffic to the internal OpenClaw gateway on `127.0.0.1:18789`.
+
+### Wrapper endpoints
+
+The wrapper exposes the following management endpoints on its public port. All other requests are proxied to the internal OpenClaw gateway.
+
+#### Health check
+
+```http
+GET /healthz
+```
+
+No authentication required. Returns wrapper health and gateway process state. Railway uses this endpoint for automatic container restarts.
+
+##### Response
+
+```json
+{
+  "status": "healthy",
+  "gateway": "running",
+  "uptime": 3600000,
+  "timestamp": "2026-04-04T12:00:00.000Z"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `status` | string | `healthy` when the gateway process is running, otherwise the current gateway state (e.g., `starting`, `crashed`, `stopped`) |
+| `gateway` | string | Gateway process state: `running`, `starting`, `stopped`, or `crashed` |
+| `uptime` | number | Gateway uptime in milliseconds since the last successful start. `0` when the gateway is not running. |
+| `timestamp` | string | ISO 8601 timestamp of the health check |
+
+#### Gateway status
+
+```http
+GET /api/status
+```
+
+No authentication required. Returns a compact status view for the dashboard.
+
+##### Response
+
+```json
+{
+  "online": true,
+  "state": "running",
+  "uptime": 3600000,
+  "logsCount": 42
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `online` | boolean | `true` when the gateway process is running |
+| `state` | string | Gateway process state: `running`, `starting`, `stopped`, or `crashed` |
+| `uptime` | number | Gateway uptime in milliseconds |
+| `logsCount` | number | Number of buffered log lines |
+
+#### Gateway logs
+
+```http
+GET /api/logs
+```
+
+No authentication required. Returns the last N lines of gateway process output.
+
+##### Query parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `lines` | number | `100` | Number of log lines to return. Maximum `500`. |
+
+##### Response
+
+```json
+{
+  "logs": [
+    {
+      "ts": "2026-04-04T12:00:00.000Z",
+      "stream": "stdout",
+      "line": "Gateway ready on port 18789"
+    }
+  ]
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `logs` | array | Array of log entry objects |
+| `logs[].ts` | string | ISO 8601 timestamp of the log entry |
+| `logs[].stream` | string | Output stream: `stdout` or `stderr` |
+| `logs[].line` | string | Log line content |
+
+#### Restart gateway
+
+```http
+POST /api/restart
+```
+
+No authentication required. Stops the gateway process and restarts it.
+
+##### Response (200)
+
+```json
+{
+  "ok": true,
+  "state": "running"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `ok` | boolean | `true` on success |
+| `state` | string | Gateway state after restart |
+
+##### Error response (500)
+
+```json
+{
+  "ok": false,
+  "error": "Restart failed: gateway process not found"
+}
+```
+
+#### Proxy error response (503)
+
+When a request is proxied to the gateway but the gateway is not running, the wrapper returns:
+
+```json
+{
+  "error": "OpenClaw gateway is not running",
+  "state": "crashed",
+  "hint": "The gateway is starting up or has crashed. Check /healthz for status."
+}
+```
+
+When the gateway is running but unreachable, the proxy returns:
+
+```json
+{
+  "error": "Gateway not reachable",
+  "detail": "connect ECONNREFUSED 127.0.0.1:18789"
+}
+```
+
+### WebSocket proxy
+
+The wrapper proxies WebSocket upgrade requests to the internal OpenClaw gateway using a raw TCP pipe. This avoids known WebSocket bugs in Node.js 22's `http-proxy` module. The wrapper injects the `Authorization: Bearer <token>` header automatically.
+
+When the gateway is not running, WebSocket upgrade requests receive an HTTP `503 Service Unavailable` response and the socket is closed.
 
 ### Environment variables
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `OPENCLAW_GATEWAY_TOKEN` | Auto-generated | Bearer token for authenticating requests. If not set, a 64-character hex token is generated at startup. |
-| `PORT` | `8080` | Port the gateway listens on |
-| `AGENTBOT_API_URL` | `https://agentbot-prod-production.up.railway.app` | Backend API URL the gateway proxies to |
-| `CONTROL_UI_ORIGIN` | `https://agentbot.sh` | Allowed origin for the gateway control UI. Used to populate `gateway.controlUi.allowedOrigins`. |
-| `SKIP_SERVICE_READINESS` | `false` | When set to `true`, the gateway starts immediately without waiting for the backend API health check. |
-| `SERVICE_HEALTH_URL` | `{AGENTBOT_API_URL}/health` | URL the gateway polls at startup to confirm the backend API is available. Derived from `AGENTBOT_API_URL` by default. |
+| `OPENCLAW_GATEWAY_TOKEN` | _(empty)_ | Bearer token for authenticating proxied requests to the internal gateway. When not set, requests are proxied without authentication. |
+| `PORT` | `3000` | Port the wrapper listens on |
+| `OPENCLAW_DATA_DIR` | `/data` | Root directory for persistent storage. The OpenClaw configuration and workspace are stored under `{OPENCLAW_DATA_DIR}/.openclaw/`. This should be a Railway volume mount. |
+| `OPENROUTER_API_KEY` | _(empty)_ | OpenRouter API key for LLM provider authentication. Written into the OpenClaw configuration at startup. |
 
 ### OpenClaw configuration `env` section
 
-The production gateway configuration includes a top-level `env` section in `openclaw.json` that passes secrets directly to the OpenClaw runtime. This is separate from container-level environment variables — the `env` section is read by OpenClaw at startup to authenticate with external services.
+The wrapper writes an `openclaw.json` configuration file to `{OPENCLAW_DATA_DIR}/.openclaw/openclaw.json` at startup. This file includes a top-level `env` section that passes secrets directly to the OpenClaw runtime. This is separate from container-level environment variables — the `env` section is read by OpenClaw at startup to authenticate with external services.
 
 | Parameter | Description |
 |-----------|-------------|
@@ -327,7 +474,6 @@ The production gateway uses the following model defaults:
 |-----------|-------|-------------|
 | `agents.defaults.model.primary` | `openrouter/xiaomi/mimo-v2-pro` | Primary model for agent requests |
 | `agents.defaults.model.fallbacks` | `["openrouter/anthropic/claude-sonnet-4", "openrouter/google/gemini-2.5-flash"]` | Fallback models tried in order if the primary is unavailable |
-| `agents.defaults.imageModel.primary` | `openrouter/google/gemini-2.5-flash` | Model used for image-related tasks |
 
 Model aliases are configured for convenience:
 
@@ -341,30 +487,23 @@ Model aliases are configured for convenience:
 
 | Parameter | Value | Description |
 |-----------|-------|-------------|
-| `agents.defaults.workspace` | `/home/node/.openclaw/workspace` | Default workspace directory |
+| `agents.defaults.workspace` | `{OPENCLAW_DATA_DIR}/.openclaw/workspace` | Default workspace directory inside the persistent volume |
 | `agents.defaults.userTimezone` | `Europe/London` | Default timezone |
 | `agents.defaults.thinkingDefault` | `low` | Default thinking verbosity level |
 | `agents.defaults.verboseDefault` | `off` | Default verbose output mode |
 | `agents.defaults.timeoutSeconds` | `600` | Maximum time in seconds for a single request |
-| `agents.defaults.mediaMaxMb` | `5` | Maximum media file size in megabytes |
 | `agents.defaults.maxConcurrent` | `3` | Maximum concurrent agent tasks |
 | `agents.defaults.heartbeat.every` | `30m` | Self-monitoring heartbeat interval |
 | `agents.defaults.heartbeat.lightContext` | `true` | Use minimal context for heartbeat checks |
 | `agents.defaults.heartbeat.isolatedSession` | `true` | Run heartbeat in an isolated session to avoid polluting active conversations |
-| `agents.defaults.heartbeat.target` | `none` | Heartbeat notification target (disabled by default) |
 
 ### Tool configuration
 
 | Parameter | Value | Description |
 |-----------|-------|-------------|
 | `tools.profile` | `coding` | Tool profile loaded by default |
-| `tools.deny` | `["browser", "canvas"]` | Tools disabled in the gateway environment |
 | `tools.exec.backgroundMs` | `10000` | Maximum time in milliseconds a background process can run |
 | `tools.exec.timeoutSec` | `1800` | Maximum execution time in seconds for foreground commands (30 minutes) |
-| `tools.loopDetection.enabled` | `true` | Whether loop detection is active |
-| `tools.loopDetection.historySize` | `30` | Number of recent tool calls tracked for loop detection |
-| `tools.loopDetection.warningThreshold` | `10` | Number of repeated calls before a warning is issued |
-| `tools.loopDetection.criticalThreshold` | `20` | Number of repeated calls before the agent is interrupted |
 | `tools.web.search.enabled` | `true` | Web search tool is available |
 | `tools.web.fetch.enabled` | `true` | Web fetch tool is available |
 | `tools.web.fetch.maxChars` | `50000` | Maximum characters returned from web fetch requests |
@@ -395,28 +534,36 @@ Model aliases are configured for convenience:
 | `logging.level` | `info` | Minimum log level written to persistent storage |
 | `logging.consoleLevel` | `info` | Minimum log level written to stdout |
 | `logging.consoleStyle` | `compact` | Log output format (`compact` omits timestamps and metadata for cleaner output) |
-| `logging.redactSensitive` | `tools` | Redacts sensitive data in tool call logs (API keys, tokens, credentials) |
 
 ### Gateway settings
 
 | Parameter | Value | Description |
 |-----------|-------|-------------|
 | `gateway.mode` | `local` | Gateway operating mode |
-| `gateway.bind` | `lan` | Bind address |
-| `gateway.auth.mode` | `token` | Authentication mode |
+| `gateway.bind` | `loopback` | Bind address. The internal gateway binds to loopback only; the wrapper handles external traffic and proxies it to `127.0.0.1:18789`. |
+| `gateway.port` | `18789` | Internal gateway port |
+| `gateway.auth.mode` | `token` or `none` | Authentication mode. Set to `token` when `OPENCLAW_GATEWAY_TOKEN` is configured, otherwise `none`. |
 | `gateway.auth.rateLimit.maxAttempts` | `10` | Maximum authentication attempts before lockout |
 | `gateway.auth.rateLimit.windowMs` | `60000` | Rate limit window (1 minute) |
 | `gateway.auth.rateLimit.lockoutMs` | `300000` | Lockout duration (5 minutes) |
+| `gateway.trustedProxies` | `["127.0.0.1", "10.0.0.0/8", "100.64.0.0/10"]` | IP addresses trusted as reverse proxies |
 | `gateway.http.endpoints.chatCompletions.enabled` | `true` | OpenAI-compatible chat completions endpoint is enabled |
-| `gateway.controlUi.allowedOrigins` | `["https://agentbot.sh"]` | Permitted WebSocket origins. Populated from the `CONTROL_UI_ORIGIN` environment variable. |
-| `gateway.controlUi.dangerouslyDisableDeviceAuth` | `false` | Device auth is enabled on the production gateway. |
-| `gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback` | `false` | Host header fallback is disabled on the production gateway. |
+| `gateway.controlUi.allowedOrigins` | `["*"]` | Permitted WebSocket origins. Set to `["*"]` to allow connections from any origin. |
+| `gateway.controlUi.dangerouslyDisableDeviceAuth` | `true` | Device auth is disabled. Required for headless deployments where no browser is available to complete the device auth handshake. |
 | `gateway.reload.mode` | `hybrid` | Configuration reload strategy |
 | `gateway.reload.debounceMs` | `300` | Debounce interval for configuration reloads in milliseconds |
 
 ### Health check
 
-The production gateway exposes a `/healthz` endpoint for Railway health monitoring. Railway is configured to check this path with a 90-second timeout and will restart the service on failure (up to 10 retries).
+The wrapper exposes a `/healthz` endpoint on the public port. The container image is configured with a Docker `HEALTHCHECK` that probes this endpoint every 15 seconds (5-second timeout, 30-second start period, 3 retries). Railway uses the same path for health monitoring and will restart the container on failure (up to 10 retries).
+
+### Persistent storage
+
+The wrapper stores all OpenClaw state under `{OPENCLAW_DATA_DIR}/.openclaw/` (default: `/data/.openclaw/`). This directory should be backed by a Railway volume mount so that configuration, conversations, and workspace files survive container restarts.
+
+### Process management
+
+The wrapper manages the OpenClaw gateway process with automatic restart on crash. When the gateway exits unexpectedly, the wrapper schedules a restart with exponential backoff starting at 2 seconds, doubling each attempt, up to a maximum of 30 seconds. The gateway is considered ready when it accepts TCP connections on port `18789`. If the gateway does not become ready within 60 seconds, the wrapper marks it as crashed and schedules another restart attempt.
 
 ## Per-agent gateway authentication
 
