@@ -42,7 +42,9 @@ Returns all available skills in the marketplace. No authentication required for 
       "author": "Agentbot",
       "downloads": 150,
       "rating": 5.0,
-      "featured": true
+      "featured": true,
+      "mcpEnabled": false,
+      "mcpConfig": null
     }
   ],
   "categories": [
@@ -66,6 +68,8 @@ Returns all available skills in the marketplace. No authentication required for 
 | Field | Type | Description |
 |-------|------|-------------|
 | `skills` | array | List of skill objects matching the query filters |
+| `skills[].mcpEnabled` | boolean | Whether this skill has a bundled MCP server enabled. When `true`, the skill provides additional tools through the [MCP skills API](/api-reference/mcp-skills). |
+| `skills[].mcpConfig` | object \| null | MCP server configuration for the skill. Contains server name, version, and tool definitions when `mcpEnabled` is `true`. `null` when the skill has no MCP configuration. |
 | `categories` | string[] | All distinct skill categories in the marketplace |
 | `featured` | array | Subset of `skills` where `featured` is `true` |
 | `installedSkillIds` | string[] | IDs of skills installed and enabled for the authenticated user and the specified `agentId`. Returns an empty array when no session is present or `agentId` is omitted. |
@@ -140,6 +144,8 @@ Requires session authentication. Creates a new custom skill in the marketplace. 
     "downloads": 0,
     "rating": 0,
     "featured": false,
+    "mcpEnabled": false,
+    "mcpConfig": null,
     "createdAt": "2026-04-02T12:00:00.000Z",
     "updatedAt": "2026-04-02T12:00:00.000Z"
   }
@@ -157,6 +163,8 @@ Requires session authentication. Creates a new custom skill in the marketplace. 
 | `skill.downloads` | number | Download count, starts at `0` |
 | `skill.rating` | number | Rating score, starts at `0` |
 | `skill.featured` | boolean | Always `false` for user-created skills |
+| `skill.mcpEnabled` | boolean | Whether the skill has a bundled MCP server. Always `false` for user-created skills. |
+| `skill.mcpConfig` | object \| null | MCP server configuration. Always `null` for user-created skills. |
 | `skill.createdAt` | string | ISO 8601 creation timestamp |
 | `skill.updatedAt` | string | ISO 8601 last-updated timestamp |
 
