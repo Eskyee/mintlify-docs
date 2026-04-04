@@ -358,6 +358,8 @@ Records a subscription-to-plan mapping so the next agent deployment uses the cor
 | `enterprise` | 16 GB | 4 | Legacy alias |
 | `white_glove` | 32 GB | 8 | Legacy alias |
 
+<Note>The Railway provisioning function enforces resource limits for the following plans only: `underground`, `solo`, `collective`, `label`, `network`. Legacy aliases (`starter`, `pro`, `scale`, `enterprise`, `white_glove`) are not resolved during Railway provisioning and default to `solo` limits (2 GB / 1 vCPU). The subscription deploy endpoint still accepts all tier values listed above.</Note>
+
 ### Errors
 
 | Code | Description |

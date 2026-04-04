@@ -372,7 +372,7 @@ Provisions a new agent. Requires an active subscription unless the caller is an 
 
 <Note>The web proxy enforces agent limits based on the subscription tier (`starter`: 1, `pro`: 3, `enterprise`: 100). The backend provisioning route (`POST /api/provision`) enforces its own limits (`solo`: 1, `collective`: 3, `label`: 10, `network`: unlimited). These provisioning limits determine how many agents you can create. The agent count is per-user across all plans — all active agents count toward the current plan's limit regardless of which plan they were originally created under. The plan middleware enforces separate per-request limits for AI model access and skill usage. The limit cannot be overridden in the request body.</Note>
 
-<Note>The backend also accepts legacy plan aliases for resource allocation: `underground` (2 GB / 1 CPU), `starter` (2 GB / 1 CPU), `pro` (4 GB / 2 CPU), `scale` (8 GB / 4 CPU), `enterprise` (16 GB / 4 CPU), and `white_glove` (32 GB / 8 CPU). These are accepted in addition to the standard plan names (`solo`, `collective`, `label`, `network`) when determining container resource limits.</Note>
+<Note>Resource limits are enforced at provisioning time. The Railway provisioning function applies memory and CPU caps based on the plan: `underground` (2 GB / 1 vCPU), `solo` (2 GB / 1 vCPU), `collective` (4 GB / 2 vCPU), `label` (8 GB / 4 vCPU), `network` (16 GB / 4 vCPU). Plans not in this list default to `solo` limits. Legacy plan aliases (`starter`, `pro`, `scale`, `enterprise`, `white_glove`) are no longer resolved by the Railway provisioning function and fall back to `solo` limits (2 GB / 1 vCPU).</Note>
 
 ### Admin bypass
 
@@ -1059,7 +1059,7 @@ The web proxy `update` endpoint (`POST /api/instance/:userId/update`) updates th
 
 ## Web proxy instance endpoints
 
-The following endpoints are available at `/api/instance/:userId/{action}` and require session authentication. The `userId` parameter is the agent's instance identifier (a hex string), not the user's database ID. Ownership is verified by checking that the authenticated user's `openclawInstanceId` matches the `userId` parameter.
+The following endpoints are available at `/api/instance/:userId/{action}` and require session authentication. The `userId` parameter is the agent's instance identifier (a hex string), not the user's database ID. Ownership is verified by checking that the authenticated user's `openclawInstanceId` matches the `userId` parameter. The ownership check returns differentiated results: `no_session` when the user is not authenticated, `no_instance` when the user is authenticated but has no deployed agent, and `true`/`false` for ownership match/mismatch.
 
 Lifecycle actions (`start`, `stop`, `restart`, `repair`, `reset-memory`, `update`) resolve the actual Railway service before acting. The service is resolved using the user's `openclawInstanceId` and `openclawUrl` fields from the database. This ensures that control actions target the correct managed service even when the stored instance identifier differs from the Railway service ID.
 
@@ -1115,9 +1115,9 @@ The endpoint proxies to the backend. When the backend is unavailable or returns 
 
 | Code | Description |
 |------|-------------|
-| 403 | Forbidden — authenticated user does not own this instance |
+| 403 | Forbidden — not authenticated (no valid session) |
+| 404 | No instance found — the authenticated user does not have a deployed agent. The response message is: `No instance found. Please deploy first.` This is also returned when the authenticated user's instance does not match the requested `userId`. |
 | 502 | Backend unavailable (fallback data is returned instead of an error) |
-```
 
 ## Get instance stats
 
@@ -1235,7 +1235,7 @@ Returns the shared gateway token. The web proxy reads the token from a shared to
 
 | Code | Description |
 |------|-------------|
-| 403 | Forbidden — authenticated user does not own this instance |
+| 403 | Forbidden — not authenticated, no deployed instance, or the authenticated user does not own this instance |
 | 503 | No gateway token configured — no shared token file or `OPENCLAW_GATEWAY_TOKEN` environment variable is set |
 
 ## Sync agent to gateway
@@ -1740,7 +1740,7 @@ If the resolved email matches an admin email, the caller is treated as an admin.
 The endpoint provisions agents using a two-path strategy, tried in order:
 
 1. **Backend service** — the request is forwarded to the backend Express service (`BACKEND_API_URL`). If a fallback URL is configured (`BACKEND_API_FALLBACK_URL`), it is tried next if the primary fails. Non-JSON responses (such as HTML error pages from a proxy or load balancer) are detected and treated as failures, avoiding the previous "Unexpected token" parsing errors.
-2. **Railway direct provisioning** — when all backend URLs fail or are not configured, the endpoint falls back to provisioning the agent container directly via the Railway GraphQL API. This path requires `RAILWAY_API_KEY`, `RAILWAY_PROJECT_ID`, and `RAILWAY_ENVIRONMENT_ID` to be set. The Railway path creates a new Railway service, injects environment variables (including `OPENCLAW_GATEWAY_PORT=18789`), sets a start command via the `ServiceInstanceUpdate` mutation that writes an `openclaw.json` configuration file with an `env` section containing `OPENROUTER_API_KEY` for LLM provider authentication, configures the gateway (local mode, disabled device auth, enabled chat completions endpoint), generates a public domain via the `serviceDomainCreate` mutation with `targetPort: 18789` so that Railway's HTTP proxy routes traffic directly to the gateway port, and then triggers a deployment. The domain is generated before the deploy so that the service has a routable public URL immediately. The returned URL is the direct Railway domain for the service. The `controlUiUrl` is constructed with `token` and `gatewayUrl` in the URL hash fragment so the Control UI auto-connects without requiring manual configuration. The hash fragment is never sent to the server, keeping the gateway token client-side only.
+2. **Railway direct provisioning** — when all backend URLs fail or are not configured, the endpoint falls back to provisioning the agent container directly via the Railway GraphQL API. This path requires `RAILWAY_API_KEY`, `RAILWAY_PROJECT_ID`, and `RAILWAY_ENVIRONMENT_ID` to be set. The Railway path creates a new Railway service, injects environment variables (including `OPENCLAW_GATEWAY_PORT=18789`), sets a start command and plan-based resource limits (memory and CPU caps) via the `ServiceInstanceUpdate` mutation, writes an `openclaw.json` configuration file with an `env` section containing `OPENROUTER_API_KEY` for LLM provider authentication, configures the gateway (local mode, disabled device auth, enabled chat completions endpoint), generates a public domain via the `serviceDomainCreate` mutation with `targetPort: 18789` so that Railway's HTTP proxy routes traffic directly to the gateway port, and then triggers a deployment. Resource limits are: `underground`/`solo` 2 GB / 1 vCPU, `collective` 4 GB / 2 vCPU, `label` 8 GB / 4 vCPU, `network` 16 GB / 4 vCPU. Unrecognized plan values default to `solo` limits. The domain is generated before the deploy so that the service has a routable public URL immediately. The returned URL is the direct Railway domain for the service. The `controlUiUrl` is constructed with `token` and `gatewayUrl` in the URL hash fragment so the Control UI auto-connects without requiring manual configuration. The hash fragment is never sent to the server, keeping the gateway token client-side only.
 
 If both paths fail, the endpoint returns a `502` error.
 
