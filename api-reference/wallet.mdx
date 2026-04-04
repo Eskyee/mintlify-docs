@@ -510,7 +510,7 @@ The webhook processes events where `metadata.type` equals `wallet_top_up`. On a 
 GET /api/wallet/transactions
 ```
 
-Returns recent USDC transfer history for a wallet address on Base. The endpoint scans recent blocks for ERC-20 `Transfer` events on the USDC contract, returning both incoming and outgoing transfers.
+Returns recent wallet activity for an address on Base. The endpoint returns both USDC token transfers and recent native ETH transactions in a single merged timeline, sorted by timestamp (newest first).
 
 ### Query parameters
 
@@ -527,13 +527,11 @@ Returns recent USDC transfer history for a wallet address on Base. The endpoint 
   "chain": "Base",
   "chainId": 8453,
   "currentBlock": "12345678",
-  "indexedAsset": "USDC",
-  "windowBlocks": "50000",
   "transactions": [
     {
       "hash": "0xabc123...",
+      "asset": "USDC",
       "direction": "received",
-      "symbol": "USDC",
       "amount": "10.000000",
       "amountRaw": "10000000",
       "from": "0x1234...",
@@ -541,9 +539,28 @@ Returns recent USDC transfer history for a wallet address on Base. The endpoint 
       "blockNumber": "12345670",
       "timestamp": "2026-04-04T12:00:00.000Z",
       "status": "confirmed",
-      "explorerUrl": "https://basescan.org/tx/0xabc123..."
+      "explorerUrl": "https://basescan.org/tx/0xabc123...",
+      "source": "token-log"
+    },
+    {
+      "hash": "0xdef456...",
+      "asset": "ETH",
+      "direction": "received",
+      "amount": "0.01",
+      "amountRaw": "10000000000000000",
+      "from": "0x5678...",
+      "to": "0xd8fd...",
+      "blockNumber": "12345665",
+      "timestamp": "2026-04-04T11:58:00.000Z",
+      "status": "confirmed",
+      "explorerUrl": "https://basescan.org/tx/0xdef456...",
+      "source": "recent-native-scan"
     }
-  ]
+  ],
+  "sources": {
+    "usdc": "token logs over last 50000 blocks",
+    "eth": "native scan over last 180 blocks"
+  }
 }
 ```
 
@@ -555,24 +572,26 @@ Returns recent USDC transfer history for a wallet address on Base. The endpoint 
 | `chain` | string | Network name (`Base`) |
 | `chainId` | number | Chain ID (`8453` for Base mainnet) |
 | `currentBlock` | string | Current block number on the chain |
-| `indexedAsset` | string | The asset being tracked (`USDC`) |
-| `windowBlocks` | string | Number of recent blocks scanned for transfers (`50000`) |
-| `transactions` | array | List of USDC transfer events, sorted by block number (newest first) |
+| `transactions` | array | Merged list of USDC and ETH transactions, sorted by timestamp (newest first) |
 | `transactions[].hash` | string | Transaction hash |
+| `transactions[].asset` | string | `"USDC"` or `"ETH"` |
 | `transactions[].direction` | string | `"sent"` or `"received"` relative to the queried address |
-| `transactions[].symbol` | string | Always `"USDC"` |
-| `transactions[].amount` | string | Formatted USDC amount (6 decimal places) |
-| `transactions[].amountRaw` | string | Raw amount in smallest unit |
+| `transactions[].amount` | string | Formatted amount (6 decimal places for USDC, variable for ETH) |
+| `transactions[].amountRaw` | string | Raw amount in smallest unit (USDC uses 6 decimals, ETH uses 18 decimals in wei) |
 | `transactions[].from` | string | Sender address |
 | `transactions[].to` | string | Recipient address |
 | `transactions[].blockNumber` | string | Block number of the transaction |
 | `transactions[].timestamp` | string | ISO 8601 timestamp of the block |
 | `transactions[].status` | string | Always `"confirmed"` |
 | `transactions[].explorerUrl` | string | Basescan URL for the transaction |
+| `transactions[].source` | string | Data source: `"token-log"` for USDC ERC-20 transfer events, `"recent-native-scan"` for ETH transactions found by scanning recent blocks |
+| `sources` | object | Describes the scan window for each asset type |
+| `sources.usdc` | string | USDC token log scan window description |
+| `sources.eth` | string | ETH native scan window description |
 
-<Note>The endpoint scans the most recent 50,000 blocks for USDC `Transfer` events involving the queried address. Older transactions outside this window are not returned. For complete history, use the `explorerUrl` from the [wallet balance endpoint](#base-network-balance-query) to link users to Basescan.</Note>
+<Note>USDC transactions are retrieved from ERC-20 `Transfer` event logs over the most recent 50,000 blocks. ETH transactions are found by scanning the most recent 180 blocks for native value transfers involving the queried address. Older transactions outside these windows are not returned. For complete history, use the `explorerUrl` from the [wallet balance endpoint](#base-network-balance-query) to link users to Basescan.</Note>
 
-<Warning>The transaction history endpoint has migrated from Tempo to Base. The previous response fields (`note`, `explorerUrl` at the top level) have been replaced. The response now returns real USDC transfer data with `indexedAsset`, `windowBlocks`, and per-transaction `explorerUrl` fields. Only USDC transfers are tracked — native ETH transfers are not included.</Warning>
+<Warning>The `indexedAsset` and `windowBlocks` top-level fields have been removed. Use the `sources` object to see scan window details. Each transaction now includes an `asset` field (`"USDC"` or `"ETH"`) and a `source` field indicating how it was discovered. The previous `symbol` field on transactions has been replaced by `asset`.</Warning>
 
 ### Errors
 
@@ -591,6 +610,42 @@ When transferring USDC through the wallet service, the following validation rule
 These checks run before any on-chain transaction is initiated.
 
 <Note>When payments are initiated through the [x402 pay action](/api-reference/x402#pay), additional protections apply: a per-payment maximum of $100, recipient address format validation (EVM or Solana), and audit logging of every payment attempt. See the [x402 gateway reference](/api-reference/x402) for details.</Note>
+
+## Sending USDC
+
+USDC sends from the wallet use a sponsored-first strategy. The wallet attempts a gas-sponsored send before falling back to a standard ERC-20 transfer, so users do not need ETH for gas when sponsorship is available.
+
+### Send flow
+
+1. **Sponsored send (preferred)** — The wallet first attempts a gas-sponsored USDC send using the Base paymaster. If the sponsored send succeeds, the resulting identifier is returned and the transaction status is polled for up to 30 seconds.
+2. **Standard send (fallback)** — If the sponsored send fails for any reason, the wallet falls back to a standard on-chain ERC-20 `transfer` call on the Base USDC contract. This path requires the sender to have ETH for gas.
+
+The send mode is determined automatically. You do not need to specify which path to use.
+
+### Send state
+
+After initiating a send, the wallet returns a state object with the following fields:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `mode` | string | `"sponsored"` if the gas-sponsored path succeeded, `"standard"` if it fell back to a direct ERC-20 transfer |
+| `status` | string | `"pending"`, `"completed"`, or `"failed"` |
+| `asset` | string | `"USDC"` or `"ETH"` |
+| `hash` | string | Transaction hash (for standard sends) or payment identifier (for sponsored sends) |
+| `message` | string | Human-readable status message |
+| `amount` | string | The amount sent |
+| `recipient` | string | The recipient address |
+
+<Warning>Sponsored send identifiers are not standard transaction hashes. Do not use them for on-chain receipt polling via RPC methods like `eth_getTransactionReceipt`. The wallet polls the sponsored payment status internally and updates the send state when the transaction confirms.</Warning>
+
+<Note>When sponsorship is available, no ETH balance is required to send USDC. The gas fee is covered by the platform paymaster. If sponsorship is unavailable, the wallet falls back to a standard send that requires ETH for gas.</Note>
+
+### Supported assets
+
+| Asset | Contract | Decimals | Send behavior |
+|-------|----------|----------|---------------|
+| USDC | `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913` | 6 | Sponsored-first with standard fallback |
+| ETH | Native | 18 | Standard native transfer (no sponsorship) |
 
 ## MPP payment sessions
 
