@@ -110,6 +110,7 @@
           "api-reference/memory",
           "api-reference/files",
           "api-reference/ai",
+          "api-reference/mcp-skills",
           "api-reference/render-mcp",
           "api-reference/streaming",
           "api-reference/registration",
