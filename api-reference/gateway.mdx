@@ -157,40 +157,40 @@ When paid via MPP, the response includes a `Payment-Receipt` header and the `pay
 | 500 | `internal` | Internal server error |
 | 502 | `no_plugin` | No plugin registered for the given ID |
 
-## Gateway chat proxy (WebSocket fallback)
+## Gateway chat proxy
 
 ```http
 POST /api/gateway/chat
 ```
 
-Sends a chat message to the caller's deployed agent through the OpenClaw Gateway using WebSocket. The server connects to the agent's gateway via WebSocket, authenticates using the challenge-response handshake, delivers the message, and returns the agent's reply.
+Sends a chat message to the caller's deployed agent by enqueuing it as a job on the backend control plane. The server validates the user's agent, applies rate limiting and workload gating, and returns a job ID that you poll for the result.
 
-<Info>The primary chat endpoint [`POST /api/chat`](/api-reference/agents#send-message) now uses the OpenAI-compatible REST API (`POST /v1/chat/completions`) instead of WebSocket. This WebSocket-based endpoint is retained as a fallback for gateways that do not have `chatCompletions` enabled. For new integrations, prefer `POST /api/chat`.</Info>
+<Info>This endpoint no longer connects to the gateway via WebSocket. Chat messages are enqueued as asynchronous jobs on the backend. Use the returned `jobId` to poll for the result via [`GET /api/jobs/:jobId`](#get-job-status).</Info>
 
-This endpoint reads the gateway token from a shared token file on disk, falling back to the `OPENCLAW_GATEWAY_TOKEN` environment variable. The gateway URL is derived from the user's `openclawUrl` in the database when available, otherwise constructed from the user's `openclawInstanceId` (`wss://agentbot-agent-{openclawInstanceId}-production.up.railway.app`).
-
-Requires session authentication.
+Requires session authentication. Subject to rate limiting (per-IP) and workload gating (per-user). Messages longer than 800 characters consume 2 workload slots; shorter messages consume 1.
 
 ### Request body
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `message` | string | Yes | Message to send |
-| `sessionKey` | string | No | Session key for the conversation. Defaults to `main`. |
 
 ```json
 {
-  "message": "Summarize my tasks",
-  "sessionKey": "project-alpha"
+  "message": "Summarize my tasks"
 }
 ```
 
-### Response (200)
+<Warning>The `sessionKey` parameter has been removed. Chat sessions are now managed server-side by the backend job processor.</Warning>
+
+### Response (202 Accepted)
 
 ```json
 {
   "success": true,
-  "reply": "Here is a summary of your tasks...",
+  "queued": true,
+  "jobId": "job_abc123",
+  "status": "queued",
   "agentId": "inst_a1b2c3d4e5",
   "agentName": "my-agent"
 }
@@ -199,9 +199,11 @@ Requires session authentication.
 | Field | Type | Description |
 |-------|------|-------------|
 | `success` | boolean | Always `true` on success |
-| `reply` | string | The agent's response text |
-| `agentId` | string | The user's OpenClaw instance identifier (`openclawInstanceId`). This was previously the agent's database ID. |
-| `agentName` | string | Name of the agent. Falls back to the `openclawInstanceId` when no agent name is set. |
+| `queued` | boolean | Always `true` — the message was enqueued |
+| `jobId` | string | Job identifier. Poll [`GET /api/jobs/:jobId`](#get-job-status) to retrieve the result. |
+| `status` | string | `"queued"` — the job is waiting to be processed |
+| `agentId` | string | The user's OpenClaw instance identifier |
+| `agentName` | string | Name of the agent |
 
 ### Errors
 
@@ -212,10 +214,10 @@ Requires session authentication.
 | 404 | `User not found` — authenticated user does not exist |
 | 404 | `No OpenClaw instance found` — the user has no provisioned OpenClaw instance |
 | 404 | `No agent found` — the user has no deployed agent |
-| 500 | `Chat failed` — WebSocket connection or agent response error |
-| 503 | `No gateway token available` — no shared gateway token is configured on disk or in the environment |
-
-<Note>This endpoint opens a WebSocket connection per request and times out after 30 seconds. If the gateway rejects the authentication handshake, a `500` error is returned with details from the gateway. For lower-overhead chat that avoids WebSocket, use [`POST /api/chat`](/api-reference/agents#send-message) which uses the OpenAI-compatible REST API.</Note>
+| 429 | `Too many requests` — rate limit or workload gate exceeded. Response may include `retryAfterSeconds`. |
+| 500 | `Chat failed` — error enqueuing the job |
+| 502 | Backend job queue returned an error or non-JSON response |
+| 503 | `No gateway token available` — no shared gateway token is configured |
 
 ### Example
 
@@ -223,7 +225,7 @@ Requires session authentication.
 curl -X POST https://agentbot.sh/api/gateway/chat \
   -H "Content-Type: application/json" \
   -H "Cookie: next-auth.session-token=YOUR_SESSION" \
-  -d '{"message": "What is my agent status?", "sessionKey": "main"}'
+  -d '{"message": "What is my agent status?"}'
 ```
 
 ## Gateway status

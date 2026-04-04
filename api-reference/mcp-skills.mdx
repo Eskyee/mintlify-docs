@@ -101,6 +101,84 @@ Stops the MCP server for the specified skill and frees its resources.
 | 401 | Unauthorized -- no valid session |
 | 500 | Failed to deactivate MCP. The error message describes the failure. |
 
+## Call an MCP tool
+
+```http
+POST /api/mcp/:skillId/call/:toolName
+```
+
+Invokes a specific tool on an active MCP server. The skill's MCP server must be activated before calling its tools.
+
+Requires session authentication.
+
+### Path parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `skillId` | string | Yes | Identifier of the skill whose MCP server to call |
+| `toolName` | string | Yes | Name of the tool to invoke |
+
+### Request body
+
+The request body should be a JSON object containing the tool parameters. You can either pass parameters directly as the body or wrap them in a `parameters` key:
+
+```json
+{
+  "parameters": {
+    "query": "search term"
+  }
+}
+```
+
+Or directly:
+
+```json
+{
+  "query": "search term"
+}
+```
+
+An empty body or no body is allowed for tools that take no parameters.
+
+### Response (200)
+
+```json
+{
+  "skillId": "websearch",
+  "toolName": "web_search",
+  "success": true,
+  "result": {}
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `skillId` | string | The skill that was called |
+| `toolName` | string | The tool that was invoked |
+| `success` | boolean | Whether the tool call succeeded |
+| `result` | any | Tool-specific result data |
+
+### Response (400)
+
+When the tool call fails (for example, invalid parameters):
+
+```json
+{
+  "skillId": "websearch",
+  "toolName": "web_search",
+  "success": false,
+  "error": "Invalid parameters"
+}
+```
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | Unauthorized — no valid session |
+| 400 | Tool call failed. The response includes `success: false` and an error message. |
+| 500 | Failed to call MCP tool. The error message describes the failure. |
+
 ## Automatic idle cleanup
 
 MCP servers that remain idle are automatically deactivated to free resources. You do not need to manually deactivate servers that are no longer in use, though explicit deactivation is recommended when you know a skill's tools are no longer needed.

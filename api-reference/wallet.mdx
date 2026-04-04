@@ -5,7 +5,7 @@ description: "Manage wallets for on-chain transactions and payments"
 
 # Wallet API
 
-Manage wallets for on-chain transactions and payments. Supports session-based wallets, Coinbase Developer Platform (CDP) wallets, and Tempo network balance queries.
+Manage wallets for on-chain transactions and payments. Supports session-based wallets, Coinbase Developer Platform (CDP) wallets, and Base network balance queries.
 
 <Note>The platform uses Coinbase Smart Wallet as its only wallet connector on Base (`coinbaseWallet({ preference: 'smartWalletOnly' })`). Injected wallets such as MetaMask are not supported. All wallet interactions on the Base network require a Coinbase Smart Wallet.</Note>
 
@@ -17,9 +17,9 @@ GET /api/wallet
 
 Returns wallet information. Behavior depends on whether an `address` query parameter is provided and on your server configuration.
 
-### Tempo balance query
+### Base network balance query
 
-When the `address` query parameter is present, the endpoint queries the Tempo blockchain for the wallet's balances across all known stablecoins. The endpoint reads balances using standard ERC-20 `balanceOf` calls and returns a total USD value along with per-token breakdowns.
+When the `address` query parameter is present, the endpoint queries the Base network for the wallet's native ETH balance and USDC token balance. The address must be a valid EVM address (0x-prefixed, 42 characters).
 
 ```http
 GET /api/wallet?address=0xd8fd...db56f
@@ -29,54 +29,73 @@ GET /api/wallet?address=0xd8fd...db56f
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `address` | string | Yes | Hex-encoded wallet address (0x-prefixed) |
+| `address` | string | Yes | Valid hex-encoded wallet address (0x-prefixed, 42 characters). Invalid addresses return a `400` error. |
 
-#### Supported tokens
+#### Tracked assets
 
-The endpoint queries the following Tempo stablecoins (all pegged 1:1 to USD):
+The endpoint returns balances for the following assets on Base:
 
-| Token | Address | Description |
-|-------|---------|-------------|
-| pathUSD | `0x20c0000000000000000000000000000000000000` | Native Tempo stablecoin |
-| alphaUSD | `0x20c0000000000000000000000000000000000001` | Tempo stablecoin variant |
-| betaUSD | `0x20c0000000000000000000000000000000000002` | Tempo stablecoin variant |
-| thetaUSD | `0x20c0000000000000000000000000000000000003` | Tempo stablecoin variant |
-| USDC.e | `0x20c000000000000000000000b9537d11c60e8b50` | Bridged USDC (Stargate bridge) |
-| EURC.e | `0x20c0000000000000000000001621e21f71cf12fb` | Bridged EURC |
-| USDT0 | `0x20c00000000000000000000014f22ca97301eb73` | Bridged USDT |
-| frxUSD | `0x20c0000000000000000000003554d28269e0f3c2` | Frax USD |
-| cUSD | `0x20c0000000000000000000000520792dcccccccc` | Celo USD |
-| stcUSD | `0x20c0000000000000000000008ee4fcff88888888` | Staked Celo USD |
-| GUSD | `0x20c0000000000000000000005c0bac7cef389a11` | Gemini USD |
+| Asset | Type | Decimals | Description |
+|-------|------|----------|-------------|
+| ETH | Native | 18 | Native Ethereum balance on Base |
+| USDC | ERC-20 | 6 | USD Coin on Base |
 
 #### Response
 
 ```json
 {
   "address": "0xd8fd0e1dce89beaab924ac68098ddb17613db56f",
-  "chain": "Tempo",
-  "chainId": 4217,
+  "chain": "Base",
+  "chainId": 8453,
   "testnet": false,
-  "totalUsd": "24.94",
+  "explorerUrl": "https://basescan.org/address/0xd8fd0e1dce89beaab924ac68098ddb17613db56f",
+  "nativeBalance": {
+    "address": "native",
+    "name": "Ethereum",
+    "symbol": "ETH",
+    "decimals": 18,
+    "balance": "0.05",
+    "balanceRaw": "50000000000000000",
+    "explorerUrl": "https://basescan.org/address/0xd8fd0e1dce89beaab924ac68098ddb17613db56f"
+  },
   "primaryToken": {
-    "address": "0x20c0000000000000000000000000000000000000",
-    "name": "Path USD",
-    "symbol": "pathUSD",
+    "address": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+    "name": "USD Coin",
+    "symbol": "USDC",
     "decimals": 6,
-    "balance": "12.470000"
+    "balance": "24.940000",
+    "balanceRaw": "24940000",
+    "explorerUrl": "https://basescan.org/address/0xd8fd0e1dce89beaab924ac68098ddb17613db56f#tokentxns"
   },
   "allTokens": [
     {
-      "address": "0x20c0000000000000000000000000000000000000",
-      "name": "Path USD",
-      "symbol": "pathUSD",
-      "balance": "12.470000"
+      "address": "native",
+      "name": "Ethereum",
+      "symbol": "ETH",
+      "decimals": 18,
+      "balance": "0.05",
+      "balanceRaw": "50000000000000000",
+      "explorerUrl": "https://basescan.org/address/0xd8fd0e1dce89beaab924ac68098ddb17613db56f"
+    }
+  ],
+  "assets": [
+    {
+      "address": "native",
+      "name": "Ethereum",
+      "symbol": "ETH",
+      "decimals": 18,
+      "balance": "0.05",
+      "balanceRaw": "50000000000000000",
+      "explorerUrl": "https://basescan.org/address/0xd8fd0e1dce89beaab924ac68098ddb17613db56f"
     },
     {
-      "address": "0x20c0000000000000000000000000000000000001",
-      "name": "Alpha USD",
-      "symbol": "alphaUSD",
-      "balance": "12.470000"
+      "address": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      "name": "USD Coin",
+      "symbol": "USDC",
+      "decimals": 6,
+      "balance": "24.940000",
+      "balanceRaw": "24940000",
+      "explorerUrl": "https://basescan.org/address/0xd8fd0e1dce89beaab924ac68098ddb17613db56f#tokentxns"
     }
   ]
 }
@@ -87,32 +106,45 @@ The endpoint queries the following Tempo stablecoins (all pegged 1:1 to USD):
 | Field | Type | Description |
 |-------|------|-------------|
 | `address` | string | The queried wallet address |
-| `chain` | string | Network name (`Tempo` or `Tempo Testnet`) |
-| `chainId` | number | Chain ID (`4217` for mainnet, `42431` for testnet) |
-| `testnet` | boolean | Whether the server is configured for testnet |
-| `totalUsd` | string | Total USD value across all funded tokens, formatted to 2 decimal places |
-| `primaryToken` | object \| null | The first token with a non-zero balance, or `null` if no tokens are funded |
-| `primaryToken.address` | string | Token contract address |
-| `primaryToken.name` | string | Token name (e.g., `Path USD`) |
-| `primaryToken.symbol` | string | Token symbol (e.g., `pathUSD`) |
-| `primaryToken.decimals` | number | Token decimal places |
-| `primaryToken.balance` | string | Formatted token balance |
-| `allTokens` | array | All tokens with a non-zero balance |
-| `allTokens[].address` | string | Token contract address |
-| `allTokens[].name` | string | Token name |
-| `allTokens[].symbol` | string | Token symbol |
-| `allTokens[].balance` | string | Formatted token balance |
+| `chain` | string | Network name (`Base`) |
+| `chainId` | number | Chain ID (`8453` for Base mainnet) |
+| `testnet` | boolean | Always `false` — the wallet API connects to Base mainnet |
+| `explorerUrl` | string | Basescan URL for the wallet address |
+| `nativeBalance` | object | Native ETH balance on Base |
+| `nativeBalance.address` | string | Always `"native"` |
+| `nativeBalance.name` | string | `"Ethereum"` |
+| `nativeBalance.symbol` | string | `"ETH"` |
+| `nativeBalance.decimals` | number | `18` |
+| `nativeBalance.balance` | string | Formatted ETH balance |
+| `nativeBalance.balanceRaw` | string | Raw balance in wei |
+| `nativeBalance.explorerUrl` | string | Basescan URL for the wallet address |
+| `primaryToken` | object | USDC token balance on Base |
+| `primaryToken.address` | string | USDC contract address on Base |
+| `primaryToken.name` | string | `"USD Coin"` |
+| `primaryToken.symbol` | string | `"USDC"` |
+| `primaryToken.decimals` | number | `6` |
+| `primaryToken.balance` | string | Formatted USDC balance |
+| `primaryToken.balanceRaw` | string | Raw balance in smallest unit |
+| `primaryToken.explorerUrl` | string | Basescan token transactions URL |
+| `allTokens` | array | Assets with a non-zero balance |
+| `allTokens[].address` | string | Token contract address or `"native"` for ETH |
+| `allTokens[].name` | string | Asset name |
+| `allTokens[].symbol` | string | Asset symbol |
+| `allTokens[].balance` | string | Formatted balance |
+| `allTokens[].balanceRaw` | string | Raw balance string |
+| `allTokens[].explorerUrl` | string | Basescan URL |
+| `assets` | array | All tracked assets (ETH and USDC), regardless of balance |
 
-<Note>The endpoint queries all 11 tokens from the official Tempo tokenlist. All supported tokens are pegged 1:1 to USD. The `allTokens` array only includes tokens with a non-zero balance. The `primaryToken` is the first funded token found, defaulting to pathUSD metadata when no tokens are funded. The network is determined server-side by the `TEMPO_TESTNET` environment variable.</Note>
+<Warning>The wallet API has migrated from the Tempo network to Base. The previous Tempo-specific response fields (`totalUsd` and per-token `hasBalance`) have been removed. The response now includes `explorerUrl`, `nativeBalance`, and `assets` fields. The `primaryToken` now always refers to USDC on Base. Update any integrations that relied on the Tempo response shape.</Warning>
 
-<Warning>The previous `feeToken` and `pathUsd` response fields have been replaced by `totalUsd`, `primaryToken`, and `allTokens`. Update any integrations that relied on the old response shape.</Warning>
+<Note>The `allTokens` array only includes assets with a non-zero balance. The `assets` array always includes both ETH and USDC regardless of balance. The `nativeBalance` is always the first entry in the `assets` array, and `primaryToken` is always USDC (the second entry).</Note>
 
 #### Errors
 
 | Code | Description |
 |------|-------------|
-| 400 | Missing `address` parameter |
-| 500 | Failed to fetch wallet data from Tempo RPC |
+| 400 | Valid address parameter required. The `address` must be a valid EVM address (0x-prefixed, 42 characters). |
+| 500 | Failed to fetch wallet data from Base RPC |
 
 ### CDP / session wallet query
 
@@ -226,45 +258,75 @@ Seed export is disabled for security. Returns `403`.
 | 401 | Unauthorized |
 | 404 | No wallet found (for `get_seed`) |
 
-## Get CDP wallet address
+## Get wallet address
 
 ```http
 GET /api/wallet/address
 ```
 
-Returns the address of the CDP Agentic Wallet.
+Returns the wallet address for the authenticated user. Prioritizes Base network wallets. When no managed wallet exists in the database, the endpoint falls back to the session-based Base wallet address (from Coinbase Smart Wallet sign-in).
 
-### Response (authenticated)
+Requires session authentication.
+
+### Response (managed wallet)
+
+When a Base wallet is found in the database:
 
 ```json
 {
   "authenticated": true,
-  "address": "0x..."
+  "address": "0x...",
+  "network": "base",
+  "type": "managed",
+  "source": "managed"
 }
 ```
 
-### Response (not authenticated)
+| Field | Type | Description |
+|-------|------|-------------|
+| `authenticated` | boolean | Always `true` |
+| `address` | string | Wallet address |
+| `network` | string | Wallet network (one of `base`, `base-mainnet`, `base-sepolia`) |
+| `type` | string | Wallet type from the database |
+| `source` | string | `"managed"` — the address was resolved from the wallet database |
 
-When the CDP wallet address cannot be retrieved, the response includes `authenticated: false` and `needsAuth: true`. The remaining fields vary by failure reason:
+### Response (session wallet)
+
+When no managed wallet exists but the user signed in with a Base wallet:
 
 ```json
 {
-  "authenticated": false,
-  "needsAuth": true,
-  "message": "Run: npx awal auth login your@email.com"
+  "authenticated": true,
+  "address": "0x...",
+  "network": "base",
+  "type": "base-auth",
+  "source": "session"
 }
 ```
 
-If the failure is caused by a configuration error, the response includes `error` and `setup` fields instead of `message`:
+| Field | Type | Description |
+|-------|------|-------------|
+| `source` | string | `"session"` — the address was resolved from the authentication session |
+| `type` | string | `"base-auth"` — address derived from Base wallet sign-in |
+
+### Response (no wallet)
+
+When no wallet is linked:
 
 ```json
 {
-  "authenticated": false,
-  "needsAuth": true,
-  "error": "Error description",
-  "setup": "Install: npx skills add coinbase/agentic-wallet-skills"
+  "authenticated": true,
+  "address": null,
+  "message": "No Base wallet linked. Sign in with Base to use send and receive."
 }
 ```
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | Unauthorized — no valid session |
+| 500 | Failed to fetch wallet address |
 
 ## Create CDP wallet
 
@@ -448,26 +510,40 @@ The webhook processes events where `metadata.type` equals `wallet_top_up`. On a 
 GET /api/wallet/transactions
 ```
 
-Returns recent transaction history for a wallet address on the Tempo blockchain. Currently provides a link to the Tempo block explorer for full transaction details.
+Returns recent USDC transfer history for a wallet address on Base. The endpoint scans recent blocks for ERC-20 `Transfer` events on the USDC contract, returning both incoming and outgoing transfers.
 
 ### Query parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `address` | string | Yes | Hex-encoded wallet address (0x-prefixed) |
-| `limit` | number | No | Maximum number of transactions to return. Defaults to `20`. |
+| `address` | string | Yes | Valid hex-encoded wallet address (0x-prefixed, 42 characters). Invalid addresses return a `400` error. |
+| `limit` | number | No | Maximum number of transactions to return. Minimum `1`, maximum `25`. Defaults to `10`. |
 
 ### Response
 
 ```json
 {
   "address": "0xd8fd0e1dce89beaab924ac68098ddb17613db56f",
-  "chain": "Tempo",
-  "chainId": 4217,
-  "currentBlock": "12345",
-  "transactions": [],
-  "note": "Transaction history requires indexer integration. Use Tempo block explorer for now.",
-  "explorerUrl": "https://explore.tempo.xyz/address/0xd8fd0e1dce89beaab924ac68098ddb17613db56f"
+  "chain": "Base",
+  "chainId": 8453,
+  "currentBlock": "12345678",
+  "indexedAsset": "USDC",
+  "windowBlocks": "50000",
+  "transactions": [
+    {
+      "hash": "0xabc123...",
+      "direction": "received",
+      "symbol": "USDC",
+      "amount": "10.000000",
+      "amountRaw": "10000000",
+      "from": "0x1234...",
+      "to": "0xd8fd...",
+      "blockNumber": "12345670",
+      "timestamp": "2026-04-04T12:00:00.000Z",
+      "status": "confirmed",
+      "explorerUrl": "https://basescan.org/tx/0xabc123..."
+    }
+  ]
 }
 ```
 
@@ -476,21 +552,34 @@ Returns recent transaction history for a wallet address on the Tempo blockchain.
 | Field | Type | Description |
 |-------|------|-------------|
 | `address` | string | The queried wallet address |
-| `chain` | string | Network name (`Tempo` or `Tempo Testnet`) |
-| `chainId` | number | Chain ID (`4217` for mainnet, `42431` for testnet) |
+| `chain` | string | Network name (`Base`) |
+| `chainId` | number | Chain ID (`8453` for Base mainnet) |
 | `currentBlock` | string | Current block number on the chain |
-| `transactions` | array | List of transactions (empty until indexer integration is complete) |
-| `note` | string | Status note about the endpoint |
-| `explorerUrl` | string | Link to the Tempo block explorer for the address |
+| `indexedAsset` | string | The asset being tracked (`USDC`) |
+| `windowBlocks` | string | Number of recent blocks scanned for transfers (`50000`) |
+| `transactions` | array | List of USDC transfer events, sorted by block number (newest first) |
+| `transactions[].hash` | string | Transaction hash |
+| `transactions[].direction` | string | `"sent"` or `"received"` relative to the queried address |
+| `transactions[].symbol` | string | Always `"USDC"` |
+| `transactions[].amount` | string | Formatted USDC amount (6 decimal places) |
+| `transactions[].amountRaw` | string | Raw amount in smallest unit |
+| `transactions[].from` | string | Sender address |
+| `transactions[].to` | string | Recipient address |
+| `transactions[].blockNumber` | string | Block number of the transaction |
+| `transactions[].timestamp` | string | ISO 8601 timestamp of the block |
+| `transactions[].status` | string | Always `"confirmed"` |
+| `transactions[].explorerUrl` | string | Basescan URL for the transaction |
 
-<Note>Full transaction history requires an indexer integration. In the meantime, use the `explorerUrl` value to link users to the Tempo block explorer where they can view all on-chain activity.</Note>
+<Note>The endpoint scans the most recent 50,000 blocks for USDC `Transfer` events involving the queried address. Older transactions outside this window are not returned. For complete history, use the `explorerUrl` from the [wallet balance endpoint](#base-network-balance-query) to link users to Basescan.</Note>
+
+<Warning>The transaction history endpoint has migrated from Tempo to Base. The previous response fields (`note`, `explorerUrl` at the top level) have been replaced. The response now returns real USDC transfer data with `indexedAsset`, `windowBlocks`, and per-transaction `explorerUrl` fields. Only USDC transfers are tracked — native ETH transfers are not included.</Warning>
 
 ### Errors
 
 | Code | Description |
 |------|-------------|
-| 400 | Missing `address` parameter |
-| 500 | Failed to fetch transactions from Tempo RPC |
+| 400 | Valid address parameter required. The `address` must be a valid EVM address (0x-prefixed, 42 characters). |
+| 500 | Failed to fetch transactions from Base RPC |
 
 ## USDC transfer validation
 
