@@ -30,7 +30,7 @@ Runs on the Vercel Edge Runtime with CDN-level caching (`s-maxage=5, stale-while
   "plan": "solo",
   "openclawUrl": "https://agentbot-agent-abc123-production.up.railway.app",
   "openclawInstanceId": "abc123",
-  "gatewayToken": "shared-gateway-token",
+  "gatewayToken": "a1b2c3d4e5f6...",
   "agent": {
     "id": "agent_xyz",
     "status": "active",
@@ -185,7 +185,7 @@ GET /api/dashboard/bootstrap
 
 Requires session authentication. Returns lightweight user and runtime shell data in a single request. Use this endpoint to populate the dashboard shell immediately without waiting for slower runtime probes.
 
-This endpoint consolidates data that previously required multiple separate fetches (user profile, OpenClaw state, and gateway token) into one call. The dashboard renders skeleton cards for runtime-dependent data while the full runtime probe completes in the background.
+This endpoint consolidates data that previously required multiple separate fetches (user profile, OpenClaw state, and gateway token) into one call. The `gatewayToken` returned is the authenticated user's own token, enabling automatic pairing with their agent instance. The dashboard renders skeleton cards for runtime-dependent data while the full runtime probe completes in the background.
 
 ### Response
 
@@ -197,7 +197,7 @@ This endpoint consolidates data that previously required multiple separate fetch
   "plan": "solo",
   "openclawUrl": "https://agentbot-agent-abc123-production.up.railway.app",
   "openclawInstanceId": "abc123",
-  "gatewayToken": "shared-gateway-token"
+  "gatewayToken": "a1b2c3d4e5f6..."
 }
 ```
 
@@ -209,7 +209,7 @@ This endpoint consolidates data that previously required multiple separate fetch
 | `plan` | string \| null | Current subscription plan (for example, `solo`, `collective`, `label`, `network`), or `null` if no plan is active. |
 | `openclawUrl` | string \| null | URL of the user's deployed OpenClaw instance, or `null` if no instance is registered. |
 | `openclawInstanceId` | string \| null | Identifier of the user's OpenClaw instance, or `null` if no instance is registered. |
-| `gatewayToken` | string \| null | Shared gateway authentication token, or `null` if not configured. |
+| `gatewayToken` | string \| null | The authenticated user's gateway token for auto-pairing with their agent instance, or `null` if no token is registered. |
 
 ### Errors
 
