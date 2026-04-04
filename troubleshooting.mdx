@@ -134,6 +134,32 @@ Skills are loaded at agent startup. If a skill fails to load, the agent will sta
 
 </Accordion>
 
+<Accordion icon="bug" title="Gateway token missing or expired">
+
+Gateway tokens are now auto-healed. When you open the dashboard, the system checks for a valid gateway token and generates a new one automatically if it is missing or expired. No manual refresh is required.
+
+If auto-healing does not resolve the issue, you can trigger it manually:
+
+```http
+POST /api/support/heal-token
+```
+
+This returns a new token and updates the Control UI URL. See the [support API](/api-reference/support#heal-gateway-token) for details.
+
+To check overall platform health and token status, use the diagnostics endpoint:
+
+```http
+GET /api/support/diagnostics
+```
+
+If you recently updated to OpenClaw 2026.4.2, run the compatibility check to apply any required migrations:
+
+```http
+POST /api/openclaw/ensure-compatibility
+```
+
+</Accordion>
+
 </AccordionGroup>
 
 ## Billing Issues

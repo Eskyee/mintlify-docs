@@ -291,6 +291,9 @@ curl -X POST https://agentbot.sh/api/ai/chat \
 | `/api/version` | GET | Get platform version (no auth) |
 | `/api/openclaw/maintenance` | GET | Get agent health status (liveness and readiness) |
 | `/api/openclaw/maintenance` | POST | Restart agent container (runs doctor and migrations on startup) |
+| `/api/openclaw/ensure-compatibility` | POST | Check and fix OpenClaw 2026.4.2 compatibility (session auth) |
+| `/api/support/heal-token` | POST | Auto-heal (regenerate) gateway tokens (session auth) |
+| `/api/support/diagnostics` | GET | Platform diagnostics snapshot (session auth) |
 | `/api/openclaw-version` | GET | Get OpenClaw runtime version (web proxy, fallback `2026.4.2`) |
 | `/api/openclaw/version` | GET | Get OpenClaw runtime version (backend only) |
 | `/api/openclaw/instances` | GET | List running agent instances (backend only, requires auth) |

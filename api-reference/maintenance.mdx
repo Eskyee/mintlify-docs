@@ -232,6 +232,43 @@ When a restart or factory reset fails:
 
 <Note>Factory reset pins the agent to the platform's configured default image. After a factory reset, you can update to a newer version later through the normal update flow.</Note>
 
+## Ensure OpenClaw compatibility
+
+```http
+POST /api/openclaw/ensure-compatibility
+```
+
+Requires session authentication. Checks whether the authenticated user's OpenClaw setup is compatible with the current platform version (2026.4.2) and automatically applies any required fixes. This includes plugin configuration migration, agent pairing scope corrections, and gateway token generation.
+
+### Response
+
+```json
+{
+  "compatible": true,
+  "fixes": ["migrated_plugin_config", "fixed_pairing_scope"],
+  "errors": [],
+  "message": "Applied 2 compatibility fixes"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `compatible` | boolean | `true` when the setup is compatible (either already compatible or all fixes were applied successfully) |
+| `fixes` | string[] | List of fixes that were applied. Empty when no fixes were needed. |
+| `errors` | string[] | List of errors encountered during compatibility checks. Empty on success. |
+| `message` | string | Human-readable summary of the result |
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | Unauthorized — missing or invalid session |
+| 500 | Internal error during compatibility check |
+
+<Note>This endpoint is idempotent. Calling it multiple times on an already-compatible setup returns `compatible: true` with an empty `fixes` array and the message "No fixes needed".</Note>
+
+---
+
 ## OpenClaw runtime version
 
 ```http
