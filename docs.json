@@ -145,6 +145,7 @@
           "api-reference/export",
           "api-reference/wallet-monitor",
           "api-reference/market-intel",
+          "api-reference/gamification",
           "api-reference/referrals"
         ]
       },
