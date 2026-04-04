@@ -24,7 +24,7 @@ Requires session authentication. Returns all core dashboard data in a single req
   "plan": "solo",
   "openclawUrl": "https://openclaw-agent-abc.up.railway.app",
   "openclawInstanceId": "inst_abc123",
-  "gatewayToken": "gw_token_abc123",
+  "gatewayToken": "a1b2c3d4e5f6...",
   "agent": {
     "id": "agent_abc123",
     "status": "active",
@@ -175,7 +175,7 @@ Requires session authentication. Returns time-series trends for deployments, ski
 GET /api/dashboard/bootstrap
 ```
 
-Requires session authentication. Returns lightweight initialization data for the dashboard, including referral credits, plan information, and OpenClaw connection details.
+Requires session authentication. Returns lightweight initialization data for the dashboard, including referral credits, plan information, and OpenClaw connection details. The `gatewayToken` is the authenticated user's own token, enabling automatic pairing with their agent instance.
 
 ### Response
 
@@ -187,7 +187,7 @@ Requires session authentication. Returns lightweight initialization data for the
   "plan": "solo",
   "openclawUrl": "https://openclaw-agent-abc.up.railway.app",
   "openclawInstanceId": "inst_abc123",
-  "gatewayToken": "gw_token_abc123"
+  "gatewayToken": "a1b2c3d4e5f6..."
 }
 ```
 
@@ -199,7 +199,7 @@ Requires session authentication. Returns lightweight initialization data for the
 | `plan` | string \| null | Current subscription plan |
 | `openclawUrl` | string \| null | OpenClaw instance URL |
 | `openclawInstanceId` | string \| null | OpenClaw instance identifier |
-| `gatewayToken` | string \| null | Shared gateway authentication token |
+| `gatewayToken` | string \| null | The authenticated user's gateway token for auto-pairing with their agent instance, or `null` if no token is registered |
 
 ### Errors
 
