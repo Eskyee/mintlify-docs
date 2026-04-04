@@ -130,6 +130,7 @@
           "api-reference/scheduled-tasks",
           "api-reference/billing",
           "api-reference/clawmerchants",
+          "api-reference/dashboard",
           "api-reference/debug",
           "api-reference/config",
           "api-reference/devices",
