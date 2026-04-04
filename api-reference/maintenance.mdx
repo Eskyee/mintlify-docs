@@ -159,9 +159,18 @@ Restarts the agent container. The agent automatically runs `openclaw doctor --fi
 ```json
 {
   "success": true,
-  "message": "Agent restarting — doctor & migrations run on startup"
+  "message": "Agent restarting — doctor & migrations run on startup",
+  "serviceId": "abc123-service-id",
+  "instanceId": "abc123"
 }
 ```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `success` | boolean | `true` when the action was initiated |
+| `message` | string | Confirmation message describing what happened |
+| `serviceId` | string | Railway service identifier for the restarted agent |
+| `instanceId` | string | The user's OpenClaw instance identifier |
 
 #### `factory-reset`
 
@@ -181,7 +190,8 @@ Pins the agent to the known-good OpenClaw image (`v2026.4.2`), reconfigures envi
 {
   "success": true,
   "message": "Factory reset complete — pinned to ghcr.io/openclaw/openclaw:2026.4.2. Agent restarting with doctor --fix.",
-  "image": "ghcr.io/openclaw/openclaw:2026.4.2"
+  "image": "ghcr.io/openclaw/openclaw:2026.4.2",
+  "serviceId": "abc123-service-id"
 }
 ```
 
@@ -189,7 +199,8 @@ Pins the agent to the known-good OpenClaw image (`v2026.4.2`), reconfigures envi
 |-------|------|-------------|
 | `success` | boolean | `true` when the action was initiated |
 | `message` | string | Confirmation message describing what happened |
-| `image` | string | *(factory-reset only)* The Docker image the agent was pinned to |
+| `image` | string | The Docker image the agent was pinned to |
+| `serviceId` | string | Railway service identifier for the reset agent |
 
 ### Error responses
 
@@ -201,21 +212,11 @@ When the user has no deployed agent:
 }
 ```
 
-When a restart call fails:
+When a restart or factory reset fails:
 
 ```json
 {
-  "error": "Restart failed",
-  "details": 502
-}
-```
-
-When a factory reset fails during the image update:
-
-```json
-{
-  "error": "Factory reset failed during update",
-  "details": {}
+  "error": "Description of the error"
 }
 ```
 
@@ -224,8 +225,7 @@ When a factory reset fails during the image update:
 | 200 | Action completed successfully |
 | 401 | Unauthorized — missing or invalid session |
 | 404 | No agent deployed for the authenticated user |
-| 500 | Internal error during the request |
-| 502 | Backend call failed (restart or factory reset) |
+| 500 | Internal error during the restart or factory reset |
 | 503 | Managed runtime controls are disabled |
 
 <Warning>Both `restart` and `factory-reset` cause a brief period of downtime while the container reinitializes. The `openclaw doctor --fix` process runs automatically during startup and may take additional time depending on the number of pending fixes or migrations.</Warning>
