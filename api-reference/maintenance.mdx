@@ -59,7 +59,8 @@ Requires session authentication. Returns runtime state for a specific agent inst
 
 | Code | Description |
 |------|-------------|
-| 403 | Forbidden — the authenticated user does not own this instance |
+| 403 | Forbidden — not authenticated (no valid session) |
+| 404 | No instance found — the authenticated user does not have a deployed agent, or does not own the requested instance. The response message is: `No instance found. Please deploy first.` |
 
 ---
 
