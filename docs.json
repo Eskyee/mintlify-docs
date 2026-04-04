@@ -136,6 +136,8 @@
           "api-reference/permissions",
           "api-reference/hooks-classify",
           "api-reference/orchestration",
+          "api-reference/hashline",
+          "api-reference/init-deep",
           "api-reference/trial",
           "api-reference/showcase",
           "api-reference/admin-summary",

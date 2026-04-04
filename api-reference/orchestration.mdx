@@ -25,7 +25,7 @@ Submit a batch of tool calls for concurrent execution. The system automatically 
 | `tools[].id` | string | Yes | Unique identifier for this tool call |
 | `tools[].toolName` | string | Yes | Name of the tool to invoke (for example, `read`, `grep`, `write`, `bash`) |
 | `tools[].input` | object | Yes | Input parameters for the tool call |
-| `userId` | string | No | User identifier. Used for server-side logging and monitoring. Not validated against the authenticated session. |
+| `userId` | string | No | User identifier for server-side logging. When calling through the Next.js proxy, this field is automatically populated from your session and does not need to be sent by the client. |
 
 ```json
 {
@@ -119,11 +119,12 @@ In this example, `t1` and `t2` are read-only and run in parallel. `t3` is mutati
 |------|-------------|
 | 400 | `tools array required` — missing or empty `tools` field |
 | 400 | `Maximum 20 tools per batch` — batch size exceeds the limit |
+| 400 | `Each tool must have id and toolName` — a tool object is missing `id` or `toolName` |
 | 401 | Unauthorized — missing bearer token |
 | 403 | Forbidden — invalid bearer token |
 | 500 | Internal server error |
 
-<Note>Individual tool call objects are not validated for required fields (`id`, `toolName`) at the API level. Malformed tool objects are passed to the executor and may produce runtime errors in the tool results.</Note>
+<Note>Each tool object in the array must include both `id` and `toolName`. The API validates these fields and returns a `400` error if any tool object is missing either field.</Note>
 
 ### Serial failure behavior
 
