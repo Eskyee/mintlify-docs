@@ -367,12 +367,25 @@ Provisions a new agent. Requires an active subscription unless the caller is an 
 |-------|------|----------|-------------|
 | `name` | string | Yes | Agent name. Must be between 1 and 64 characters after trimming whitespace. |
 | `model` | string | No | AI model (default: `claude-opus-4-6`). Options: `claude-opus-4-6`, `gpt-4`, `custom` |
-| `config` | object | No | Agent configuration |
-| `tier` | string | No | Subscription tier hint. Options: `starter`, `pro`, `enterprise`. This value is forwarded to the backend as the `plan` field (mapped to `solo`, `collective`, `label`, `network`). When omitted, the backend deployment defaults to `label`. |
+| `config` | object | No | Agent configuration. May include a `tier` field as a string. |
+| `tier` | string | No | Subscription tier hint. Accepts both new and legacy plan names — see the alias table below. This value is normalized server-side before being applied. When omitted, the tier is resolved from `config.tier`, then the user's current plan, defaulting to `solo`. |
 
-<Note>The web proxy enforces agent limits based on the subscription tier (`starter`: 1, `pro`: 3, `enterprise`: 100). The backend provisioning route (`POST /api/provision`) enforces its own limits (`solo`: 1, `collective`: 3, `label`: 10, `network`: unlimited). These provisioning limits determine how many agents you can create. The agent count is per-user across all plans — all active agents count toward the current plan's limit regardless of which plan they were originally created under. The plan middleware enforces separate per-request limits for AI model access and skill usage. The limit cannot be overridden in the request body.</Note>
+#### Tier aliases
 
-<Note>Resource limits are enforced at provisioning time. The Railway provisioning function applies memory and CPU caps based on the plan: `underground` (2 GB / 1 vCPU), `solo` (2 GB / 1 vCPU), `collective` (4 GB / 2 vCPU), `label` (8 GB / 4 vCPU), `network` (16 GB / 4 vCPU). Plans not in this list default to `solo` limits. Legacy plan aliases (`starter`, `pro`, `scale`, `enterprise`, `white_glove`) are no longer resolved by the Railway provisioning function and fall back to `solo` limits (2 GB / 1 vCPU).</Note>
+The following values are accepted for the `tier` (or `config.tier`) field and are normalized to the canonical plan name:
+
+| Input | Normalized to |
+|-------|---------------|
+| `starter`, `free`, `underground`, `solo` | `solo` |
+| `pro`, `collective` | `collective` |
+| `label` | `label` |
+| `enterprise`, `network` | `network` |
+
+Any unrecognized value defaults to `solo`.
+
+<Note>The web proxy enforces agent limits based on the subscription tier (`free`: 1, `underground`: 1, `solo`: 1, `starter`: 1, `collective`: 3, `pro`: 3, `label`: 10, `network`: 100, `enterprise`: 100). These provisioning limits determine how many agents you can create. The agent count is per-user across all plans — all active agents count toward the current plan's limit regardless of which plan they were originally created under. The plan middleware enforces separate per-request limits for AI model access and skill usage. The limit cannot be overridden in the request body.</Note>
+
+<Note>Resource limits are enforced at provisioning time. The Railway provisioning function applies memory and CPU caps based on the plan: `underground` (2 GB / 1 vCPU), `solo` (2 GB / 1 vCPU), `collective` (4 GB / 2 vCPU), `label` (8 GB / 4 vCPU), `network` (16 GB / 4 vCPU). Plans not in this list default to `solo` limits.</Note>
 
 ### Admin bypass
 
@@ -387,6 +400,8 @@ Admin status is determined by checking the session email against `ADMIN_EMAILS`.
 
 ### Response (201 Created)
 
+When the user already has a managed runtime, the agent is deployed to the existing runtime:
+
 ```json
 {
   "success": true,
@@ -394,12 +409,40 @@ Admin status is determined by checking the session email against `ADMIN_EMAILS`.
     "id": "agent_789",
     "name": "My Agent",
     "status": "running",
-    "websocketUrl": "ws://openclaw-gateway:10000/agent/user_123",
+    "websocketUrl": "https://agentbot-agent-inst_a1b2c3d4e5-production.up.railway.app",
     "model": "claude-opus-4-6",
     "createdAt": "2026-03-19T00:00:00Z"
   }
 }
 ```
+
+When the user does not yet have a managed runtime, a new one is provisioned automatically and the response includes a `runtime` object:
+
+```json
+{
+  "success": true,
+  "agent": {
+    "id": "agent_789",
+    "name": "My Agent",
+    "status": "deploying",
+    "websocketUrl": "https://agentbot-agent-inst_a1b2c3d4e5-production.up.railway.app",
+    "model": "claude-opus-4-6",
+    "createdAt": "2026-03-19T00:00:00Z",
+    "runtime": {
+      "instanceId": "inst_a1b2c3d4e5",
+      "url": "https://agentbot-agent-inst_a1b2c3d4e5-production.up.railway.app",
+      "serviceId": "srv_abc123"
+    }
+  }
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `agent.runtime` | object | Only present when a new managed runtime was provisioned |
+| `agent.runtime.instanceId` | string | The new OpenClaw instance identifier |
+| `agent.runtime.url` | string | The public URL for the new runtime |
+| `agent.runtime.serviceId` | string | The Railway service identifier |
 
 ### Errors
 
@@ -408,8 +451,9 @@ Admin status is determined by checking the session email against `ADMIN_EMAILS`.
 | 400 | Agent name is required |
 | 401 | Unauthorized |
 | 402 | Active subscription required to provision agents |
-| 429 | Agent limit reached for your plan (web proxy). Response includes `current` (agent count) and `limit` fields. Limits: `starter` 1, `pro` 3, `enterprise` 100. Users without a recognized plan default to a limit of 1. The backend returns `402` with code `AGENT_LIMIT_REACHED` for the same condition. |
+| 429 | Agent limit reached for your plan. Response includes `current` (agent count) and `limit` fields. Limits: `free`/`underground`/`solo`/`starter` 1, `collective`/`pro` 3, `label` 10, `network`/`enterprise` 100. Users without a recognized plan default to a limit of 1. |
 | 500 | Failed to provision agent |
+| 503 | Managed runtime provisioning is not configured. Returned when the managed runtime infrastructure is not available. |
 
 <Note>When an agent is provisioned, the complete agent state — including installed skills, stored memories, and uploaded files — is deployed to the OpenClaw gateway. If the initial deployment fails, you can retry using the [sync endpoint](#sync-agent-to-gateway).</Note>
 
@@ -1737,194 +1781,184 @@ If the resolved email matches an admin email, the caller is treated as an admin.
 
 ### Provisioning strategy
 
-The endpoint provisions agents using a two-path strategy, tried in order:
+The endpoint enqueues the provisioning request as an asynchronous job on the backend control plane. The backend scheduler performs the actual Railway API work out of band.
 
-1. **Backend service** — the request is forwarded to the backend Express service (`BACKEND_API_URL`). If a fallback URL is configured (`BACKEND_API_FALLBACK_URL`), it is tried next if the primary fails. Non-JSON responses (such as HTML error pages from a proxy or load balancer) are detected and treated as failures, avoiding the previous "Unexpected token" parsing errors.
-2. **Railway direct provisioning** — when all backend URLs fail or are not configured, the endpoint falls back to provisioning the agent container directly via the Railway GraphQL API. This path requires `RAILWAY_API_KEY`, `RAILWAY_PROJECT_ID`, and `RAILWAY_ENVIRONMENT_ID` to be set. The Railway path creates a new Railway service, injects environment variables (including `OPENCLAW_GATEWAY_PORT=18789`), sets a start command and plan-based resource limits (memory and CPU caps) via the `ServiceInstanceUpdate` mutation, writes an `openclaw.json` configuration file with an `env` section containing `OPENROUTER_API_KEY` for LLM provider authentication, configures the gateway (local mode, disabled device auth, enabled chat completions endpoint), generates a public domain via the `serviceDomainCreate` mutation with `targetPort: 18789` so that Railway's HTTP proxy routes traffic directly to the gateway port, and then triggers a deployment. Resource limits are: `underground`/`solo` 2 GB / 1 vCPU, `collective` 4 GB / 2 vCPU, `label` 8 GB / 4 vCPU, `network` 16 GB / 4 vCPU. Unrecognized plan values default to `solo` limits. The domain is generated before the deploy so that the service has a routable public URL immediately. The returned URL is the direct Railway domain for the service. The `controlUiUrl` is constructed with `token` and `gatewayUrl` in the URL hash fragment so the Control UI auto-connects without requiring manual configuration. The hash fragment is never sent to the server, keeping the gateway token client-side only.
+The web proxy validates authentication, checks the subscription, acquires a workload slot, and forwards the request to the backend job queue (`POST /api/platform-jobs/provision`). On success, a `202 Accepted` response is returned with a `jobId` that you poll for the result.
 
-If both paths fail, the endpoint returns a `502` error.
+Subject to rate limiting (per-IP) and workload gating (per-user). Auto-provision requests (`autoProvision: true`) consume 2 workload slots; standard requests consume 1.
 
-When the backend path succeeds and `MUX_TOKEN_ID` and `MUX_TOKEN_SECRET` are configured, the backend creates a real Mux live stream via the Mux API with public playback policy. When Mux credentials are not configured, placeholder streaming credentials are returned instead. The Railway direct path does not create Mux streams.
+<Warning>The provisioning endpoint no longer tries multiple backend URLs or falls back to direct Railway API calls. It exclusively uses the backend job queue. The previous multi-path provisioning strategy (backend service, backend Railway proxy, Railway direct) has been replaced with a single async path.</Warning>
 
 ### Request body
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `telegramToken` | string | Conditional | Telegram bot token. At least one channel token is required unless `autoProvision` is `true` or `agentType` is `business`. |
-| `telegramUserId` | string | No | Telegram user ID for owner binding |
-| `whatsappToken` | string | Conditional | WhatsApp API token. At least one channel token is required unless `autoProvision` is `true` or `agentType` is `business`. |
-| `discordBotToken` | string | Conditional | Discord bot token. At least one channel token is required unless `autoProvision` is `true` or `agentType` is `business`. |
 | `aiProvider` | string | No | AI provider (default: `openrouter`). Options: `openrouter`, `gemini`, `groq`, `anthropic`, `openai`. Each provider maps to a default model — see [AI provider defaults](#ai-provider-defaults) below. |
-| `plan` | string | No | Plan tier. Options: `solo`, `collective`, `label`, `network`. Defaults to `free` when omitted. Since `free` is not a valid plan, omitting this field returns a `400` validation error — you must explicitly specify a paid plan when calling the backend directly. |
-| `model` | string | No | AI model identifier. **Web proxy only** — this field is accepted by the web proxy and used to configure the agent's model, but is not accepted by the backend provisioning route directly. When omitted, the default model for the selected `aiProvider` is used (see [AI provider defaults](#ai-provider-defaults)). |
-| `skills` | string[] | No | List of skill identifiers to enable on the agent. **Web proxy only** — this field is accepted by the web proxy but is not forwarded to the backend provisioning route. |
+| `plan` | string | No | Plan tier. Options: `solo`, `collective`, `label`, `network`. Defaults to `solo` when omitted. |
 | `agentType` | string | No | Agent type. Defaults to `creative`. When set to `business`, the agent is provisioned as an OpenClaw-only deployment and channel tokens are not required. Accepted values: `creative` (default), `business`. |
 | `autoProvision` | boolean | No | When `true`, the agent is provisioned as an OpenClaw-only deployment and channel tokens are not required. The onboard flow sets this automatically in deploy mode. |
-| `email` | string | No | User email address. When calling through the web proxy, this field is forwarded to the backend but is not used for admin detection (the web proxy uses the session email). When calling the backend directly, this field **is** used for admin detection — the backend resolves the email from the body first, falling back to the `X-User-Email` header, and checks it against `ADMIN_EMAILS`. See [admin check](#admin-check). |
-| `stripeSubscriptionId` | string | No | Stripe subscription ID from checkout. This field is accepted by the backend provisioning service directly. The web proxy does not forward this field — it performs its own subscription check against the database instead. |
+| `stripeSubscriptionId` | string | No | Stripe subscription ID from checkout. |
 
-<Note>The server resolves the user email exclusively from the authenticated session. The session email is sent to the backend provisioning service in the `X-User-Email` header and the session user ID is sent in the `X-User-Id` header. The `email` field in the request body is not used for authentication or admin detection.</Note>
+<Warning>The following request fields have been removed from the provision payload forwarded to the backend: `telegramToken`, `telegramUserId`, `whatsappToken`, `discordBotToken`, `apiKey`. Channel tokens are no longer accepted by the web proxy provision endpoint. The payload now only includes `userId`, `email`, `agentId`, `aiProvider`, `plan`, `stripeSubscriptionId`, `autoProvision`, and `agentType`.</Warning>
 
-<Warning>The following request fields are deprecated and no longer accepted: `whatsappPhoneNumberId`, `whatsappBusinessAccountId`, `discordGuildId`, `discordChannelId`.</Warning>
+<Note>The server resolves the user email exclusively from the authenticated session. The session email is sent to the backend provisioning service in the `X-User-Email` header and the session user ID is sent in the `X-User-Id` header.</Note>
 
-### Response
+### Response (202 Accepted)
 
-The response shape depends on which provisioning path succeeds. The web proxy attempts three paths in order:
-
-1. **Path 1 — Backend Express service** — sends a `POST /api/provision` request to the backend. This path handles container creation, channel configuration, and streaming setup.
-2. **Path 1.5 — Backend Railway proxy** — sends a `POST /api/railway/provision` request to the backend. This path creates a Railway service directly through the backend, bypassing Cloudflare WAF restrictions that block requests originating from Vercel serverless functions. See [Railway provisioning proxy](#railway-provisioning-proxy-internal) for the backend endpoint specification.
-3. **Path 2 — Railway direct** — calls the Railway GraphQL API directly from the web proxy. This path is a last resort because requests from Vercel infrastructure may be blocked by Cloudflare.
-
-The proxy tries each path in order and returns the response from the first one that succeeds. If all paths fail, a `502` error is returned.
-
-#### Backend path response (path 1)
-
-When the backend Express service handles the request, the proxy returns a filtered subset:
+The endpoint returns a job reference immediately. The actual provisioning happens asynchronously on the backend.
 
 ```json
 {
   "success": true,
+  "queued": true,
+  "jobId": "job_abc123",
   "userId": "a1b2c3d4e5",
-  "subdomain": "dj-a1b2c3d4e5.agentbot.sh",
-  "url": "https://dj-a1b2c3d4e5.agentbot.sh",
-  "streamKey": "sk-ab12-cd34-ef56",
-  "liveStreamId": "x7k9m2p4q1"
-}
-```
-
-<Note>The backend path returns `success`, `userId`, `subdomain`, `url`, `streamKey`, and `liveStreamId`. The full response shape from the backend provisioning service is shown below.</Note>
-
-#### Backend Railway proxy response (path 1.5)
-
-When the backend Railway proxy handles the request, the response has the same shape as the Railway direct path:
-
-```json
-{
-  "success": true,
-  "userId": "a1b2c3d4e5",
-  "url": "https://agentbot-agent-a1b2c3d4e5-production.up.railway.app",
-  "status": "deploying"
+  "status": "queued"
 }
 ```
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `success` | boolean | Whether the provisioning request was accepted |
-| `userId` | string | The generated agent ID (forwarded from the backend proxy response) |
-| `url` | string | The Railway domain URL for the agent |
-| `status` | string | `deploying` — the Railway service has been created and deployment is in progress |
-
-<Note>This path produces the same response shape as the Railway direct path. The difference is that the Railway GraphQL API calls are made from the backend (which runs on non-Vercel infrastructure) instead of from the web proxy. This avoids Cloudflare WAF blocks that affect Vercel-originating requests to the Railway API.</Note>
-
-#### Railway direct path response (path 2)
-
-When the Railway direct fallback handles the request, the response has a different shape:
-
-```json
-{
-  "success": true,
-  "userId": "a1b2c3d4e5",
-  "url": "https://agentbot-agent-a1b2c3d4e5-production.up.railway.app",
-  "status": "deploying"
-}
-```
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `success` | boolean | Whether the provisioning request was accepted |
+| `success` | boolean | Whether the job was enqueued |
+| `queued` | boolean | Always `true` — the provisioning request was accepted |
+| `jobId` | string | Job identifier. Poll [`GET /api/provision/jobs/:jobId`](#get-provision-job-status) to check progress and retrieve the provisioned agent URL. |
 | `userId` | string | The generated agent ID |
-| `url` | string | The direct Railway domain URL for the agent. This URL is generated by Railway via the `serviceDomainCreate` API and points directly to the agent's Railway service rather than routing through a backend proxy. If domain generation fails, the URL falls back to `https://agentbot-agent-{agentId}.up.railway.app`. |
-| `status` | string | Always `deploying` for the Railway path. The agent service is created and the deployment is triggered, but it may not be ready to receive traffic immediately. |
+| `status` | string | `"queued"` — the job is waiting to be processed |
 
-<Note>The Railway path does not return `subdomain`, `streamKey`, or `liveStreamId`. These fields are only available when the backend Express service handles the request. The `status` field is `deploying` (not `active`) because the Railway service is created asynchronously. The Railway path creates a service domain with `targetPort: 18789` so that Railway's HTTP proxy routes incoming requests directly to the OpenClaw gateway port. The start command writes an `openclaw.json` with a top-level `env` section (containing `OPENROUTER_API_KEY`) and configures the gateway in local mode with device auth disabled and chat completions enabled before launching on port 18789.</Note>
-
-<Note>On a successful provision through either path, the proxy persists the agent in two places: it updates the user record with the `openclawUrl` and `openclawInstanceId`, and it upserts an `Agent` record with the agent's name, model, status, WebSocket URL, tier, and configuration metadata. The agent name is set to "OpenClaw Agent" when `agentType` is `business`, or "Agentbot Agent" otherwise. The agent status is normalized before saving — an `active` status from the backend is stored as `running`. You can retrieve the user-level values later using [`GET /api/user/openclaw`](#get-user-openclaw-instance), and the agent record is returned by [`GET /api/agents`](#list-agents). The stored `openclawUrl` is no longer used for gateway routing — the platform always uses the shared gateway URL instead. The `openclawInstanceId` remains the primary identifier for the agent instance.</Note>
-
-### Full backend response
-
-When calling the backend provisioning service directly, the response includes additional fields. The backend returns `200 OK` on success (not `201 Created`).
-
-<Warning>Channel tokens (`telegramToken`, `discordBotToken`, `whatsappToken`) are no longer included in the provision response. Tokens are write-only secrets — they are stored server-side but never returned to the caller.</Warning>
-
-```json
-{
-  "success": true,
-  "userId": "a1b2c3d4e5",
-  "agentId": "a1b2c3d4e5",
-  "id": "a1b2c3d4e5",
-  "aiProvider": "openrouter",
-  "aiProviderConfig": {
-    "model": "openai/gpt-4o-mini",
-    "baseUrl": "https://openrouter.ai/api/v1",
-    "requiresKey": true
-  },
-  "plan": "solo",
-  "streamKey": "sk-ab12-cd34-ef56",
-  "liveStreamId": "x7k9m2p4q1",
-  "rtmpServer": "rtmps://live.mux.com/app",
-  "playbackUrl": "https://image.mux.com/x7k9m2p4q1/playlist.m3u8",
-  "subdomain": "dj-a1b2c3d4e5.agentbot.sh",
-  "url": "https://dj-a1b2c3d4e5.agentbot.sh",
-  "hls": {
-    "playlistUrl": "https://image.mux.com/x7k9m2p4q1/playlist.m3u8"
-  },
-  "rtmp": {
-    "server": "rtmps://live.mux.com/app",
-    "key": "sk-ab12-cd34-ef56"
-  },
-  "status": "active",
-  "createdAt": "2026-03-20T00:00:00Z",
-  "metadata": {
-    "channels": {
-      "telegram": "enabled",
-      "discord": "disabled",
-      "whatsapp": "disabled"
-    },
-    "streaming": {
-      "provider": "mux",
-      "lowLatency": true,
-      "resolution": "1920x1080",
-      "bitrate": "5000k"
-    }
-  },
-  "container": {
-    "name": "agentbot-agent-a1b2c3d4e5",
-    "status": "deploying",
-    "serviceId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-    "renderUrl": "https://agentbot-agent-a1b2c3d4e5.up.railway.app",
-    "controlUiUrl": "https://agentbot-agent-a1b2c3d4e5.up.railway.app/chat?session=main#token=your-gateway-token&gatewayUrl=wss%3A%2F%2Fagentbot-agent-a1b2c3d4e5.up.railway.app"
-  }
-}
-```
-
-<Note>The `container` object is included when the backend successfully creates a container for the agent. If container creation fails, provisioning still succeeds and the `container` field is omitted. The agent can operate using API-side processing until the container becomes available. You can check backend availability using the [backend health endpoint](/api-reference/health#backend-health-check).</Note>
-
-<Note>The `container.status` is `deploying` because the Railway service is created asynchronously. The service transitions to `running` once the deployment completes. Device pairing (`dangerouslyDisableDeviceAuth`) is automatically disabled for user containers at provisioning time — each user has an isolated container, so device auth is unnecessary. The gateway is still protected by token authentication (`OPENCLAW_GATEWAY_TOKEN`). The service domain is created with `targetPort: 18789` so that Railway's HTTP proxy routes traffic directly to the gateway port. The backend provisioner writes a top-level `env` section in `openclaw.json` containing `OPENROUTER_API_KEY` so the OpenClaw runtime can authenticate with the LLM provider.</Note>
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `container.name` | string | Container name (format: `agentbot-agent-{userId}`) |
-| `container.status` | string | Container status (for example, `running`, `stopped`) |
-| `container.serviceId` | string | Railway service ID for the agent container. |
-| `container.renderUrl` | string | Public service URL for the agent container (for example, `https://agentbot-agent-{userId}.up.railway.app`). The field name is retained for backward compatibility but now points to a Railway URL. |
-| `container.controlUiUrl` | string | Auto-connect URL for the OpenClaw Control UI. The `token` and `gatewayUrl` are passed in the URL hash fragment (for example, `https://service.up.railway.app/chat?session=main#token=...&gatewayUrl=wss%3A%2F%2Fservice.up.railway.app`). Because the hash fragment is never sent to the server, the gateway token remains client-side only. The Control UI reads the token and WebSocket endpoint from the fragment on load and connects automatically, bypassing the onboarding redirect. Only present when a gateway token is configured. |
-| `container.port` | number \| null | **Deprecated.** Previously held the container's local listening port. Removed in favor of `container.renderUrl`. |
-| `container.gatewayUrl` | string | **Deprecated.** Previously held the local gateway URL. Replaced by `container.renderUrl`, which points to the service URL instead. |
+<Note>When the job completes successfully and you poll [`GET /api/provision/jobs/:jobId`](#get-provision-job-status), the endpoint automatically persists the managed agent in the database (user record and `Agent` record).</Note>
 
 ### Errors
 
 | Code | Description |
 |------|-------------|
-| 400 | At least one channel token required (Telegram, WhatsApp, or Discord) when `autoProvision` is not `true` and `agentType` is not `business`, or invalid `aiProvider` value |
-| 400 | Invalid plan value (backend only). The `plan` field must be one of `solo`, `collective`, `label`, or `network`. The web proxy defaults to `label` when forwarding to the backend, so this error is only returned when calling the backend directly with an unrecognized value. Since the `plan` field defaults to `free` when omitted, and `free` is not a valid plan, callers must always specify an explicit paid plan. The error message is: `Invalid plan. Supported: solo, collective, label, network`. |
-| 401 | Authentication required. Returned when no valid session is present, or the session email does not match a configured admin email. The body `email` field is not used for authentication. |
-| 403 | Active subscription required (web proxy). Returned when the authenticated user does not have an active subscription and is not an admin. The response body includes `success: false` and an `error` message: `Active subscription required. Please purchase a plan to deploy.` |
-| 402 | No free tier available. Returned when `plan` is `free` (the default when omitted). The response body includes `code: "PAYMENT_REQUIRED"` and the message `"No free tier. Choose a paid plan to get started."` You must explicitly specify a paid plan (`solo`, `collective`, `label`, or `network`). |
-| 402 | Active subscription required (backend). Returned when a valid paid plan is specified but no Stripe subscription ID is provided and the caller is not an admin. The response body includes `code: "PAYMENT_REQUIRED"` and `success: false`. |
-| 402 | Agent limit reached for your plan. The response body includes a `code` field set to `AGENT_LIMIT_REACHED`, along with `current` (current agent count) and `limit` (maximum allowed) fields. Provisioning limits: `solo` 1, `collective` 3, `label` 10, `network` unlimited. The agent count is per-user across all plans — agents created under a previous plan count toward the current plan's limit. |
+| 401 | Authentication required. Returned when no valid session is present, or the session email does not match a configured admin email. |
+| 403 | Active subscription required. Returned when the authenticated user does not have an active subscription and is not an admin. |
+| 429 | Rate limit or workload gate exceeded. Response may include `retryAfterSeconds`. |
 | 500 | Internal server error |
-| 502 | Provisioning service unavailable. All backend URLs failed or returned non-JSON/error responses, and Railway direct provisioning also failed or is not configured. The error message from the last attempted path is included in the response. |
-| 503 | Provisioning is temporarily disabled (kill switch active) or provisioning service misconfigured. |
+| 502 | Backend job queue returned an error or non-JSON response |
+
+## Get job status
+
+```http
+GET /api/jobs/:jobId
+```
+
+Returns the status and result of an asynchronous job. Use this to poll for the result of chat messages enqueued via [`POST /api/chat`](#send-message) or [`POST /api/gateway/chat`](/api-reference/gateway#gateway-chat-proxy).
+
+Requires session authentication. You can only access jobs that belong to your account.
+
+### Path parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `jobId` | string | Job identifier returned by the enqueue endpoint |
+
+### Response
+
+```json
+{
+  "job": {
+    "id": "job_abc123",
+    "userId": "user_123",
+    "status": "completed",
+    "error": null,
+    "result": {}
+  }
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `job.id` | string | Job identifier |
+| `job.userId` | string \| null | Owner user ID |
+| `job.status` | string | Job status: `queued`, `processing`, `completed`, or `failed` |
+| `job.error` | string \| null | Error message when `status` is `failed` |
+| `job.result` | object \| null | Job result when `status` is `completed` |
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | Unauthorized — no valid session |
+| 403 | Forbidden — job belongs to another user |
+| 404 | Job not found |
+
+## Get provision job status
+
+```http
+GET /api/provision/jobs/:jobId
+```
+
+Returns the status and result of a provisioning job. When the job completes successfully, this endpoint automatically persists the managed agent in the database.
+
+Requires session authentication. You can only access jobs that belong to your account.
+
+### Path parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `jobId` | string | Job identifier returned by [`POST /api/provision`](#provision-with-channel-tokens) |
+
+### Response
+
+```json
+{
+  "job": {
+    "id": "job_abc123",
+    "userId": "user_123",
+    "agentId": "a1b2c3d4e5",
+    "status": "completed",
+    "error": null,
+    "result": {
+      "url": "https://agentbot-agent-a1b2c3d4e5-production.up.railway.app",
+      "status": "deploying"
+    },
+    "payload": {
+      "plan": "solo",
+      "aiProvider": "openrouter",
+      "agentType": "creative"
+    }
+  }
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `job.id` | string | Job identifier |
+| `job.userId` | string \| null | Owner user ID |
+| `job.agentId` | string \| null | Agent identifier (set when provisioning completes) |
+| `job.status` | string | Job status: `queued`, `processing`, `completed`, or `failed` |
+| `job.error` | string \| null | Error message when `status` is `failed` |
+| `job.result` | object \| null | Job result when `status` is `completed`. Contains `url` (agent URL) and `status` (agent status). |
+| `job.payload` | object | Original job payload with `plan`, `aiProvider`, and `agentType` |
+
+<Note>When `job.status` is `completed` and the result contains a `url` and `agentId`, the endpoint automatically persists the managed agent in the database. You do not need to separately call a persistence endpoint.</Note>
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | Unauthorized — no valid session |
+| 403 | Forbidden — job belongs to another user |
+| 404 | Job not found |
+
+## Get provision job metrics (admin)
+
+```http
+GET /api/provision/jobs/metrics
+```
+
+Returns aggregate metrics for the provisioning job queue. Requires admin authentication.
+
+### Response
+
+Returns the metrics payload from the backend job queue.
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 403 | Forbidden — not an admin user |
 
 ### AI provider defaults
 
@@ -2629,9 +2663,9 @@ POST /api/agent
 POST /api/chat
 ```
 
-Sends a message to the caller's deployed agent via the OpenAI-compatible REST API. The server forwards the message to the agent's gateway using `POST /v1/chat/completions` with a bearer token. The gateway must have `chatCompletions` enabled in its configuration.
+Sends a message to the caller's deployed agent by enqueuing it as an asynchronous job on the backend control plane. The server validates the user's agent, applies rate limiting and workload gating, and returns a job ID that you poll for the result.
 
-Requires session authentication.
+Requires session authentication. Subject to rate limiting (per-IP) and workload gating (per-user). Messages longer than 1,200 characters consume 3 workload slots; messages longer than 400 characters consume 2 slots; shorter messages consume 1.
 
 ### Request body
 
@@ -2645,7 +2679,7 @@ Requires session authentication.
 }
 ```
 
-<Warning>The `topic` parameter was removed. Conversation context is no longer passed through this endpoint. If you need to route messages to a specific conversation, use the [gateway chat proxy](/api-reference/gateway#gateway-chat-proxy) which supports a `sessionKey` parameter.</Warning>
+<Warning>The `topic` parameter was removed. This endpoint no longer returns a synchronous reply. It returns a `202 Accepted` response with a `jobId` that you poll for the result. The previous synchronous response fields (`id`, `reply`, `response`, `model`, `usage`, `timestamp`) are no longer returned directly — they are available in the job result.</Warning>
 
 ### Gateway URL resolution
 
@@ -2657,38 +2691,21 @@ The endpoint resolves the agent's gateway URL using the following priority:
 
 If the agent has a personality configured in memory, the endpoint injects a system prompt before the user message. The personality type determines the system prompt content (for example, `basement`, `selector`, `ar`, `road`, or `label`).
 
-### Response (200)
+### Response (202 Accepted)
 
 ```json
 {
-  "id": "msg_1742472000000",
-  "message": "Hello!",
-  "agent": "my-agent",
-  "reply": "Hi there! How can I help you today?",
-  "response": "Hi there! How can I help you today?",
-  "model": "openclaw/default",
-  "usage": {
-    "prompt_tokens": 12,
-    "completion_tokens": 25,
-    "total_tokens": 37
-  },
-  "timestamp": "2026-03-20T03:33:15.000Z"
+  "queued": true,
+  "jobId": "job_abc123",
+  "status": "queued"
 }
 ```
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `id` | string | Message identifier. Uses the upstream completion ID when available, otherwise prefixed with `msg_`. |
-| `message` | string | The original message that was sent |
-| `agent` | string | Name of the agent that processed the message |
-| `reply` | string | The agent's response |
-| `response` | string | Alias for `reply`. Contains the same content. Included for backward compatibility with clients that read `response` instead of `reply`. |
-| `model` | string | Model identifier used by the gateway for the completion |
-| `usage` | object | Token usage statistics from the upstream completion |
-| `usage.prompt_tokens` | number | Input tokens consumed |
-| `usage.completion_tokens` | number | Output tokens generated |
-| `usage.total_tokens` | number | Total tokens used |
-| `timestamp` | string | ISO 8601 timestamp of when the response was generated |
+| `queued` | boolean | Always `true` — the message was enqueued |
+| `jobId` | string | Job identifier. Poll [`GET /api/jobs/:jobId`](#get-job-status) to retrieve the result. |
+| `status` | string | `"queued"` — the job is waiting to be processed |
 
 ### Errors
 
@@ -2698,11 +2715,12 @@ If the agent has a personality configured in memory, the endpoint injects a syst
 | 401 | `Unauthorized` — no valid session |
 | 404 | `User not found` — authenticated user does not exist in the database |
 | 404 | `No agent deployed` — the user does not have a deployed agent |
-| 502 | Gateway returned a 5xx error — the agent's gateway encountered an internal error |
+| 429 | Rate limit or workload gate exceeded. Response may include `retryAfterSeconds`. |
 | 500 | `Failed to send message` — an unexpected error occurred |
+| 502 | Backend job queue returned an error or non-JSON response |
 | 503 | `Gateway not configured` — the server does not have a gateway token configured |
 
-<Note>The server sends an HTTP POST request to the agent's gateway for each call. Requests time out after 30 seconds. If the gateway is unreachable or the agent does not respond within this window, a `502` or `500` error is returned.</Note>
+<Note>Messages are processed asynchronously. The 10-second enqueue timeout applies only to the job submission — the actual chat processing happens out-of-band. Poll the job status endpoint to retrieve the agent's reply.</Note>
 
 ## List messages
 
