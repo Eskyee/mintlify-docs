@@ -112,6 +112,8 @@ Requires session authentication. Installs a skill on an agent.
 | 404 | Agent not found or skill not found |
 | 500 | Internal error |
 
+<Note>When a skill is installed, the agent's complete state (including the newly installed skill) is automatically synced to the OpenClaw gateway. If the gateway sync fails, the skill is still recorded in the database — you can retry the sync manually using the [agent sync endpoint](/api-reference/agents#sync-agent-to-gateway).</Note>
+
 ## Create skill
 
 ```http
@@ -208,6 +210,8 @@ Requires session authentication. Removes a skill from an agent.
 | 500 | Internal error |
 
 <Note>The uninstall endpoint returns `{ "success": true }` even when no matching installation exists. It does not return a `404` error for missing installations.</Note>
+
+<Note>When a skill is uninstalled, the updated agent state is automatically synced to the OpenClaw gateway. If the sync fails, the skill is still removed from the database — you can retry the sync manually using the [agent sync endpoint](/api-reference/agents#sync-agent-to-gateway).</Note>
 
 ## Available skills
 

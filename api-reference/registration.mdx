@@ -189,6 +189,41 @@ Returns registered installations belonging to the authenticated user. Results ar
 |------|-------------|
 | 500 | Internal server error |
 
+## Get registration token (internal)
+
+```http
+GET /api/registration/token
+```
+
+Returns the gateway token for a user from the agent registrations table. This is an internal API used by the Edge Runtime dashboard to retrieve gateway tokens without direct database access from edge functions.
+
+### Query parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `userId` | string | Yes | User identifier to look up the gateway token for |
+
+### Response
+
+```json
+{
+  "gateway_token": "a1b2c3d4e5f6..."
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `gateway_token` | string \| null | The gateway token associated with the user's agent registration. `null` when no registration exists for the user. |
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | `userId required` — the `userId` query parameter is missing |
+| 500 | Failed to fetch token |
+
+<Note>This endpoint queries the `agent_registrations` table directly. It does not require session authentication and is intended for internal service-to-service calls within the Edge Runtime.</Note>
+
 ## Registration heartbeat
 
 ```http
