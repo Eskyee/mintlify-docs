@@ -167,7 +167,7 @@ Sends a chat message to the caller's deployed agent through the OpenClaw Gateway
 
 <Info>The primary chat endpoint [`POST /api/chat`](/api-reference/agents#send-message) now uses the OpenAI-compatible REST API (`POST /v1/chat/completions`) instead of WebSocket. This WebSocket-based endpoint is retained as a fallback for gateways that do not have `chatCompletions` enabled. For new integrations, prefer `POST /api/chat`.</Info>
 
-This endpoint retrieves the gateway token dynamically from the backend API rather than relying on a single environment variable. The gateway URL is derived from the agent ID (`wss://agentbot-agent-{agentId}-production.up.railway.app`). Per-user `openclawUrl` values from the database are not used for WebSocket routing.
+This endpoint reads the gateway token from a shared token file on disk, falling back to the `OPENCLAW_GATEWAY_TOKEN` environment variable. The gateway URL is derived from the user's `openclawUrl` in the database when available, otherwise constructed from the user's `openclawInstanceId` (`wss://agentbot-agent-{openclawInstanceId}-production.up.railway.app`).
 
 Requires session authentication.
 
@@ -191,7 +191,7 @@ Requires session authentication.
 {
   "success": true,
   "reply": "Here is a summary of your tasks...",
-  "agentId": "abc123",
+  "agentId": "inst_a1b2c3d4e5",
   "agentName": "my-agent"
 }
 ```
@@ -200,8 +200,8 @@ Requires session authentication.
 |-------|------|-------------|
 | `success` | boolean | Always `true` on success |
 | `reply` | string | The agent's response text |
-| `agentId` | string | ID of the agent that handled the request |
-| `agentName` | string | Name of the agent |
+| `agentId` | string | The user's OpenClaw instance identifier (`openclawInstanceId`). This was previously the agent's database ID. |
+| `agentName` | string | Name of the agent. Falls back to the `openclawInstanceId` when no agent name is set. |
 
 ### Errors
 
@@ -210,9 +210,10 @@ Requires session authentication.
 | 400 | `Message required` — the `message` field is missing |
 | 401 | `Unauthorized` — no valid session |
 | 404 | `User not found` — authenticated user does not exist |
+| 404 | `No OpenClaw instance found` — the user has no provisioned OpenClaw instance |
 | 404 | `No agent found` — the user has no deployed agent |
 | 500 | `Chat failed` — WebSocket connection or agent response error |
-| 503 | `No gateway token available` — no gateway token could be retrieved from the backend or environment |
+| 503 | `No gateway token available` — no shared gateway token is configured on disk or in the environment |
 
 <Note>This endpoint opens a WebSocket connection per request and times out after 30 seconds. If the gateway rejects the authentication handshake, a `500` error is returned with details from the gateway. For lower-overhead chat that avoids WebSocket, use [`POST /api/chat`](/api-reference/agents#send-message) which uses the OpenAI-compatible REST API.</Note>
 
