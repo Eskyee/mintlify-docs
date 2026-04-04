@@ -19,7 +19,7 @@ Create, manage, and interact with agents.
 GET /api/agents
 ```
 
-Returns all agents owned by the authenticated user. When no session is present, returns an empty list instead of a `401` error.
+Returns all agents owned by the authenticated user. When no session is present, returns an empty list instead of a `401` error. The listing is resilient — if an individual agent's metadata cannot be read, that agent is excluded from the response rather than causing the entire request to fail.
 
 ### Response (backend)
 
