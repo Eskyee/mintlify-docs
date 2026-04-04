@@ -9,7 +9,49 @@ The usage tracking system records per-event token consumption and tool execution
 
 <Note>The usage tracker records events to a PostgreSQL database whenever an AI completion or tool call is made. The endpoints below are read-only query APIs for retrieving aggregated usage data.</Note>
 
-<Info>The live, user-facing endpoints on this page are `GET /api/dashboard/cost` and `GET /api/dashboard/stats`. The lower query endpoints are roadmap/spec documentation only and are not linked from the main navigation.</Info>
+<Info>The live, user-facing endpoints on this page are `GET /api/dashboard/bootstrap`, `GET /api/dashboard/cost`, and `GET /api/dashboard/stats`. The lower query endpoints are roadmap/spec documentation only and are not linked from the main navigation.</Info>
+
+## Dashboard bootstrap
+
+```http
+GET /api/dashboard/bootstrap
+```
+
+Requires session authentication. Returns lightweight user and runtime shell data in a single request. Use this endpoint to populate the dashboard shell immediately without waiting for slower runtime probes.
+
+This endpoint consolidates data that previously required multiple separate fetches (user profile, OpenClaw state, and gateway token) into one call. The dashboard renders skeleton cards for runtime-dependent data while the full runtime probe completes in the background.
+
+### Response
+
+```json
+{
+  "credits": 5,
+  "referralCode": "abc123",
+  "referralCount": 2,
+  "plan": "solo",
+  "openclawUrl": "https://agentbot-agent-abc123-production.up.railway.app",
+  "openclawInstanceId": "abc123",
+  "gatewayToken": "shared-gateway-token"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `credits` | number | Referral credits balance. Defaults to `0` when no credits exist. |
+| `referralCode` | string \| null | The user's referral code, or `null` if not set. |
+| `referralCount` | number | Number of successful referrals. Defaults to `0`. |
+| `plan` | string \| null | Current subscription plan (for example, `solo`, `collective`, `label`, `network`), or `null` if no plan is active. |
+| `openclawUrl` | string \| null | URL of the user's deployed OpenClaw instance, or `null` if no instance is registered. |
+| `openclawInstanceId` | string \| null | Identifier of the user's OpenClaw instance, or `null` if no instance is registered. |
+| `gatewayToken` | string \| null | Shared gateway authentication token, or `null` if not configured. |
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | Unauthorized — no valid session |
+
+---
 
 ## Test usage logging (deprecated)
 

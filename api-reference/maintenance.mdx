@@ -1,11 +1,67 @@
 ---
 title: Maintenance API
-description: "Agent health monitoring, restart, and factory reset endpoints"
+description: "Agent health monitoring, restart, instance state, and factory reset endpoints"
 ---
 
 # Maintenance API
 
-Check agent health and trigger maintenance restarts. These endpoints operate on the authenticated user's deployed agent instance.
+Check agent health, query runtime state, and trigger maintenance restarts. These endpoints operate on the authenticated user's deployed agent instance.
+
+## Get instance runtime state
+
+```http
+GET /api/instance/:userId
+```
+
+Requires session authentication. Returns runtime state for a specific agent instance by probing the agent's `/healthz` and `/readyz` endpoints directly. This endpoint resolves status without a backend hop — it reads the persisted OpenClaw URL from the database and probes the agent in-process.
+
+### Path parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `userId` | string | The instance identifier (matches the user's `openclawInstanceId`) |
+
+### Response
+
+```json
+{
+  "userId": "abc123",
+  "status": "running",
+  "startedAt": "2026-04-04T03:10:00.000Z",
+  "subdomain": "agentbot-agent-abc123-production.up.railway.app",
+  "url": "https://agentbot-agent-abc123-production.up.railway.app",
+  "plan": "solo",
+  "openclawVersion": "2026.4.2"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `userId` | string | The instance identifier from the request path |
+| `status` | string | Runtime status derived from health probes: `running`, `starting`, or `unknown` |
+| `startedAt` | string | ISO 8601 timestamp of when the status was checked |
+| `subdomain` | string | Hostname of the agent's public URL |
+| `url` | string | Full URL of the agent instance. Uses the persisted `openclawUrl` from the database when available, otherwise falls back to `https://agentbot-agent-{userId}-production.up.railway.app`. |
+| `plan` | string | The user's subscription plan (for example, `solo`, `collective`, `label`). Defaults to `free` when no plan is set. |
+| `openclawVersion` | string | OpenClaw runtime version reported by the agent's `/healthz` endpoint. Falls back to the platform default version when the probe fails or the agent does not report a version. |
+
+### Status values
+
+| Status | Condition |
+|--------|-----------|
+| `running` | Both `/healthz` and `/readyz` respond successfully |
+| `starting` | `/healthz` responds but `/readyz` does not |
+| `unknown` | `/healthz` does not respond or the probe failed |
+
+<Note>The health probe uses a 5-second timeout for `/healthz` and a 4-second timeout for `/readyz`. Agents that are starting up may report `unknown` or `starting` until fully initialized.</Note>
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 403 | Forbidden — the authenticated user does not own this instance |
+
+---
 
 ## Get agent health
 
