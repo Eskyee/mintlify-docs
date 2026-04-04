@@ -102,29 +102,11 @@ sudo ./contrib/FastSync/load-utxo-set.sh
 
 This reduces sync time from **days to minutes**.
 
-## Agent Wallet API
+## Agent wallet API
 
-NBXplorer provides a REST API for agent wallet operations:
+Agentbot wraps NBXplorer with authenticated endpoints for registering watch-only wallets, generating addresses, querying balances, and viewing transactions. See the [Bitcoin wallets API reference](/api-reference/bitcoin-wallets) for the full endpoint specification.
 
-### Create a wallet
-
-```bash
-POST http://localhost:32838/v1/cryptos/btc/derivations
-```
-
-### Get wallet balance
-
-```bash
-GET http://localhost:32838/v1/cryptos/btc/derivations/{walletId}/balance
-```
-
-### Track transactions
-
-```bash
-POST http://localhost:32838/v1/cryptos/btc/derivations/{walletId}/transactions
-```
-
-Full API docs available at `http://localhost:32838` (Redoc UI).
+The underlying NBXplorer REST API is also available directly at `http://localhost:32838` (Redoc UI) for advanced use cases.
 
 ## Use Cases
 
