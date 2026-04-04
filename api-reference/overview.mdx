@@ -129,7 +129,7 @@ curl -X POST https://agentbot.sh/api/ai/chat \
 | 201 | Resource created |
 | 400 | Bad request or validation error |
 | 401 | Unauthorized (missing or invalid authentication) |
-| 402 | Payment required — a paid subscription is mandatory for all agent provisioning and usage. The minimum plan is `solo`. Also returned when an [MPP](/payments/mpp) credential is missing for gateway requests. Requests using the deprecated `free` plan value receive this status. |
+| 402 | Payment required — a paid subscription is mandatory for all agent provisioning and usage. The minimum plan is `solo`. Also returned when an [MPP](/payments/mpp) credential is missing for gateway requests, when the subscription ID does not match the authenticated user's subscription on file (`SUBSCRIPTION_MISMATCH`), or when using the deprecated `free` plan value. |
 | 403 | Forbidden (insufficient permissions, token gating failure, bot detection, missing CSRF token, or missing active subscription). Non-admin users without an active subscription who attempt to provision an agent receive a `403` with the message `Active subscription required`. |
 | 404 | Resource not found |
 | 429 | Too many requests or tier limit reached |

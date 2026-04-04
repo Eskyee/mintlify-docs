@@ -53,7 +53,7 @@ The signature is computed over the string `{userId}:{userEmail}:{userRole}` usin
 | 401 | `SIGNATURE_REQUIRED` | `HMAC_SECRET` is configured but the `x-user-signature` header is missing |
 | 401 | `INVALID_SIGNATURE` | The provided signature does not match the expected HMAC-SHA256 digest |
 
-<Warning>The AI route middleware (`/api/ai/chat`) reads user context from headers separately from this middleware. Access control on AI routes is enforced by the plan middleware, which checks `x-user-plan` and `x-stripe-subscription-id`.</Warning>
+<Warning>The AI route middleware (`/api/ai/chat`) reads user context from headers separately from this middleware. Access control on AI routes is enforced by the plan middleware, which validates `x-user-plan` and `x-stripe-subscription-id` against the user's database record. When the database is available, the subscription ID header is cross-referenced against the stored subscription to prevent forgery — a mismatch returns `402` with code `SUBSCRIPTION_MISMATCH`. If the database is unavailable, the middleware falls back to header-based validation.</Warning>
 
 ### Admin middleware
 
