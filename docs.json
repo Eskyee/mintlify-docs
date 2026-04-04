@@ -144,7 +144,8 @@
           "api-reference/admin-summary",
           "api-reference/export",
           "api-reference/wallet-monitor",
-          "api-reference/market-intel"
+          "api-reference/market-intel",
+          "api-reference/referrals"
         ]
       },
       {
