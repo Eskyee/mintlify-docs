@@ -7,6 +7,8 @@ description: "Create and manage API keys for programmatic access"
 
 Create and manage API keys for authenticating with the Agentbot API. All endpoints require session authentication.
 
+<Note>Each account can hold a maximum of 10 API keys. Attempting to create a key beyond this limit returns a `429` error. Delete unused keys before creating new ones.</Note>
+
 ## List keys
 
 ```http
@@ -60,6 +62,7 @@ POST /api/keys
 |------|-------------|
 | 400 | Name required or name too long (max 64 characters) |
 | 401 | Unauthorized |
+| 429 | API key limit reached (max 10 per account). Delete unused keys first. |
 | 500 | Failed to create key |
 
 ## Get key
