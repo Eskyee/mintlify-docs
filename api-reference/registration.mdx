@@ -153,27 +153,22 @@ Registers a Link mode installation that connects an existing OpenClaw instance. 
 GET /api/installations
 ```
 
-Returns all registered installations across all deployment modes. Requires identity headers (`x-user-email`, `x-user-id`, `x-user-role`) set by the authenticated frontend.
+Returns registered installations belonging to the authenticated user. Results are scoped to the caller's identity — you can only see your own installations. Requires identity headers (`x-user-email`, `x-user-id`, `x-user-role`) set by the authenticated frontend.
+
+<Note>This endpoint filters results by the authenticated user's ID. Each user can only view their own installations across all deployment modes.</Note>
 
 ### Response
 
 ```json
 {
   "success": true,
-  "count": 2,
+  "count": 1,
   "installations": [
     {
       "user_id": "user-a1b2c3d4",
       "mode": "home",
       "registered_at": "2026-03-21T00:00:00Z",
       "last_seen": "2026-03-21T12:00:00Z",
-      "status": "active"
-    },
-    {
-      "user_id": "user-e5f6g7h8",
-      "mode": "link",
-      "registered_at": "2026-03-21T01:00:00Z",
-      "last_seen": "2026-03-21T11:00:00Z",
       "status": "active"
     }
   ]

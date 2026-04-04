@@ -938,6 +938,16 @@ The `GET` method returns endpoint metadata.
 
 ## Token gating
 
+The token gating endpoints check whether a wallet holds sufficient `$RAVE` tokens on Base mainnet. The following parameters are configurable via environment variables:
+
+| Environment variable | Default | Description |
+|---------------------|---------|-------------|
+| `TOKEN_GATING_ADDRESS` | `0x6EE72eEDEfBa8937Ec8c36dEd9B8c1ef9ca7A3db` | ERC-20 contract address to check balance against |
+| `TOKEN_GATING_MIN_BALANCE` | `1000000000000000000` (1 RAVE, 18 decimals) | Minimum token balance required for access |
+| `TOKEN_GATING_RPC` | `https://mainnet.base.org` | Base network RPC endpoint used for balance queries |
+
+<Note>These environment variables allow you to change the token address, minimum balance threshold, and RPC endpoint without redeploying. The `minBalance`, `contractAddress`, and `rpcEndpoint` fields in the API responses reflect the currently configured values.</Note>
+
 ### Verify token access (POST)
 
 ```http

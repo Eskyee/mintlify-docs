@@ -482,6 +482,14 @@ export async function POST(request) {
 
 <Warning>The legacy endpoint at `/api/stripe/webhook` has been permanently removed. Both `POST` and `GET` requests return `410 Gone` with `{ "error": "This endpoint is deprecated. Use /api/webhooks/stripe instead." }`. Update your Stripe dashboard webhook URL to the canonical endpoint at `/api/webhooks/stripe`. The previous forwarding behavior has been removed.</Warning>
 
+### User matching
+
+When processing `checkout.session.completed` events, the webhook identifies the user by the `userId` field in the session metadata. If the `userId` matches an existing user, the subscription is activated for that user.
+
+When `userId` is missing from the session metadata, the webhook falls back to looking up the user by `customerEmail`. In this case, only existing users are updated — a new user account is never created. If no user is found by email, the event is logged and skipped. This prevents duplicate accounts when session metadata is incomplete.
+
+<Warning>Ensure your Stripe checkout session metadata includes a `userId` field. When `userId` is missing, the webhook can only update users that already exist in the database by email. If the email does not match any existing user, the subscription activation is skipped.</Warning>
+
 ### Plan mapping
 
 When processing `checkout.session.completed` events, the webhook maps the `plan` value from the session metadata to a subscription tier. The following plans are recognized:
