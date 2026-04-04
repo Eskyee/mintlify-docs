@@ -313,9 +313,9 @@ Stops and removes the agent's local Docker container, deallocates its port, and 
 
 ### Web proxy delete
 
-The web proxy exposes the same `DELETE /api/agents/:id` path but uses session authentication instead of bearer tokens. It verifies that the authenticated user owns the agent, makes a best-effort call to the backend to stop the container, and then removes the agent record from the database (cascading to related data such as memories, files, and skills).
+The web proxy exposes the same `DELETE /api/agents/:id` path but uses session authentication instead of bearer tokens. It verifies that the authenticated user owns the agent, makes a best-effort call to delete the associated Railway service, and then removes the agent record from the database (cascading to related data such as memories, files, and skills).
 
-If the backend is unreachable when the delete is initiated, the database record is still removed. The container may need to be cleaned up separately.
+The Railway service is resolved using the agent's identifier and the owner's stored OpenClaw URL. Deleting the Railway service permanently stops the running container and removes it from the hosting platform. If the Railway service cannot be found or the deletion fails, the operation continues with database cleanup — the failure is non-fatal.
 
 #### Response
 
