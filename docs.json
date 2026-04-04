@@ -101,6 +101,7 @@
           "api-reference/auth",
           "api-reference/keys",
           "api-reference/wallet",
+          "api-reference/bitcoin-wallets",
           "api-reference/bankr",
           "api-reference/fee-payer",
           "api-reference/metrics",
