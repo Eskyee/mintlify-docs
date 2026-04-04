@@ -313,9 +313,19 @@ Stops and removes the agent's local Docker container, deallocates its port, and 
 
 ### Web proxy delete
 
-The web proxy exposes the same `DELETE /api/agents/:id` path but uses session authentication instead of bearer tokens. It verifies that the authenticated user owns the agent, makes a best-effort call to the backend to stop the container, and then removes the agent record from the database (cascading to related data such as memories, files, and skills).
+The web proxy exposes the same `DELETE /api/agents/:id` path but uses session authentication instead of bearer tokens. Ownership is verified in two ways:
 
-If the backend is unreachable when the delete is initiated, the database record is still removed. The container may need to be cleaned up separately.
+1. **Agent table lookup** — the endpoint first checks for an `Agent` row matching both the agent ID and the authenticated user.
+2. **Instance ID fallback** — if no `Agent` row exists, the endpoint checks whether the authenticated user's `openclawInstanceId` matches the agent ID. This covers users who were provisioned before the `Agent` table was introduced and only have an instance ID on their `User` record.
+
+If neither check matches, the endpoint returns `404`.
+
+When ownership is confirmed, the endpoint makes a best-effort call to the backend to stop and remove the container, then performs database cleanup:
+
+- If an `Agent` row exists, it is deleted (cascading to related data such as memories, files, and skills).
+- The user's `openclawInstanceId` and `openclawUrl` fields are always cleared, regardless of whether an `Agent` row existed. This allows the user to re-provision a new agent.
+
+If the backend is unreachable when the delete is initiated, the database cleanup still proceeds. The container may need to be cleaned up separately.
 
 #### Response
 
@@ -336,7 +346,7 @@ If the backend is unreachable when the delete is initiated, the database record 
 | Code | Description |
 |------|-------------|
 | 401 | Unauthorized — missing or invalid session |
-| 404 | Agent not found or not owned by the authenticated user |
+| 404 | Agent not found — no matching `Agent` row or `openclawInstanceId` for the authenticated user |
 | 500 | Failed to delete agent |
 
 ## Provision agent
