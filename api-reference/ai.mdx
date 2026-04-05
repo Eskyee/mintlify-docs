@@ -297,19 +297,16 @@ Each subscription plan grants access to a specific set of AI models. The chat en
 
 ## Model fallbacks
 
-Each AI provider is configured with a primary model and a fallback model. When the primary model is unavailable or returns an error, the system automatically retries the request using the fallback model.
+The backend AI service uses a tier-based fallback system. Each tier has a primary model and one or more fallback models. When the primary model is unavailable, times out, or returns an error, the system automatically retries the request using the next fallback model in order. Each model attempt is bounded by a configurable timeout (default 30 seconds) to prevent hangs.
 
-| Provider | Primary model | Fallback model |
-|----------|--------------|----------------|
-| `openrouter` | `moonshotai/kimi-k2.5` | `openrouter/openai/gpt-4o-mini` |
-| `gemini` | `google/gemini-2.0-flash` | `openrouter/anthropic/claude-sonnet-4-5` |
-| `groq` | `groq/gemma2-9b-it` | `openai/gpt-4o-mini` |
-| `anthropic` | `anthropic/claude-sonnet-4-5` | `openai/gpt-4o` |
-| `openai` | `openai/gpt-4o` | `openai/gpt-4o-mini` |
+| Tier | Primary model | Fallback models |
+|------|--------------|-----------------|
+| `reasoning` | `deepseek/deepseek-r1` | `meta-llama/llama-3.3-70b-instruct`, `moonshotai/kimi-k2.5` |
+| `coding` | `qwen/qwen-2.5-coder-32b-instruct` | `deepseek/deepseek-r1`, `google/gemini-2.0-flash-001` |
+| `fast` | `meta-llama/llama-3.3-70b-instruct` | `mistralai/mistral-7b-instruct`, `google/gemini-2.0-flash-001` |
+| `creative` | `moonshotai/kimi-k2.5` | `deepseek/deepseek-r1`, `meta-llama/llama-3.3-70b-instruct` |
 
-<Note>`minimax` (`MiniMax/MiniMax-Text-01`) is available in the provider configuration map but is not currently supported in the model fallback chain. It may be enabled in a future release.</Note>
-
-Fallback routing is handled transparently. The response always indicates which model ultimately served the request via the `model` field.
+Fallback routing is handled transparently. The response always indicates which model ultimately served the request via the `model` field. All tier-based requests are routed through OpenRouter.
 
 ## Task-based model selection
 
