@@ -217,7 +217,7 @@ curl -X GET "https://agentbot.sh/api/colony/status?action=tree" \
 
 #### `soul`
 
-Returns the full cognitive state of the soul service.
+Returns the full cognitive state of the soul service. The Borg Dashboard at `/dashboard/borg` consumes this endpoint and auto-refreshes every 30 seconds.
 
 ```bash
 curl -X GET "https://agentbot.sh/api/colony/status?action=soul" \
@@ -256,16 +256,33 @@ curl -X GET "https://agentbot.sh/api/colony/status?action=soul" \
   "fitness": {
     "total": 0.85,
     "trend": 0.02,
-    "economic": 0.78,
-    "execution": 0.91,
-    "evolution": 0.82,
     "coordination": 0.88,
+    "economic": 0.78,
+    "evolution": 0.82,
+    "execution": 0.91,
     "introspection": 0.79,
     "prediction": 0.84,
     "measured_at": 1711152000
   },
-  "beliefs": [],
-  "goals": [],
+  "beliefs": [
+    {
+      "id": "belief_001",
+      "subject": "colony",
+      "predicate": "is_healthy",
+      "value": "true",
+      "confidence": "0.92",
+      "confirmation_count": 14
+    }
+  ],
+  "goals": [
+    {
+      "id": "goal_abc",
+      "description": "Optimize colony fitness score above 90%",
+      "status": "active",
+      "priority": 1,
+      "retry_count": 0
+    }
+  ],
   "recent_thoughts": [],
   "brain": {
     "parameters": 284000,
@@ -279,20 +296,83 @@ curl -X GET "https://agentbot.sh/api/colony/status?action=soul" \
     "vocab_size": 512,
     "plans_generated": 148
   },
-  "role": {
-    "rank": 1,
-    "can_spawn": true,
-    "should_cull": false,
-    "niche": "general",
-    "colony_size": 3
+  "benchmark": {
+    "elo_rating": 1847.5,
+    "elo_display": "1848 (Advanced)",
+    "opus_iq": "142",
+    "pass_at_1": 81.8,
+    "problems_attempted": 200
   },
-  "cortex": null,
+  "capability_profile": {
+    "overall_success_rate": 0.82,
+    "strongest": "code_generation",
+    "weakest": "file_editing",
+    "capabilities": [
+      {
+        "capability": "code_generation",
+        "display_name": "Code Generation",
+        "attempts": 120,
+        "successes": 108,
+        "success_rate": 0.9
+      },
+      {
+        "capability": "file_editing",
+        "display_name": "File Editing",
+        "attempts": 45,
+        "successes": 28,
+        "success_rate": 0.622
+      }
+    ]
+  },
+  "role": {
+    "colony_size": 3,
+    "rank": 1,
+    "self_fitness": 0.85,
+    "psi": 0.9234,
+    "phase3_ready": true,
+    "can_spawn": true
+  },
+  "acceleration": {
+    "alpha": "0.12",
+    "regime": "EXPLOIT"
+  },
+  "cortex": {
+    "total_experiences": 1580,
+    "global_curiosity": 0.34,
+    "emotion": {
+      "valence": 0.65,
+      "arousal": 0.42,
+      "drive": "explore"
+    }
+  },
   "genesis": null,
   "hivemind": null,
   "synthesis": null,
   "evaluation": null,
-  "free_energy": null,
-  "lifecycle": null
+  "free_energy": {
+    "F": "0.342",
+    "regime": "LEARN",
+    "trend": "decreasing",
+    "components": [
+      {
+        "system": "cortex",
+        "surprise": "0.12",
+        "contribution": "35%",
+        "weight": "0.25"
+      },
+      {
+        "system": "brain",
+        "surprise": "0.08",
+        "contribution": "25%",
+        "weight": "0.30"
+      }
+    ]
+  },
+  "lifecycle": {
+    "phase": "mature",
+    "own_commits": 42,
+    "lines_diverged": 1200
+  }
 }
 ```
 
@@ -308,19 +388,131 @@ curl -X GET "https://agentbot.sh/api/colony/status?action=soul" \
 | `cycle_health` | object | Health metrics for the current cognitive cycle |
 | `active_plan` | object \| null | Currently executing plan |
 | `fitness` | object \| null | Multi-dimensional fitness scores |
-| `beliefs` | array | Active beliefs with domain, confidence, and confirmation count |
-| `goals` | array | Active goals with description, status, and priority |
+| `beliefs` | array | Active beliefs with subject, predicate, value, confidence, and confirmation count |
+| `goals` | array | Active goals with description, status, priority, and retry count |
 | `recent_thoughts` | array | Recent thought entries |
 | `brain` | object \| null | Brain neural network stats |
 | `transformer` | object \| null | Plan prediction transformer stats |
-| `role` | object \| null | Colony role and rank |
-| `cortex` | object \| null | World model and prediction accuracy |
+| `benchmark` | object \| null | IQ and ELO benchmark scores |
+| `capability_profile` | object \| null | Success rates and attempt counts per capability |
+| `role` | object \| null | Colony role, rank, psi value, and spawn eligibility |
+| `acceleration` | object \| null | Learning acceleration parameters (alpha and regime) |
+| `cortex` | object \| null | World model state including experiences, curiosity, and emotion |
 | `genesis` | object \| null | Evolved plan templates |
 | `hivemind` | object \| null | Pheromone trail sharing data |
 | `synthesis` | object \| null | Multi-system synthesis state |
 | `evaluation` | object \| null | System evaluation records |
-| `free_energy` | object \| null | Free energy minimization metrics |
-| `lifecycle` | object \| null | Development lifecycle state |
+| `free_energy` | object \| null | Free energy minimization metrics with component breakdown |
+| `lifecycle` | object \| null | Development lifecycle phase, commits, and divergence |
+
+**Fitness fields (`fitness`):**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `total` | number | Overall fitness score (0–1) |
+| `trend` | number | Fitness trend over recent cycles. Positive values indicate improvement. |
+| `coordination` | number | Coordination fitness dimension (0–1) |
+| `economic` | number | Economic fitness dimension (0–1) |
+| `evolution` | number | Evolution fitness dimension (0–1) |
+| `execution` | number | Execution fitness dimension (0–1) |
+| `introspection` | number | Introspection fitness dimension (0–1) |
+| `prediction` | number | Prediction fitness dimension (0–1) |
+| `measured_at` | number | Unix timestamp of the measurement |
+
+**Benchmark fields (`benchmark`):**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `elo_rating` | number | ELO rating score |
+| `elo_display` | string | Human-readable ELO display string (e.g., `"1848 (Advanced)"`) |
+| `opus_iq` | string | IQ benchmark score |
+| `pass_at_1` | number | Pass@1 success rate as a percentage |
+| `problems_attempted` | number | Total benchmark problems attempted |
+
+**Capability profile fields (`capability_profile`):**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `overall_success_rate` | number | Aggregate success rate across all capabilities (0–1) |
+| `strongest` | string | Capability with the highest success rate |
+| `weakest` | string | Capability with the lowest success rate |
+| `capabilities` | array | Per-capability breakdown |
+| `capabilities[].capability` | string | Capability identifier |
+| `capabilities[].display_name` | string | Human-readable capability name |
+| `capabilities[].attempts` | number | Total attempts for this capability |
+| `capabilities[].successes` | number | Successful attempts |
+| `capabilities[].success_rate` | number | Success rate (0–1) |
+
+**Belief fields (`beliefs[]`):**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Belief identifier |
+| `subject` | string | Belief subject |
+| `predicate` | string | Belief predicate |
+| `value` | string | Belief value |
+| `confidence` | string | Confidence score as a decimal string |
+| `confirmation_count` | number | Number of times this belief has been confirmed |
+
+**Goal fields (`goals[]`):**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Goal identifier |
+| `description` | string | Goal description |
+| `status` | string | Goal status (e.g., `active`, `completed`, `failed`) |
+| `priority` | number | Priority level (lower is higher priority) |
+| `retry_count` | number | Number of retry attempts |
+
+**Role fields (`role`):**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `colony_size` | number | Total colony size |
+| `rank` | number | Fitness rank within the colony |
+| `self_fitness` | number | This node's own fitness score (0–1) |
+| `psi` | number | Colony psi coordination value |
+| `phase3_ready` | boolean | Whether the node is ready for phase 3 operations |
+| `can_spawn` | boolean | Whether this node can create child agents |
+
+**Free energy fields (`free_energy`):**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `F` | string | Free energy value as a decimal string |
+| `regime` | string | Current regime (e.g., `LEARN`, `EXPLOIT`) |
+| `trend` | string | Trend direction (e.g., `decreasing`, `increasing`, `stable`) |
+| `components` | array | Per-system free energy breakdown |
+| `components[].system` | string | System name (e.g., `cortex`, `brain`) |
+| `components[].surprise` | string | Surprise value as a decimal string |
+| `components[].contribution` | string | Contribution percentage |
+| `components[].weight` | string | Weight as a decimal string |
+
+**Acceleration fields (`acceleration`):**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `alpha` | string | Learning rate alpha as a decimal string |
+| `regime` | string | Acceleration regime (e.g., `EXPLOIT`, `LEARN`) |
+
+**Lifecycle fields (`lifecycle`):**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `phase` | string | Current lifecycle phase (e.g., `mature`, `bootstrap`, `evolving`) |
+| `own_commits` | number | Number of commits made by this node |
+| `lines_diverged` | number | Number of lines diverged from the parent |
+
+**Cortex fields (`cortex`):**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `total_experiences` | number | Total experiences recorded |
+| `global_curiosity` | number | Global curiosity level (0–1) |
+| `emotion` | object | Current emotional state |
+| `emotion.valence` | number | Emotional valence (-1 to 1, positive is pleasant) |
+| `emotion.arousal` | number | Emotional arousal level (0–1) |
+| `emotion.drive` | string | Current drive (e.g., `explore`, `exploit`) |
 
 ---
 
@@ -390,7 +582,7 @@ When no healthy soul host can be reached (including the fallback), the endpoint 
   "root": {
     "address": "0x0000000000000000000000000000000000000000",
     "designation": null,
-    "dashboardUrl": "https://soul-dashboard.example.com",
+    "dashboardUrl": "/dashboard/borg",
     "serviceUrl": "https://soul.example.com",
     "fitness": null,
     "wallet_balance": null,
@@ -416,10 +608,10 @@ When no healthy soul host can be reached (including the fallback), the endpoint 
 | `degraded` | boolean | `true` when the soul service is unreachable |
 | `error` | string | Error message describing the failure |
 | `detail` | string | Underlying error detail (for example, `Connection refused`) |
-| `root.dashboardUrl` | string | Soul dashboard URL (replaces the former top-level `dashboard_url`) |
+| `root.dashboardUrl` | string | Soul dashboard path. Now an internal route (`/dashboard/borg`) instead of an external URL. |
 | `root.serviceUrl` | string | Soul service URL (replaces the former top-level `soul_url`) |
 
-<Note>The endpoint tries each configured soul host in order and uses the first healthy one. A host is considered healthy when its `/soul/status` path returns a JSON object containing an `active` field within 4 seconds. If no host passes the health check, the degraded response is returned. Prior to this change, only a single soul host was attempted and a failure returned HTTP `503` with top-level `soul_url` and `dashboard_url` fields. The endpoint now returns HTTP `200` with the full colony response shape (zeroed out) so that clients do not need to handle a separate error status code.</Note>
+<Note>The endpoint tries each configured soul host in order and uses the first healthy one. A host is considered healthy when its `/soul/status` path returns a JSON object containing an `active` field within 4 seconds. If no host passes the health check, the degraded response is returned. The `dashboardUrl` field now returns the internal path `/dashboard/borg` rather than an external soul service URL. The Borg Dashboard is served by the platform at `/dashboard/borg` and fetches soul data from this endpoint directly.</Note>
 
 ### Unknown action
 
