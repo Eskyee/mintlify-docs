@@ -385,7 +385,7 @@ Any unrecognized value defaults to `solo`.
 
 <Note>The web proxy enforces agent limits based on the subscription tier (`free`: 1, `underground`: 1, `solo`: 1, `starter`: 1, `collective`: 3, `pro`: 3, `label`: 10, `network`: 100, `enterprise`: 100). These provisioning limits determine how many agents you can create. The agent count is per-user across all plans — all active agents count toward the current plan's limit regardless of which plan they were originally created under. The plan middleware enforces separate per-request limits for AI model access and skill usage. The limit cannot be overridden in the request body.</Note>
 
-<Note>Resource limits are enforced at provisioning time. The Railway provisioning function applies memory and CPU caps based on the plan: `underground` (2 GB / 1 vCPU), `solo` (2 GB / 1 vCPU), `collective` (4 GB / 2 vCPU), `label` (8 GB / 4 vCPU), `network` (16 GB / 4 vCPU). Plans not in this list default to `solo` limits.</Note>
+<Note>Resource limits are enforced at provisioning time. Memory and CPU caps are applied based on the plan: `underground` (2 GB / 1 vCPU), `solo` (2 GB / 1 vCPU), `collective` (4 GB / 2 vCPU), `label` (8 GB / 4 vCPU), `network` (16 GB / 8 vCPU). Plans not in this list default to `solo` limits. Resource limits are applied across all provisioning paths, including the backend container manager and the Railway provisioning proxy.</Note>
 
 ### Admin bypass
 
@@ -2035,6 +2035,8 @@ When the endpoint receives a valid request, it performs the following operations
 
 Plans not in this list default to `solo` limits.
 
+<Note>The backend container manager provisioning path (`POST /api/provision`) applies 8 vCPU for the `network` plan. The Railway provisioning proxy listed here applies 4 vCPU. The higher limit applies when agents are provisioned through the backend container manager.</Note>
+
 ### Response
 
 ```json
@@ -2074,10 +2076,14 @@ Every new user instance is provisioned with a complete configuration template. T
 | Setting | Default | Description |
 |---------|---------|-------------|
 | `agents.defaults.workspace` | `/home/node/.openclaw/workspace` | Path to the agent's workspace directory inside the container |
-| `agents.defaults.model.primary` | `openrouter/xiaomi/mimo-v2-pro` | Primary AI model used for completions |
+| `agents.defaults.model.primary` | `openrouter/google/gemini-flash-1.5` | Primary AI model used for completions |
 | `agents.defaults.heartbeat.every` | `30m` | Heartbeat interval (30 minutes) |
 | `agents.defaults.heartbeat.lightContext` | `true` | Use lightweight context during heartbeat checks to reduce token usage |
 | `agents.defaults.heartbeat.isolatedSession` | `true` | Run heartbeat checks in an isolated session to avoid polluting conversation state |
+
+### Container restart policy
+
+Provisioned containers use an `ON_FAILURE` restart policy with a maximum of 10 retries. If the agent process crashes, the container automatically restarts up to the retry limit.
 
 ### Workspace starter files
 
