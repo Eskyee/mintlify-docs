@@ -347,7 +347,7 @@ No authentication required. Returns gateway state, uptime, and configuration sta
 | `running` | boolean | `true` when the gateway process is running |
 | `configured` | boolean | Always `true` |
 | `uptime` | number | Wrapper process uptime in seconds |
-| `terminalSessions` | number | Number of active WebSocket terminal sessions |
+| `terminalSessions` | number | Number of active WebSocket terminal sessions. Returns `0` when the terminal feature is unavailable. See [WebSocket proxy](#websocket-proxy). |
 | `gatewayToken` | string \| null | The configured gateway authentication token, or `null` if not set |
 | `aiProvider` | string \| null | The primary model configured in the gateway, or `null` if not configured |
 | `ts` | string | ISO 8601 timestamp of the status check |
@@ -877,8 +877,10 @@ When a request is proxied to the gateway but the gateway is not running, the wra
 
 The wrapper handles WebSocket upgrade requests with path-based routing:
 
-- **`/ws/terminal`** — Routed to the built-in terminal WebSocket service, which provides an interactive terminal session to the container.
+- **`/ws/terminal`** — Routed to the built-in terminal WebSocket service, which provides an interactive terminal session to the container. This feature is **optional** — it requires `node-pty` to be installed in the container. When `node-pty` is not available, the terminal service is disabled and connections to `/ws/terminal` receive an error message indicating the feature is unavailable. The `terminalSessions` field in [`GET /api/status`](#gateway-status) returns `0` when the terminal is disabled.
 - **All other paths** — Proxied to the internal OpenClaw gateway. The wrapper injects the `Authorization: Bearer <token>` header automatically.
+
+<Note>The `node-pty` native module is dynamically loaded at startup. If it cannot be compiled or is not present in the container image, the gateway logs a warning (`node-pty not available — terminal feature disabled`) and continues operating normally. All other gateway features remain functional. To enable the terminal, ensure `node-pty` is installed and its native bindings can compile for the target platform.</Note>
 
 When the gateway is not running, non-terminal WebSocket upgrade requests are proxied to the gateway address, which returns a connection error.
 
