@@ -888,7 +888,7 @@ When the gateway is not running, non-terminal WebSocket upgrade requests are pro
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `OPENCLAW_GATEWAY_TOKEN` | _(empty)_ | Bearer token for authenticating proxied requests to the internal gateway. When not set, the entrypoint generates a random 64-character hex token. |
+| `OPENCLAW_GATEWAY_TOKEN` | _(empty)_ | Bearer token for authenticating proxied requests to the internal gateway. When not set, a random 64-character hex token is generated at startup. |
 | `PORT` | `3000` | Port the wrapper listens on |
 | `OPENCLAW_DATA_DIR` | `/data` | Root directory for persistent storage. The OpenClaw configuration and workspace are stored under `{OPENCLAW_DATA_DIR}/.openclaw/`. This should be a Railway volume mount. |
 | `WRAPPER_ADMIN_PASSWORD` | _(empty)_ | Password for accessing the admin dashboard and protected API endpoints. When not set, all management endpoints are accessible without authentication. See [wrapper authentication](#wrapper-authentication). |
@@ -907,7 +907,7 @@ The wrapper writes an `openclaw.json` configuration file to `{OPENCLAW_DATA_DIR}
 
 ### Default model configuration
 
-The production gateway entrypoint configures the following model default:
+The production gateway configures the following model default:
 
 | Parameter | Value | Description |
 |-----------|-------|-------------|
@@ -994,7 +994,7 @@ When you use the setup UI to configure the gateway, the primary model is set bas
 
 ### Health check
 
-The container image is configured with a Docker `HEALTHCHECK` that probes `GET /api/status` every 15 seconds (5-second timeout, 30-second start period, 3 retries). Railway uses the same path for health monitoring and will restart the container on failure.
+The container image is configured with a Docker `HEALTHCHECK` that probes `GET /api/status` every 15 seconds (5-second timeout, 60-second start period, 5 retries). Railway uses the same path (`/api/status`) for health monitoring and will restart the container on failure.
 
 ### Persistent storage
 
@@ -1011,10 +1011,10 @@ Each agent container receives a unique gateway auth token at provisioning time. 
 | Field | Description |
 |-------|-------------|
 | `gateway.auth.mode` | `token` |
-| `gateway.auth.token` | Unique hex token auto-generated per container. Provisioning generates a 48-character token (24 bytes of entropy). The container entrypoint generates a 32-character token (16 bytes) if no token is passed via the `OPENCLAW_GATEWAY_TOKEN` environment variable. |
+| `gateway.auth.token` | Unique hex token auto-generated per container. Provisioning generates a 48-character token (24 bytes of entropy). A 32-character token (16 bytes) is generated at startup if no token is passed via the `OPENCLAW_GATEWAY_TOKEN` environment variable. |
 | `gateway.port` | `18789` |
 
-<Note>The container entrypoint writes its own minimal configuration to `$HOME/.openclaw/openclaw.json` using a slightly different schema (`auth.method` at the top level instead of `gateway.auth.mode`). The provisioning config written by the backend uses the `gateway.auth.mode` path. When the entrypoint runs, it overwrites the provisioning config with its own minimal skeleton. All provisioning paths include a top-level `env` section containing `OPENROUTER_API_KEY` so the OpenClaw runtime can authenticate with the LLM provider. To preserve the full provisioning config, pass the gateway token via the `OPENCLAW_GATEWAY_TOKEN` environment variable so the entrypoint uses the same token.</Note>
+<Note>The container startup process writes its own minimal configuration to `$HOME/.openclaw/openclaw.json` using a slightly different schema (`auth.method` at the top level instead of `gateway.auth.mode`). The provisioning config written by the backend uses the `gateway.auth.mode` path. When the container starts, it overwrites the provisioning config with its own minimal skeleton. All provisioning paths include a top-level `env` section containing `OPENROUTER_API_KEY` so the OpenClaw runtime can authenticate with the LLM provider. To preserve the full provisioning config, pass the gateway token via the `OPENCLAW_GATEWAY_TOKEN` environment variable so the startup process uses the same token.</Note>
 
 ## Agent container configuration
 
@@ -1022,7 +1022,7 @@ When an agent is provisioned, the backend generates an OpenClaw configuration wi
 
 ### OpenClaw configuration `env` section
 
-Each agent container's `openclaw.json` includes a top-level `env` section that passes secrets to the OpenClaw runtime. All three provisioning paths (production gateway entrypoint, Railway direct provisioning, and backend container manager) write this section into the configuration file at launch.
+Each agent container's `openclaw.json` includes a top-level `env` section that passes secrets to the OpenClaw runtime. All three provisioning paths (production gateway startup, Railway direct provisioning, and backend container manager) write this section into the configuration file at launch.
 
 | Parameter | Description |
 |-----------|-------------|
@@ -1032,7 +1032,7 @@ Each agent container's `openclaw.json` includes a top-level `env` section that p
 
 ### Container environment variables
 
-The following environment variables are set on every agent container at launch. Variables are grouped by source — some are set by the container image entrypoint (local Docker path) and others are injected by the provisioning service (Railway path). When both paths set the same variable, the provisioning service value takes precedence.
+The following environment variables are set on every agent container at launch. Variables are grouped by source — some are set by the container startup process (local Docker path) and others are injected by the provisioning service (Railway path). When both paths set the same variable, the provisioning service value takes precedence.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
@@ -1042,7 +1042,7 @@ The following environment variables are set on every agent container at launch. 
 | `TERM` | `xterm-256color` | Terminal type |
 | `NODE_COMPILE_CACHE` | `/var/tmp/openclaw-compile-cache` | Directory for the Node.js compile cache. Speeds up cold starts by caching compiled bytecode across process restarts. |
 | `OPENCLAW_NO_RESPAWN` | `1` | When set to `1`, prevents the OpenClaw process from automatically respawning after exit. Container-level restart policies (Docker `--restart` or orchestrator health checks) handle process recovery instead. |
-| `OPENCLAW_GATEWAY_TOKEN` | Auto-generated | Gateway authentication token. When not set, the entrypoint generates a 32-character hex token. See [per-agent gateway authentication](#per-agent-gateway-authentication). |
+| `OPENCLAW_GATEWAY_TOKEN` | Auto-generated | Gateway authentication token. When not set, a 32-character hex token is generated at startup. See [per-agent gateway authentication](#per-agent-gateway-authentication). |
 | `OPENCLAW_GATEWAY_URL` | Platform URL | Gateway URL for the agent to communicate with the platform gateway. Set by the provisioning service. |
 | `OPENCLAW_GATEWAY_PORT` | `18789` | Port the gateway listens on inside the container |
 | `OPENCLAW_GATEWAY_BIND` | — | **Deprecated.** Previously set to `0.0.0.0` to allow Railway's reverse proxy to route traffic into the container. This variable is no longer injected by the provisioning service because it has no effect on OpenClaw. Traffic now reaches the gateway through a TCP proxy that forwards the Railway-assigned `PORT` to `127.0.0.1:18789`. |
