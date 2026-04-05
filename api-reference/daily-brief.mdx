@@ -27,6 +27,8 @@ The endpoint probes each service concurrently using an 8-second per-service time
 | Tempo Soul | `https://borg-0-production.up.railway.app/health` |
 | Borg-0 | `https://borg-0-production.up.railway.app/health` |
 
+<Note>The Tempo Soul and Borg-0 services run the x402-node binary, whose `/health` endpoint may return HTTP `503` until external dependencies are satisfied (connected peers, funded wallets, required environment variables). Railway uses a TCP port check on port `4023` instead of an HTTP health check for these services, so the service is considered healthy as long as it is accepting TCP connections. When the daily brief probes `/health` over HTTP, it may report these services as `down` even though the underlying process is running and reachable. This is expected behavior during startup or when external dependencies are not yet available.</Note>
+
 ### Response
 
 ```json
