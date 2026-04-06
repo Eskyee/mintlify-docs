@@ -393,6 +393,7 @@ Admin users (configured via `ADMIN_EMAILS`) are exempt from the following restri
 
 - **Subscription requirement** — admins can provision agents without an active subscription (the `402` error is not returned).
 - **Agent limit** — admins receive an elevated agent slot limit instead of the plan-based cap.
+- **Workload gate** — on the `POST /api/provision` endpoint, admins bypass the workload gate entirely and are not subject to per-user slot or budget limits.
 
 Admin status is determined by checking the session email against `ADMIN_EMAILS`. This endpoint does not accept an `email` field in the request body — only the authenticated session email is used for the admin check. The `POST /api/provision` endpoint uses the same session-only admin check (see [admin check](#admin-check)).
 
@@ -1785,7 +1786,7 @@ The endpoint enqueues the provisioning request as an asynchronous job on the bac
 
 The web proxy validates authentication, checks the subscription, acquires a workload slot, and forwards the request to the backend job queue (`POST /api/platform-jobs/provision`). On success, a `202 Accepted` response is returned with a `jobId` that you poll for the result.
 
-Subject to rate limiting (per-IP) and workload gating (per-user). Auto-provision requests (`autoProvision: true`) consume 2 workload slots; standard requests consume 1.
+Subject to rate limiting (per-IP) and workload gating (per-user). Auto-provision requests (`autoProvision: true`) consume 2 workload slots; standard requests consume 1. The deploy lane allows up to 6 workload slots per user per minute. Admin users bypass the workload gate entirely and are not subject to slot limits.
 
 <Warning>The provisioning endpoint no longer tries multiple backend URLs or falls back to direct Railway API calls. It exclusively uses the backend job queue. The previous multi-path provisioning strategy (backend service, backend Railway proxy, Railway direct) has been replaced with a single async path.</Warning>
 
@@ -1793,7 +1794,7 @@ Subject to rate limiting (per-IP) and workload gating (per-user). Auto-provision
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `aiProvider` | string | No | AI provider (default: `openrouter`). Options: `openrouter`, `gemini`, `groq`, `anthropic`, `openai`. Each provider maps to a default model — see [AI provider defaults](#ai-provider-defaults) below. |
+| `aiProvider` | string | No | AI provider (default: `openrouter`). Options: `openrouter`, `gemini`, `groq`, `anthropic`, `openai`, `ollama`. Each provider maps to a default model — see [AI provider defaults](#ai-provider-defaults) below. When set to `ollama`, no API key is required — the agent connects to the Ollama instance automatically. |
 | `plan` | string | No | Plan tier. Options: `solo`, `collective`, `label`, `network`. Defaults to `solo` when omitted. |
 | `agentType` | string | No | Agent type. Defaults to `creative`. When set to `business`, the agent is provisioned as an OpenClaw-only deployment and channel tokens are not required. Accepted values: `creative` (default), `business`. |
 | `autoProvision` | boolean | No | When `true`, the agent is provisioned as an OpenClaw-only deployment and channel tokens are not required. The onboard flow sets this automatically in deploy mode. |
@@ -1835,7 +1836,7 @@ The endpoint returns a job reference immediately. The actual provisioning happen
 | 403 | Active subscription required. Returned when the authenticated user does not have an active subscription and is not an admin. |
 | 429 | Rate limit or workload gate exceeded. Response may include `retryAfterSeconds`. |
 | 500 | Internal server error |
-| 502 | Backend job queue returned an error or non-JSON response |
+| 502 | Backend job queue returned an error or non-JSON response. When the backend returns a non-JSON response (for example, an HTML error page), the error message is `Backend unavailable (HTTP {status}). Please try again in a moment.` |
 
 ## Get job status
 
@@ -1976,6 +1977,7 @@ These models are configured inside the agent service at provisioning time and ar
 | `anthropic` | `anthropic/claude-sonnet-4-5` | `openai/gpt-4o` | `https://api.anthropic.com/v1` |
 | `openai` | `openai/gpt-4o` | `openai/gpt-4o-mini` | `https://api.openai.com/v1` |
 | `minimax` | `MiniMax/MiniMax-Text-01` | `openai/gpt-4o-mini` | `https://api.minimax.chat/v1` |
+| `ollama` | _(must be specified)_ | _(none)_ | `http://ollama.railway.internal:11434` |
 
 #### Provision response metadata models
 
@@ -1989,10 +1991,13 @@ The `aiProviderConfig` object returned in the provision response uses different 
 | `anthropic` | `claude-3-sonnet-20240229` | `https://api.anthropic.com/v1` |
 | `openai` | `gpt-4o` | `https://api.openai.com/v1` |
 | `minimax` | `MiniMax/MiniMax-Text-01` | `https://api.minimax.chat/v1` |
+| `ollama` | _(must be specified)_ | `http://ollama.railway.internal:11434` |
 
 Each provider includes a fallback model in the service config that is used automatically when the primary model is unavailable or returns an error.
 
 <Note>`minimax` is available as a fallback in the provider configuration map but is not currently accepted as a value for the `aiProvider` request parameter. Passing `minimax` as `aiProvider` returns a `400` validation error. This provider may be enabled in a future release.</Note>
+
+<Note>When `aiProvider` is set to `ollama`, no API key is required. The agent connects to the Ollama instance at `http://ollama.railway.internal:11434` automatically. You must specify a model name explicitly — there is no default model for Ollama.</Note>
 
 ## Railway provisioning proxy (internal)
 
