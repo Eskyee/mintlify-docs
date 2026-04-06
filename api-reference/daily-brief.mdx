@@ -15,7 +15,7 @@ GET /api/daily-brief
 
 No authentication required. Returns a structured briefing with live health checks for each monitored service, recent activity context, focus items, market pulse, security alerts, and upcoming milestones.
 
-The endpoint probes each service concurrently using an 8-second per-service timeout. Services that do not respond within the timeout are reported as `down`.
+The endpoint probes each service concurrently using an 8-second per-service timeout. Services that do not respond within the timeout are reported as `down`. Services that return a non-2xx status with a JSON body containing `"status": "degraded"` are reported as `degraded` rather than `down`.
 
 ### Monitored services
 
@@ -24,10 +24,9 @@ The endpoint probes each service concurrently using an 8-second per-service time
 | Agentbot API | `https://agentbot-prod-production.up.railway.app/health` |
 | Agentbot Web | `https://agentbot.sh` |
 | x402 Gateway | `https://x402-gateway-production.up.railway.app/health` |
-| Tempo Soul | `https://borg-0-production.up.railway.app/health` |
 | Borg-0 | `https://borg-0-production.up.railway.app/health` |
 
-<Note>The Tempo Soul and Borg-0 services run the x402-node binary, whose `/health` endpoint may return HTTP `503` until external dependencies are satisfied (connected peers, funded wallets, required environment variables). Railway uses a TCP port check on port `4023` instead of an HTTP health check for these services, so the service is considered healthy as long as it is accepting TCP connections. When the daily brief probes `/health` over HTTP, it may report these services as `down` even though the underlying process is running and reachable. This is expected behavior during startup or when external dependencies are not yet available.</Note>
+<Note>The Borg-0 service runs the x402-node binary, whose `/health` endpoint may return HTTP `503` until external dependencies are satisfied (connected peers, funded wallets, required environment variables). Railway uses a TCP port check on port `4023` instead of an HTTP health check for this service, so it is considered healthy as long as it is accepting TCP connections. When the daily brief probes `/health` over HTTP, it may report the service as `degraded` even though the underlying process is running and reachable. This is expected behavior during startup or when external dependencies are not yet available.</Note>
 
 ### Response
 
@@ -44,8 +43,7 @@ The endpoint probes each service concurrently using an 8-second per-service time
         "Agentbot API — healthy (v1.2.0)",
         "Agentbot Web — healthy",
         "x402 Gateway — healthy (v0.9.1)",
-        "Tempo Soul — healthy",
-        "Borg-0 — healthy"
+        "Borg-0 — healthy (v5e9b8c7a)"
       ]
     },
     {
@@ -125,9 +123,9 @@ Each item in the `system` section follows one of these formats based on the serv
 |--------|--------|---------|
 | Healthy | `{name} — healthy` or `{name} — healthy ({version})` | `Agentbot API — healthy (v1.2.0)` |
 | Degraded | `⚠️ {name} — degraded: {detail}` | `⚠️ x402 Gateway — degraded: HTTP 503` |
-| Down | `🔴 {name} — DOWN` | `🔴 Tempo Soul — DOWN` |
+| Down | `🔴 {name} — DOWN` | `🔴 Borg-0 — DOWN` |
 
-When a service returns a JSON response with a `version` or `build` field, the version is included in the healthy status message.
+When a service returns a JSON response with a `version` or `build` field, the value is included in the healthy status message. If the `build` field is a string, only the first 8 characters are displayed (useful for shortened commit hashes).
 
 ### Security section behavior
 

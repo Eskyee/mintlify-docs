@@ -117,9 +117,24 @@ Toggle showcase visibility and update the showcase description for an agent. Req
 | `showcaseOptIn` | boolean | Updated showcase opt-in status |
 | `showcaseDescription` | string | Updated showcase description |
 
+### Error response
+
+When the request fails, the endpoint returns a JSON object with an `error` field describing the failure:
+
+```json
+{
+  "error": "Agent not found"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `error` | string | Human-readable error message |
+
 ### Errors
 
 | Code | Description |
 |------|-------------|
 | 401 | Unauthorized — valid session required |
 | 404 | Agent not found or not owned by the authenticated user |
+| 500 | Internal server error — database update failed |
