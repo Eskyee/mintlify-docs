@@ -419,7 +419,7 @@ The endpoint also checks gateway health and sends support alerts when token gene
 | 401 | Unauthorized — missing or invalid session |
 | 500 | Token generation failed or internal error |
 
-<Note>This endpoint replaces the previous behavior where users had to manually refresh their pairing token. Tokens are now auto-generated when missing. The generated token is a 64-character hex string stored per-user in the database with a graceful fallback to the shared gateway token.</Note>
+<Note>This endpoint replaces the previous behavior where users had to manually refresh their pairing token. Tokens are now auto-generated when missing. The generated token is a 64-character hex string stored per-user in the database. Lifecycle operations such as [repair](/api-reference/agents#repair-agent) use the per-user token from the database when reconfiguring the agent runtime.</Note>
 
 ---
 
