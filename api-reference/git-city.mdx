@@ -133,7 +133,21 @@ Fetches commit history for a GitHub repository and generates 3D city visualizati
 | Code | Description |
 |------|-------------|
 | 401 | Unauthorized — valid session required |
-| 500 | Failed to generate git city data |
+| 500 | Failed to generate git city data. The response includes a `details` field with the underlying error message. |
+
+#### Error response (500)
+
+```json
+{
+  "error": "Failed to generate git city",
+  "details": "Failed to fetch commits: 404"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `error` | string | Error summary |
+| `details` | string | Underlying error message for debugging |
 
 ## List user repositories
 
@@ -208,4 +222,4 @@ Returns the same response shape as [GET /api/git-city](#get-repository-city-data
 | 400 | Repository URL required |
 | 400 | Only GitHub repositories supported |
 | 401 | Unauthorized — valid session required |
-| 500 | Failed to analyze repository |
+| 500 | Failed to analyze repository. The response includes a `details` field with the underlying error message. |

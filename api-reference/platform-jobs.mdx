@@ -26,6 +26,8 @@ Jobs that remain in `running` state for more than ten minutes are automatically 
 |------|------|-------------|
 | `provision_managed_runtime` | `deploy` | Provisions a new managed agent runtime |
 | `gateway_chat_completion` | `runtime_exec` | Sends a chat completion request through a gateway |
+| `runtime_sync` | `recovery` | Synchronizes runtime state with the platform |
+| `retry_repair` | `recovery` | Retries a previously failed operation to repair state |
 
 ### Job statuses
 
@@ -222,7 +224,7 @@ Returns the current state of a job by its identifier.
 | `job.id` | string | Job identifier |
 | `job.userId` | string \| null | User who owns this job |
 | `job.agentId` | string \| null | Associated agent identifier |
-| `job.lane` | string | Processing lane (`deploy`, `runtime_exec`, or `recovery`) |
+| `job.lane` | string | Processing lane: `deploy` for provisioning jobs, `runtime_exec` for chat completions, or `recovery` for sync and repair operations |
 | `job.jobType` | string | Job type (see [job types](#job-types)) |
 | `job.status` | string | Current status (see [job statuses](#job-statuses)) |
 | `job.priority` | number | Priority value. Higher values are processed first. |
