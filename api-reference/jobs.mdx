@@ -498,13 +498,89 @@ Returns all companies owned by the authenticated user, including summary statist
 |------|-------------|
 | 401 | Unauthorized |
 
+## List external jobs
+
+```http
+GET /api/jobs/external
+```
+
+Returns job listings from external partner boards. Currently aggregates listings from Git City. No authentication required. Results are cached for five minutes.
+
+### Response
+
+```json
+{
+  "jobs": [
+    {
+      "id": "gitcity-42",
+      "title": "Backend Engineer",
+      "description": "Build scalable APIs and microservices...",
+      "salaryMin": 100000,
+      "salaryMax": 160000,
+      "salaryCurrency": "USD",
+      "roleType": "backend",
+      "techStack": ["Node.js", "PostgreSQL"],
+      "seniority": "senior",
+      "contractType": "clt",
+      "webType": "web2",
+      "applyUrl": "https://www.thegitcity.com/jobs/42",
+      "status": "active",
+      "viewCount": 120,
+      "applyCount": 8,
+      "publishedAt": "2026-04-05T12:00:00Z",
+      "company": {
+        "name": "Acme Corp",
+        "slug": "acme-corp",
+        "logoUrl": "https://example.com/logo.png",
+        "website": "https://example.com"
+      },
+      "source": "gitcity"
+    }
+  ]
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `jobs` | array | List of external job listings |
+| `jobs[].id` | string | Listing identifier, prefixed with the source name (for example, `gitcity-42`) |
+| `jobs[].title` | string | Job title |
+| `jobs[].description` | string | Plain-text job description (HTML stripped, truncated to 500 characters) |
+| `jobs[].salaryMin` | number \| null | Minimum salary |
+| `jobs[].salaryMax` | number \| null | Maximum salary |
+| `jobs[].salaryCurrency` | string \| null | Salary currency code |
+| `jobs[].roleType` | string \| null | Role type |
+| `jobs[].techStack` | string[] | Required technologies |
+| `jobs[].seniority` | string \| null | Seniority level |
+| `jobs[].contractType` | string \| null | Contract type. A `fulltime` value from the source is mapped to `clt`. |
+| `jobs[].webType` | string \| null | Web type |
+| `jobs[].applyUrl` | string | External application URL |
+| `jobs[].status` | string \| null | Listing status |
+| `jobs[].viewCount` | number | Number of views |
+| `jobs[].applyCount` | number | Number of applications |
+| `jobs[].publishedAt` | string \| null | ISO 8601 publish timestamp |
+| `jobs[].company` | object | Company details from the external source |
+| `jobs[].company.name` | string | Company name |
+| `jobs[].company.slug` | string | URL-friendly company identifier |
+| `jobs[].company.logoUrl` | string \| null | Company logo URL |
+| `jobs[].company.website` | string | Company website |
+| `jobs[].source` | string | Source identifier (for example, `gitcity`) |
+
+<Note>External jobs cannot be applied to through the Agentbot API. Use the `applyUrl` to apply on the source site.</Note>
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 500 | Failed to fetch external jobs. Returns `{ "jobs": [], "error": "Failed to fetch external jobs" }`. |
+
 ## Get job status
 
 ```http
 GET /api/jobs/:jobId
 ```
 
-Returns the status of a background job by its identifier. Requires session authentication. You can only access jobs that belong to your account.
+Returns the status of a background job by its identifier. Requires session authentication. You can only access jobs that belong to your account. See [Platform jobs](/api-reference/platform-jobs) for details on the background job queue.
 
 ### Path parameters
 
