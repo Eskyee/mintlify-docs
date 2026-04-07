@@ -565,9 +565,29 @@ GET /api/pairing/pending
 ```json
 {
   "ok": true,
-  "pending": []
+  "pending": [
+    {
+      "id": "req_abc123",
+      "name": "Chrome on macOS",
+      "ip": "192.168.1.42",
+      "role": "viewer",
+      "createdAt": "2026-04-05T12:00:00.000Z",
+      "expiresAt": "2026-04-05T12:10:00.000Z"
+    }
+  ]
 }
 ```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `ok` | boolean | Always `true` on success |
+| `pending` | array | Array of pending pairing request objects |
+| `pending[].id` | string | Unique request identifier. Also accessible as `requestId`. |
+| `pending[].name` | string | Device display name. Also accessible as `deviceName`. |
+| `pending[].ip` | string | Remote IP address of the requesting device. Also accessible as `remoteIp`. |
+| `pending[].role` | string | Requested access role (for example `viewer`, `admin`) |
+| `pending[].createdAt` | string | ISO 8601 timestamp of when the request was created |
+| `pending[].expiresAt` | string \| undefined | ISO 8601 timestamp of when the request expires. When present, the admin dashboard displays a countdown timer. |
 
 #### Approve a pairing request
 
@@ -644,9 +664,25 @@ GET /api/pairing/paired
 ```json
 {
   "ok": true,
-  "paired": []
+  "paired": [
+    {
+      "id": "dev_abc123",
+      "name": "Chrome on macOS",
+      "role": "viewer",
+      "pairedAt": "2026-04-05T12:01:00.000Z"
+    }
+  ]
 }
 ```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `ok` | boolean | Always `true` on success |
+| `paired` | array | Array of paired device objects |
+| `paired[].id` | string | Unique device identifier. Also accessible as `deviceId`. |
+| `paired[].name` | string | Device display name. Also accessible as `deviceName`. |
+| `paired[].role` | string | Access role assigned to the device |
+| `paired[].pairedAt` | string | ISO 8601 timestamp of when the device was paired |
 
 #### Pairing event stream
 
@@ -658,24 +694,41 @@ Requires [admin authentication](#wrapper-authentication). Server-Sent Events (SS
 
 ##### Event format
 
-Pending list update:
+**Pending list update** — sent on connection and whenever the pending list changes (for example when a new pairing request arrives):
 
 ```json
 {
   "type": "pending",
-  "pending": []
+  "pending": [
+    {
+      "id": "req_abc123",
+      "name": "Chrome on macOS",
+      "ip": "192.168.1.42",
+      "role": "viewer",
+      "createdAt": "2026-04-05T12:00:00.000Z",
+      "expiresAt": "2026-04-05T12:10:00.000Z"
+    }
+  ]
 }
 ```
 
-Pairing action update:
+**Pairing action update** — sent when a pairing request is approved, rejected, or a paired device is revoked:
 
 ```json
 {
   "type": "update",
   "action": "approved",
-  "requestId": "abc123"
+  "requestId": "req_abc123"
 }
 ```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `type` | string | Event type: `pending` or `update` |
+| `pending` | array | Full list of pending requests. Only present when `type` is `pending`. See [list pending pairing requests](#list-pending-pairing-requests) for the object shape. |
+| `action` | string | Action that occurred: `approved`, `rejected`, or `revoked`. Only present when `type` is `update`. |
+| `requestId` | string | The pairing request ID that was approved or rejected. Present when `action` is `approved` or `rejected`. |
+| `deviceId` | string | The device ID that was revoked. Present when `action` is `revoked`. |
 
 ### Setup flow
 
@@ -853,7 +906,7 @@ No authentication required. Downloads a zip archive of all gateway data. When `W
 
 ##### Response
 
-Returns a `application/zip` file as a download attachment.
+Returns a `application/zip` file as a download attachment. The `Content-Disposition` header includes a filename in the format `openclaw-export-<timestamp>.zip`.
 
 ##### Errors
 
@@ -883,6 +936,24 @@ The wrapper handles WebSocket upgrade requests with path-based routing:
 <Note>The `node-pty` native module is dynamically loaded at startup. If it cannot be compiled or is not present in the container image, the gateway logs a warning (`node-pty not available — terminal feature disabled`) and continues operating normally. All other gateway features remain functional. To enable the terminal, ensure `node-pty` is installed and its native bindings can compile for the target platform.</Note>
 
 When the gateway is not running, non-terminal WebSocket upgrade requests are proxied to the gateway address, which returns a connection error.
+
+#### Terminal WebSocket messages
+
+Messages on the `/ws/terminal` WebSocket are JSON objects with a `type` field.
+
+##### Client-to-server messages
+
+| Type | Fields | Description |
+|------|--------|-------------|
+| `input` | `data` (string) | Send keystrokes or pasted text to the terminal |
+| `resize` | `cols` (number), `rows` (number) | Notify the server that the terminal dimensions have changed |
+
+##### Server-to-client messages
+
+| Type | Fields | Description |
+|------|--------|-------------|
+| `output` | `data` (string) | Terminal output to render |
+| `exit` | `code` (number) | The terminal process exited with the given exit code |
 
 ### Environment variables
 
