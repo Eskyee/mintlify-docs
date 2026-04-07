@@ -94,6 +94,7 @@ Creates a new agent with an auto-generated ID and stores its metadata on disk. R
 | `config` | object | No | Agent configuration |
 | `config.plan` | string | No | Plan tier (for example, `solo`, `collective`, `label`, `network`). Defaults to `free` when omitted. Note that `free` is not a standard plan tier and may not be recognized by other endpoints. |
 | `config.aiProvider` | string | No | AI provider (for example, `openrouter`, `anthropic`) |
+| `config.stripeSubscriptionId` | string | Conditional | Stripe subscription ID. Required unless the caller is an admin. When missing for non-admin callers, the endpoint returns `402`. |
 
 ### Response (201 Created)
 
@@ -115,6 +116,7 @@ Creates a new agent with an auto-generated ID and stores its metadata on disk. R
 |------|-------------|
 | 400 | Name required |
 | 401 | Unauthorized |
+| 402 | Active subscription required. Returned when `config.stripeSubscriptionId` is missing and the caller is not an admin. Response includes `code: "PAYMENT_REQUIRED"`. |
 | 500 | Failed to create agent |
 
 <Note>For provisioning an agent with messaging channel tokens and a live Render service deployment, use [`POST /api/agents/provision`](#provision-agent) or [`POST /api/provision`](#provision-with-channel-tokens) instead.</Note>
@@ -176,7 +178,8 @@ The web proxy wraps the agent in an object:
 | Code | Description |
 |------|-------------|
 | 401 | Unauthorized |
-| 404 | Agent not found or not owned by user |
+| 403 | Forbidden — you do not own this agent. Returned when the agent has an `ownerEmail` set and it does not match the authenticated user's email. Admins bypass this check. |
+| 404 | Agent not found — no container or metadata exists for this agent ID |
 | 500 | Failed to fetch agent |
 
 ## Update agent
@@ -213,6 +216,7 @@ Updates an agent's metadata including plan, AI provider, and configuration. Requ
 | Code | Description |
 |------|-------------|
 | 401 | Unauthorized |
+| 403 | Forbidden — you do not own this agent |
 | 404 | Agent not found |
 | 500 | Failed to update agent |
 
@@ -240,9 +244,11 @@ Stops and removes the agent's local Docker container, deallocates its port, and 
 | Code | Description |
 |------|-------------|
 | 401 | Unauthorized |
+| 403 | Forbidden — you do not own this agent |
+| 404 | Agent not found |
 | 500 | Failed to delete agent |
 
-<Note>The backend uses best-effort cleanup (service destruction and metadata removal). If the agent does not exist, the operation succeeds silently and returns `deleted: true`.</Note>
+<Note>The backend uses best-effort cleanup (service destruction and metadata removal). If the agent metadata does not exist, the endpoint returns `404` before attempting cleanup. Container stop and removal failures are silently ignored.</Note>
 
 ## Provision agent
 
@@ -694,6 +700,8 @@ Triggers an image update on the backend. Before replacing the service, the endpo
 | Code | Description |
 |------|-------------|
 | 400 | Invalid docker image value |
+| 403 | Forbidden — you do not own this agent |
+| 404 | Agent not found |
 | 500 | Update failed. When automatic rollback succeeds, the agent continues running on the previous image. |
 
 ### Repair agent
@@ -711,6 +719,14 @@ Returns the backend response directly.
 }
 ```
 
+#### Errors
+
+| Code | Description |
+|------|-------------|
+| 403 | Forbidden — you do not own this agent |
+| 404 | Agent not found |
+| 500 | Repair failed |
+
 ### Reset agent memory
 
 ```http
@@ -725,6 +741,14 @@ Returns the backend response directly.
   "message": "Memory reset successfully"
 }
 ```
+
+#### Errors
+
+| Code | Description |
+|------|-------------|
+| 403 | Forbidden — you do not own this agent |
+| 404 | Agent not found |
+| 500 | Reset failed |
 
 ### Lifecycle error responses
 
@@ -748,7 +772,8 @@ Web proxy lifecycle endpoints return a different error shape:
 | Code | Source | Description |
 |------|--------|-------------|
 | 401 | Both | Unauthorized — missing or invalid authentication |
-| 403 | Web proxy | Forbidden — authenticated user does not own this agent instance |
+| 403 | Both | Forbidden — authenticated user does not own this agent. The backend returns `{ "error": "Forbidden — you do not own this agent" }`. The web proxy returns `{ "success": false, "status": "error" }`. |
+| 404 | Backend | Agent not found — no metadata exists for this agent ID |
 | 500 | Backend | Internal server error (for example, Render API unavailable or service operation failed) |
 | 502 | Web proxy | Backend service unavailable |
 
@@ -813,6 +838,7 @@ Returns the gateway token for the agent. If no token exists, a new cryptographic
 
 | Code | Description |
 |------|-------------|
+| 403 | Forbidden — you do not own this agent |
 | 404 | Agent not found |
 | 500 | Failed to get token |
 
@@ -876,6 +902,7 @@ POST /api/agents/:id/verify
 | Code | Description |
 |------|-------------|
 | 401 | Unauthorized (handled by authentication middleware) |
+| 403 | Forbidden — you do not own this agent |
 | 404 | Agent not found |
 | 500 | Failed to update verification |
 
@@ -890,6 +917,14 @@ DELETE /api/agents/:id/verify
   "success": true
 }
 ```
+
+#### Errors
+
+| Code | Description |
+|------|-------------|
+| 403 | Forbidden — you do not own this agent |
+| 404 | Agent not found |
+| 500 | Failed to remove verification |
 
 ## Provision with channel tokens
 
