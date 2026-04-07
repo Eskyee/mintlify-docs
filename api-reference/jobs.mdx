@@ -1,0 +1,503 @@
+---
+title: Jobs API
+description: "Browse job listings, manage career profiles, and submit applications"
+---
+
+# Jobs API
+
+Browse job listings, manage career profiles, and submit applications through the jobs board.
+
+<Note>All endpoints that modify data require session authentication. The job board listing endpoint (`GET /api/jobs/board`) is publicly accessible without authentication.</Note>
+
+## List job listings
+
+```http
+GET /api/jobs/board
+```
+
+Returns active job listings with optional filters. No authentication required.
+
+### Query parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `status` | string | No | Filter by listing status. Defaults to `active`. |
+| `roleType` | string | No | Filter by role type (for example, `frontend`, `backend`, `fullstack`). |
+| `seniority` | string | No | Filter by seniority level (for example, `junior`, `mid`, `senior`). |
+| `webType` | string | No | Filter by web type (for example, `web2`, `web3`, `both`). Defaults to `both` when creating listings. |
+| `search` | string | No | Full-text search across job titles and descriptions (case-insensitive). |
+
+### Response
+
+```json
+{
+  "jobs": [
+    {
+      "id": "clxyz123",
+      "companyId": "clxyz456",
+      "title": "Senior Frontend Engineer",
+      "description": "Build next-generation interfaces...",
+      "salaryMin": 120000,
+      "salaryMax": 180000,
+      "salaryCurrency": "USD",
+      "roleType": "frontend",
+      "techStack": ["React", "TypeScript", "Next.js"],
+      "seniority": "senior",
+      "contractType": "full-time",
+      "webType": "both",
+      "applyUrl": "https://example.com/apply",
+      "language": "en",
+      "status": "active",
+      "viewCount": 42,
+      "applyCount": 5,
+      "badgeResponseGuaranteed": true,
+      "badgeNoAiScreening": false,
+      "publishedAt": "2026-04-01T00:00:00Z",
+      "company": {
+        "id": "clxyz456",
+        "name": "Acme Corp",
+        "slug": "acme-corp",
+        "logoUrl": "https://example.com/logo.png",
+        "website": "https://example.com",
+        "description": "Building the future of work",
+        "githubOrg": "acme-corp"
+      }
+    }
+  ]
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `jobs` | array | List of job listings (max 50), ordered by publish date descending |
+| `jobs[].id` | string | Listing identifier |
+| `jobs[].companyId` | string | Company identifier |
+| `jobs[].title` | string | Job title |
+| `jobs[].description` | string | Job description |
+| `jobs[].salaryMin` | number | Minimum salary |
+| `jobs[].salaryMax` | number | Maximum salary |
+| `jobs[].salaryCurrency` | string | Salary currency code (for example, `USD`) |
+| `jobs[].roleType` | string | Role type |
+| `jobs[].techStack` | string[] | Required technologies |
+| `jobs[].seniority` | string | Seniority level |
+| `jobs[].contractType` | string | Contract type (for example, `full-time`, `contract`) |
+| `jobs[].webType` | string | Web type (`web2`, `web3`, or `both`) |
+| `jobs[].applyUrl` | string | External application URL |
+| `jobs[].language` | string | Primary language for the listing |
+| `jobs[].status` | string | Listing status |
+| `jobs[].viewCount` | number | Number of views |
+| `jobs[].applyCount` | number | Number of applications |
+| `jobs[].badgeResponseGuaranteed` | boolean | Whether the company guarantees a response |
+| `jobs[].badgeNoAiScreening` | boolean | Whether the company opts out of AI screening |
+| `jobs[].publishedAt` | string | ISO 8601 publish timestamp |
+| `jobs[].company` | object | Company details (included via relation) |
+
+## Create a job listing
+
+```http
+POST /api/jobs/board
+```
+
+Creates a new job listing under a company you own. Requires session authentication.
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `companyId` | string | Yes | Company identifier. Must be owned by the authenticated user. |
+| `title` | string | Yes | Job title (minimum 1 character). |
+| `description` | string | Yes | Job description (minimum 1 character). |
+| `salaryMin` | number | Yes | Minimum salary (must be positive). |
+| `salaryMax` | number | Yes | Maximum salary (must be positive). |
+| `salaryCurrency` | string | No | Salary currency code. Defaults to `USD`. |
+| `roleType` | string | Yes | Role type (for example, `frontend`, `backend`, `fullstack`). |
+| `techStack` | string[] | No | Required technologies. Defaults to an empty array. |
+| `seniority` | string | Yes | Seniority level (for example, `junior`, `mid`, `senior`). |
+| `contractType` | string | Yes | Contract type (for example, `full-time`, `contract`, `freelance`). |
+| `webType` | string | No | Web type. Defaults to `both`. |
+| `applyUrl` | string | Yes | External application URL. Must be a valid URL. |
+| `language` | string | No | Primary listing language. Defaults to `en`. |
+| `languagePtBr` | string | No | Portuguese (Brazil) translation of the listing. |
+| `badgeResponseGuaranteed` | boolean | No | Guarantee a response to applicants. Defaults to `false`. |
+| `badgeNoAiScreening` | boolean | No | Opt out of AI screening. Defaults to `false`. |
+
+<Note>New listings are created with a `draft` status. Publish the listing by updating its status separately.</Note>
+
+### Response (200)
+
+```json
+{
+  "job": {
+    "id": "clxyz789",
+    "companyId": "clxyz456",
+    "title": "Senior Frontend Engineer",
+    "description": "Build next-generation interfaces...",
+    "salaryMin": 120000,
+    "salaryMax": 180000,
+    "salaryCurrency": "USD",
+    "roleType": "frontend",
+    "techStack": ["React", "TypeScript"],
+    "seniority": "senior",
+    "contractType": "full-time",
+    "webType": "both",
+    "applyUrl": "https://example.com/apply",
+    "language": "en",
+    "status": "draft",
+    "badgeResponseGuaranteed": false,
+    "badgeNoAiScreening": false,
+    "company": {
+      "id": "clxyz456",
+      "name": "Acme Corp",
+      "slug": "acme-corp"
+    }
+  }
+}
+```
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | Validation error. The response body contains the Zod validation issues. |
+| 401 | Unauthorized |
+| 403 | Company not found or not owned by the authenticated user |
+| 500 | Internal server error |
+
+## Create a company
+
+```http
+POST /api/jobs/board
+```
+
+Creates a new company profile for posting job listings. Send `type: "company"` in the request body to create a company instead of a listing. Requires session authentication.
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `type` | string | Yes | Must be `"company"`. |
+| `name` | string | Yes | Company name (minimum 1 character). |
+| `slug` | string | Yes | URL-friendly identifier. Must contain only lowercase letters, numbers, and hyphens. |
+| `logoUrl` | string | No | URL to the company logo. |
+| `website` | string | Yes | Company website. Must be a valid URL. |
+| `description` | string | No | Company description. |
+| `githubOrg` | string | No | GitHub organization name. |
+
+### Response (200)
+
+```json
+{
+  "company": {
+    "id": "clxyz456",
+    "advertiserId": "user_123",
+    "name": "Acme Corp",
+    "slug": "acme-corp",
+    "logoUrl": "https://example.com/logo.png",
+    "website": "https://example.com",
+    "description": "Building the future of work",
+    "githubOrg": "acme-corp"
+  }
+}
+```
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | Validation error. The response body contains the Zod validation issues. |
+| 401 | Unauthorized |
+| 500 | Internal server error |
+
+## Apply to a job
+
+```http
+POST /api/jobs/apply
+```
+
+Submits an application to an active job listing. Requires session authentication. You can only apply to each listing once.
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `listingId` | string | Yes | Job listing identifier to apply to. |
+
+### Response (200)
+
+```json
+{
+  "application": {
+    "id": "clxyz101",
+    "listingId": "clxyz789",
+    "userId": "user_123",
+    "hasProfile": true,
+    "createdAt": "2026-04-07T04:00:00Z"
+  }
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `application.id` | string | Application identifier |
+| `application.listingId` | string | Job listing identifier |
+| `application.userId` | string | Applicant user identifier |
+| `application.hasProfile` | boolean | Whether the applicant has a career profile at the time of application |
+| `application.createdAt` | string | ISO 8601 application timestamp |
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | Already applied to this listing |
+| 401 | Unauthorized |
+| 404 | Job not found or not active |
+| 500 | Internal server error |
+
+## List your applications
+
+```http
+GET /api/jobs/apply
+```
+
+Returns all job applications submitted by the authenticated user, ordered by most recent first. Includes listing and company details. Requires session authentication.
+
+### Response
+
+```json
+{
+  "applications": [
+    {
+      "id": "clxyz101",
+      "listingId": "clxyz789",
+      "userId": "user_123",
+      "hasProfile": true,
+      "createdAt": "2026-04-07T04:00:00Z",
+      "listing": {
+        "id": "clxyz789",
+        "title": "Senior Frontend Engineer",
+        "status": "active",
+        "company": {
+          "id": "clxyz456",
+          "name": "Acme Corp",
+          "slug": "acme-corp"
+        }
+      }
+    }
+  ]
+}
+```
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | Unauthorized |
+
+## Get career profile
+
+```http
+GET /api/jobs/career
+```
+
+Returns the authenticated user's career profile. Requires session authentication.
+
+### Response
+
+```json
+{
+  "profile": {
+    "id": "clxyz202",
+    "userId": "user_123",
+    "skills": ["React", "TypeScript", "Node.js"],
+    "seniority": "senior",
+    "yearsExperience": 8,
+    "bio": "Full-stack engineer with a passion for developer tools.",
+    "webType": "both",
+    "contractTypes": ["full-time", "contract"],
+    "salaryMin": 120000,
+    "salaryMax": 180000,
+    "salaryCurrency": "USD",
+    "salaryVisible": false,
+    "languages": ["en", "pt-BR"],
+    "timezone": "America/New_York",
+    "linkPortfolio": "https://portfolio.example.com",
+    "linkLinkedin": "https://linkedin.com/in/example",
+    "linkWebsite": "https://example.com",
+    "openToWork": true
+  }
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `profile` | object \| null | Career profile, or `null` if no profile exists yet |
+| `profile.skills` | string[] | Listed skills |
+| `profile.seniority` | string | Seniority level |
+| `profile.yearsExperience` | number \| null | Years of experience |
+| `profile.bio` | string | Short bio |
+| `profile.webType` | string | Preferred web type (`web2`, `web3`, or `both`) |
+| `profile.contractTypes` | string[] | Preferred contract types |
+| `profile.salaryMin` | number \| null | Minimum salary expectation |
+| `profile.salaryMax` | number \| null | Maximum salary expectation |
+| `profile.salaryCurrency` | string | Salary currency code |
+| `profile.salaryVisible` | boolean | Whether salary expectations are visible to employers |
+| `profile.languages` | string[] | Spoken languages |
+| `profile.timezone` | string \| null | Preferred timezone |
+| `profile.linkPortfolio` | string \| null | Portfolio URL |
+| `profile.linkLinkedin` | string \| null | LinkedIn profile URL |
+| `profile.linkWebsite` | string \| null | Personal website URL |
+| `profile.openToWork` | boolean | Whether you are actively looking for work |
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | Unauthorized |
+
+## Create or update career profile
+
+```http
+PUT /api/jobs/career
+```
+
+Creates or updates the authenticated user's career profile. If a profile already exists, it is updated in place. Requires session authentication.
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `skills` | string[] | No | Listed skills. Defaults to an empty array. |
+| `seniority` | string | Yes | Seniority level. |
+| `yearsExperience` | number | No | Years of experience. |
+| `bio` | string | Yes | Short bio. |
+| `webType` | string | No | Preferred web type. Defaults to `both`. |
+| `contractTypes` | string[] | No | Preferred contract types. Defaults to an empty array. |
+| `salaryMin` | number | No | Minimum salary expectation. |
+| `salaryMax` | number | No | Maximum salary expectation. |
+| `salaryCurrency` | string | No | Salary currency code. Defaults to `USD`. |
+| `salaryVisible` | boolean | No | Show salary expectations to employers. Defaults to `false`. |
+| `languages` | string[] | No | Spoken languages. Defaults to an empty array. |
+| `timezone` | string | No | Preferred timezone. |
+| `linkPortfolio` | string | No | Portfolio URL. |
+| `linkLinkedin` | string | No | LinkedIn profile URL. |
+| `linkWebsite` | string | No | Personal website URL. |
+| `openToWork` | boolean | No | Whether you are actively looking for work. Defaults to `false`. |
+
+### Response (200)
+
+```json
+{
+  "profile": {
+    "id": "clxyz202",
+    "userId": "user_123",
+    "skills": ["React", "TypeScript"],
+    "seniority": "senior",
+    "bio": "Full-stack engineer.",
+    "openToWork": true
+  }
+}
+```
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | Validation error. The response body contains the Zod validation issues. |
+| 401 | Unauthorized |
+| 500 | Internal server error |
+
+## List your companies
+
+```http
+GET /api/jobs/companies
+```
+
+Returns all companies owned by the authenticated user, including summary statistics for each listing. Requires session authentication.
+
+### Response
+
+```json
+{
+  "companies": [
+    {
+      "id": "clxyz456",
+      "advertiserId": "user_123",
+      "name": "Acme Corp",
+      "slug": "acme-corp",
+      "logoUrl": "https://example.com/logo.png",
+      "website": "https://example.com",
+      "description": "Building the future of work",
+      "githubOrg": "acme-corp",
+      "createdAt": "2026-04-01T00:00:00Z",
+      "jobs": [
+        {
+          "id": "clxyz789",
+          "title": "Senior Frontend Engineer",
+          "status": "active",
+          "viewCount": 42,
+          "applyCount": 5
+        }
+      ]
+    }
+  ]
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `companies` | array | List of companies owned by the authenticated user, ordered by creation date descending |
+| `companies[].jobs` | array | Summary of job listings under this company |
+| `companies[].jobs[].id` | string | Listing identifier |
+| `companies[].jobs[].title` | string | Job title |
+| `companies[].jobs[].status` | string | Listing status |
+| `companies[].jobs[].viewCount` | number | Number of views |
+| `companies[].jobs[].applyCount` | number | Number of applications |
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | Unauthorized |
+
+## Get job status
+
+```http
+GET /api/jobs/:jobId
+```
+
+Returns the status of a background job by its identifier. Requires session authentication. You can only access jobs that belong to your account.
+
+### Path parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `jobId` | string | Job identifier |
+
+### Response
+
+```json
+{
+  "job": {
+    "id": "job_abc123",
+    "userId": "user_123",
+    "status": "completed",
+    "error": null,
+    "result": {}
+  }
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `job.id` | string | Job identifier |
+| `job.userId` | string \| null | User who owns this job |
+| `job.status` | string | Job status (for example, `pending`, `running`, `completed`, `failed`) |
+| `job.error` | string \| null | Error message if the job failed |
+| `job.result` | object \| null | Job result data when completed |
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | Unauthorized |
+| 403 | Forbidden — the job belongs to a different user |

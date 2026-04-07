@@ -336,6 +336,14 @@ curl -X POST https://agentbot.sh/api/ai/chat \
 | `/api/usage/by-model` | GET | Get token usage grouped by model (backend only, requires auth) |
 | `/api/usage/daily` | GET | Get daily token usage totals (backend only, requires auth) |
 | `/api/usage/tools` | GET | Get tool execution statistics (backend only, requires auth) |
+| `/api/jobs/board` | GET | List active job listings (public, supports filters) |
+| `/api/jobs/board` | POST | Create a job listing or company profile |
+| `/api/jobs/apply` | POST | Apply to a job listing |
+| `/api/jobs/apply` | GET | List your job applications |
+| `/api/jobs/career` | GET | Get your career profile |
+| `/api/jobs/career` | PUT | Create or update your career profile |
+| `/api/jobs/companies` | GET | List your companies and listing stats |
+| `/api/jobs/:jobId` | GET | Get background job status |
 | `/api/workflows` | GET | List all workflows |
 | `/api/workflows` | POST | Create a workflow |
 | `/api/workflows/:workflowId` | GET | Get workflow details |
