@@ -498,6 +498,80 @@ Returns all companies owned by the authenticated user, including summary statist
 |------|-------------|
 | 401 | Unauthorized |
 
+## List external job listings
+
+```http
+GET /api/jobs/external
+```
+
+Returns job listings aggregated from external partner boards. No authentication required. Results are cached for 5 minutes.
+
+### Response
+
+```json
+{
+  "jobs": [
+    {
+      "id": "gitcity-42",
+      "title": "Backend Engineer",
+      "description": "Build scalable APIs and services...",
+      "salaryMin": 100000,
+      "salaryMax": 160000,
+      "salaryCurrency": "USD",
+      "roleType": "backend",
+      "techStack": ["Node.js", "PostgreSQL"],
+      "seniority": "mid",
+      "contractType": "clt",
+      "webType": "web3",
+      "applyUrl": "https://example.com/apply",
+      "status": "active",
+      "viewCount": 120,
+      "applyCount": 8,
+      "publishedAt": "2026-04-01T00:00:00Z",
+      "company": {
+        "name": "Example Inc",
+        "slug": "example-inc",
+        "logoUrl": "https://example.com/logo.png",
+        "website": "https://example.com"
+      },
+      "source": "gitcity"
+    }
+  ]
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `jobs` | array | List of external job listings |
+| `jobs[].id` | string | Listing identifier, prefixed with the source name (for example, `gitcity-42`) |
+| `jobs[].title` | string | Job title |
+| `jobs[].description` | string | Plain-text description (HTML stripped, truncated to 500 characters) |
+| `jobs[].salaryMin` | number \| null | Minimum salary |
+| `jobs[].salaryMax` | number \| null | Maximum salary |
+| `jobs[].salaryCurrency` | string \| null | Salary currency code |
+| `jobs[].roleType` | string \| null | Role type |
+| `jobs[].techStack` | string[] | Required technologies |
+| `jobs[].seniority` | string \| null | Seniority level |
+| `jobs[].contractType` | string \| null | Contract type. External `fulltime` values are mapped to `clt`. |
+| `jobs[].webType` | string \| null | Web type |
+| `jobs[].applyUrl` | string | External application URL |
+| `jobs[].status` | string \| null | Listing status |
+| `jobs[].viewCount` | number | Number of views |
+| `jobs[].applyCount` | number | Number of applications |
+| `jobs[].publishedAt` | string \| null | ISO 8601 publish timestamp |
+| `jobs[].company` | object | Company details |
+| `jobs[].company.name` | string | Company name (defaults to `Unknown Company` if unavailable) |
+| `jobs[].company.slug` | string | URL-friendly company identifier (defaults to `unknown` if unavailable) |
+| `jobs[].company.logoUrl` | string \| null | Company logo URL |
+| `jobs[].company.website` | string | Company website |
+| `jobs[].source` | string | Source identifier (for example, `gitcity`) |
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 500 | Failed to fetch external jobs. The response includes an empty `jobs` array and an `error` message. |
+
 ## Get job status
 
 ```http
