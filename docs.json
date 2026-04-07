@@ -147,7 +147,8 @@
           "api-reference/wallet-monitor",
           "api-reference/market-intel",
           "api-reference/referrals",
-          "api-reference/gamification"
+          "api-reference/gamification",
+          "api-reference/jobs"
         ]
       },
       {
