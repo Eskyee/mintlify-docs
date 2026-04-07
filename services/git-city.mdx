@@ -26,34 +26,60 @@ description: "Analyze GitHub repositories with 3D city visualization and analyti
 const response = await fetch('/api/git-city', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ repoUrl: 'https://github.com/owner/repo' })
+  body: JSON.stringify({ url: 'https://github.com/owner/repo' })
 });
 
 const data = await response.json();
-// Returns: { repository, stats, commits }
+// Returns: { repository, city, stats, commits }
 ```
 
-### Endpoint
+### Endpoints
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/api/git-city` | Analyze GitHub repository |
+| GET | `/api/git-city?owner={owner}&repo={repo}` | Analyze a GitHub repository by owner and name |
+| GET | `/api/git-city?type=user&username={username}` | List a user's public repositories |
+| POST | `/api/git-city` | Analyze a GitHub repository by URL |
 
-### Request Body
+### Request body (POST)
 
 ```json
 {
-  "repoUrl": "https://github.com/owner/repo"
+  "url": "https://github.com/owner/repo"
 }
 ```
 
 ### Response
 
+The branch defaults to `main` and automatically falls back to `master` if `main` is not found.
+
 ```json
 {
   "repository": {
+    "owner": "owner",
+    "repo": "repo",
+    "branch": "main",
     "fullName": "owner/repo",
     "url": "https://github.com/owner/repo"
+  },
+  "city": {
+    "blocks": [
+      {
+        "id": "block-2026-04-01",
+        "x": 0,
+        "z": 0,
+        "height": 2.5,
+        "color": "#10b981",
+        "type": "building",
+        "commitCount": 3,
+        "date": "2026-04-01"
+      }
+    ],
+    "dimensions": {
+      "width": 10,
+      "depth": 10,
+      "height": 5
+    }
   },
   "stats": {
     "totalCommits": 150,
@@ -64,17 +90,17 @@ const data = await response.json();
     "watchers": 25,
     "topics": ["ai", "agents", "autonomous"],
     "license": "MIT",
-    "createdAt": "2024-01-15",
-    "updatedAt": "2026-04-07",
+    "createdAt": "2024-01-15T00:00:00Z",
+    "updatedAt": "2026-04-07T00:00:00Z",
     "description": "Autonomous AI agent platform"
   },
   "commits": [
     {
-      "sha": "abc123",
+      "sha": "abc1234",
       "message": "feat: add new feature",
       "author": "username",
       "date": "2026-04-07T12:00:00Z",
-      "url": "https://github.com/owner/repo/commit/abc123"
+      "url": "https://github.com/owner/repo/commit/abc1234..."
     }
   ]
 }
