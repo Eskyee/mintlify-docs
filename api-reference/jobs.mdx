@@ -47,20 +47,28 @@ Returns active job listings with optional filters. No authentication required.
       "webType": "both",
       "applyUrl": "https://example.com/apply",
       "language": "en",
+      "languagePtBr": null,
       "status": "active",
+      "tier": "standard",
       "viewCount": 42,
       "applyCount": 5,
       "badgeResponseGuaranteed": true,
       "badgeNoAiScreening": false,
       "publishedAt": "2026-04-01T00:00:00Z",
+      "createdAt": "2026-03-28T12:00:00Z",
+      "updatedAt": "2026-04-01T00:00:00Z",
       "company": {
         "id": "clxyz456",
+        "advertiserId": "user_123",
         "name": "Acme Corp",
         "slug": "acme-corp",
         "logoUrl": "https://example.com/logo.png",
         "website": "https://example.com",
         "description": "Building the future of work",
-        "githubOrg": "acme-corp"
+        "githubOrg": "acme-corp",
+        "hiredCount": 0,
+        "createdAt": "2026-03-20T00:00:00Z",
+        "updatedAt": "2026-03-28T12:00:00Z"
       }
     }
   ]
@@ -84,13 +92,28 @@ Returns active job listings with optional filters. No authentication required.
 | `jobs[].webType` | string | Web type (`web2`, `web3`, or `both`) |
 | `jobs[].applyUrl` | string | External application URL |
 | `jobs[].language` | string | Primary language for the listing |
+| `jobs[].languagePtBr` | string \| null | Portuguese (Brazil) translation of the listing |
 | `jobs[].status` | string | Listing status |
+| `jobs[].tier` | string | Listing tier (for example, `standard`) |
 | `jobs[].viewCount` | number | Number of views |
 | `jobs[].applyCount` | number | Number of applications |
 | `jobs[].badgeResponseGuaranteed` | boolean | Whether the company guarantees a response |
 | `jobs[].badgeNoAiScreening` | boolean | Whether the company opts out of AI screening |
-| `jobs[].publishedAt` | string | ISO 8601 publish timestamp |
+| `jobs[].publishedAt` | string \| null | ISO 8601 publish timestamp |
+| `jobs[].createdAt` | string | ISO 8601 creation timestamp |
+| `jobs[].updatedAt` | string | ISO 8601 last update timestamp |
 | `jobs[].company` | object | Company details (included via relation) |
+| `jobs[].company.id` | string | Company identifier |
+| `jobs[].company.advertiserId` | string \| null | Owner user identifier |
+| `jobs[].company.name` | string | Company name |
+| `jobs[].company.slug` | string | URL-friendly company identifier |
+| `jobs[].company.logoUrl` | string \| null | Company logo URL |
+| `jobs[].company.website` | string | Company website |
+| `jobs[].company.description` | string \| null | Company description |
+| `jobs[].company.githubOrg` | string \| null | GitHub organization name |
+| `jobs[].company.hiredCount` | number | Number of hires through the platform |
+| `jobs[].company.createdAt` | string | ISO 8601 creation timestamp |
+| `jobs[].company.updatedAt` | string | ISO 8601 last update timestamp |
 
 ## Create a job listing
 
@@ -195,7 +218,10 @@ Creates a new company profile for posting job listings. Send `type: "company"` i
     "logoUrl": "https://example.com/logo.png",
     "website": "https://example.com",
     "description": "Building the future of work",
-    "githubOrg": "acme-corp"
+    "githubOrg": "acme-corp",
+    "hiredCount": 0,
+    "createdAt": "2026-04-01T00:00:00Z",
+    "updatedAt": "2026-04-01T00:00:00Z"
   }
 }
 ```
@@ -428,7 +454,9 @@ Returns all companies owned by the authenticated user, including summary statist
       "website": "https://example.com",
       "description": "Building the future of work",
       "githubOrg": "acme-corp",
+      "hiredCount": 0,
       "createdAt": "2026-04-01T00:00:00Z",
+      "updatedAt": "2026-04-01T00:00:00Z",
       "jobs": [
         {
           "id": "clxyz789",
@@ -446,6 +474,17 @@ Returns all companies owned by the authenticated user, including summary statist
 | Field | Type | Description |
 |-------|------|-------------|
 | `companies` | array | List of companies owned by the authenticated user, ordered by creation date descending |
+| `companies[].id` | string | Company identifier |
+| `companies[].advertiserId` | string \| null | Owner user identifier |
+| `companies[].name` | string | Company name |
+| `companies[].slug` | string | URL-friendly company identifier |
+| `companies[].logoUrl` | string \| null | Company logo URL |
+| `companies[].website` | string | Company website |
+| `companies[].description` | string \| null | Company description |
+| `companies[].githubOrg` | string \| null | GitHub organization name |
+| `companies[].hiredCount` | number | Number of hires through the platform |
+| `companies[].createdAt` | string | ISO 8601 creation timestamp |
+| `companies[].updatedAt` | string | ISO 8601 last update timestamp |
 | `companies[].jobs` | array | Summary of job listings under this company |
 | `companies[].jobs[].id` | string | Listing identifier |
 | `companies[].jobs[].title` | string | Job title |
@@ -489,9 +528,9 @@ Returns the status of a background job by its identifier. Requires session authe
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `job.id` | string | Job identifier |
+| `job.id` | string | Job identifier (prefixed with `job_`) |
 | `job.userId` | string \| null | User who owns this job |
-| `job.status` | string | Job status (for example, `pending`, `running`, `completed`, `failed`) |
+| `job.status` | string | Job status (`queued`, `running`, `completed`, or `failed`) |
 | `job.error` | string \| null | Error message if the job failed |
 | `job.result` | object \| null | Job result data when completed |
 
@@ -501,3 +540,4 @@ Returns the status of a background job by its identifier. Requires session authe
 |------|-------------|
 | 401 | Unauthorized |
 | 403 | Forbidden — the job belongs to a different user |
+| 404 | Job not found |
