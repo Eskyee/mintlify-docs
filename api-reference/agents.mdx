@@ -312,6 +312,258 @@ Admin status is determined by checking the session email against `ADMIN_EMAILS`.
 | 429 | Agent limit reached for your plan (web proxy). Response includes `current` (agent count) and `limit` fields. Limits: `starter` 1, `pro` 3, `enterprise` 100. Users without a recognized plan default to a limit of 1. The backend returns `402` with code `AGENT_LIMIT_REACHED` for the same condition. |
 | 500 | Failed to provision agent |
 
+## Token sponsorship simulator
+
+```http
+GET /api/agents/simulator
+```
+
+Calculates token economics for agent sponsorship. Supports two modes: **forward** (set liquidity tokens to calculate market cap) and **reverse** (set desired market cap to calculate required liquidity tokens). No authentication required.
+
+### Query parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `totalSupply` | number | Yes | Total token supply (must be positive) |
+| `liquidityTokens` | number | No | Number of tokens allocated to liquidity. Triggers forward mode when provided. |
+| `desiredMarketCapUsd` | number | No | Target market cap in USD. Triggers reverse mode when provided and `liquidityTokens` is not set. |
+| `sponsorshipAmount` | number | No | SELFCLAW sponsorship amount (default: `1000`) |
+
+### Forward mode example
+
+```http
+GET /api/agents/simulator?totalSupply=1000000&liquidityTokens=100000
+```
+
+### Reverse mode example
+
+```http
+GET /api/agents/simulator?totalSupply=1000000&desiredMarketCapUsd=5000
+```
+
+### Response
+
+```json
+{
+  "mode": "forward",
+  "input": {
+    "totalSupply": 1000000,
+    "liquidityTokens": 100000,
+    "liquidityPercent": "10.0%",
+    "sponsorshipAmount": 1000
+  },
+  "valuation": {
+    "initialPrice": 0.01,
+    "marketCap": 10000,
+    "interpretation": "By providing 100,000 tokens, you're valuing at $10,000 market cap"
+  },
+  "formula": {
+    "initialPrice": "sponsorshipAmount / liquidityTokens",
+    "marketCap": "initialPrice * totalSupply",
+    "reverse": "liquidityTokens = (sponsorshipAmount * totalSupply) / desiredMarketCap",
+    "keyInsight": "Fewer tokens in liquidity = higher price = higher market cap (but thinner trading)"
+  },
+  "alternativeScenarios": [
+    {
+      "label": "High valuation (10%)",
+      "liquidityTokens": 100000,
+      "initialPrice": 0.01,
+      "marketCap": 10000,
+      "liquidityPercent": 10
+    }
+  ],
+  "guidance": {
+    "liquidityRange": "10-40% of supply is typical",
+    "supplyRange": "1M-100M tokens is common",
+    "tradeoff": "Higher market cap = thinner liquidity. Lower = deeper, more stable."
+  }
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `mode` | string | `forward` or `reverse` |
+| `input` | object | Echoed input parameters with computed liquidity percentage |
+| `valuation.initialPrice` | number | Calculated initial price per token |
+| `valuation.marketCap` | number | Calculated market capitalization in USD |
+| `valuation.interpretation` | string | Human-readable explanation of the result |
+| `formula` | object | Formulas used for each calculation |
+| `alternativeScenarios` | array | Pre-computed scenarios at 10%, 25%, and 50% liquidity |
+| `guidance` | object | Recommended ranges and trade-off explanations |
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | `totalSupply is required (positive number)` — missing or non-positive `totalSupply` |
+| 400 | `Provide either liquidityTokens (forward) or desiredMarketCapUsd (reverse)` — neither liquidity mode parameter was provided |
+| 400 | `liquidityTokens cannot exceed totalSupply` |
+| 500 | Internal server error |
+
+## Agent definitions
+
+Manage agent definitions stored as markdown files with YAML frontmatter. These endpoints are backend-only and require bearer token authentication.
+
+### List definitions
+
+```http
+GET /api/agents/definitions
+```
+
+Returns all available agent definitions loaded from system, user, and project directories.
+
+#### Query parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `projectDir` | string | No | Override the project directory to scan for definitions |
+
+#### Response
+
+```json
+{
+  "agents": [
+    {
+      "name": "researcher",
+      "description": "Deep research agent for web analysis",
+      "model": "openrouter/anthropic/claude-3.5-sonnet",
+      "tools": ["bash", "read", "write", "web"],
+      "scope": "system",
+      "source": "/path/to/definitions/researcher.md"
+    }
+  ],
+  "total": 1
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `agents` | array | List of agent definition metadata objects |
+| `agents[].name` | string | Unique agent name (derived from the filename) |
+| `agents[].description` | string | Human-readable description |
+| `agents[].model` | string | AI model identifier |
+| `agents[].tools` | string[] | Available tool names |
+| `agents[].scope` | string | Where the definition was loaded from: `system`, `user`, or `project` |
+| `agents[].source` | string | File path of the definition |
+| `total` | number | Total number of definitions |
+
+### Get definition
+
+```http
+GET /api/agents/definitions/:name
+```
+
+Returns a single agent definition by name, including the full instruction body.
+
+#### Path parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `name` | string | Agent definition name |
+
+#### Response
+
+Returns the full `AgentDefinition` object:
+
+```json
+{
+  "name": "researcher",
+  "description": "Deep research agent for web analysis",
+  "model": "openrouter/anthropic/claude-3.5-sonnet",
+  "tools": ["bash", "read", "write", "web"],
+  "permissions": {
+    "bash": "dangerous",
+    "read": "safe",
+    "write": "dangerous"
+  },
+  "instruction": "# Researcher Agent\n\nYou are a deep research agent...",
+  "source": "/path/to/definitions/researcher.md",
+  "scope": "system"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `permissions` | object | Per-tool permission levels: `safe` (auto-approve), `dangerous` (require approval), or `destructive` |
+| `instruction` | string | The markdown body of the definition file (the agent's system prompt) |
+
+#### Errors
+
+| Code | Description |
+|------|-------------|
+| 404 | Agent definition not found |
+| 500 | Failed to load definition |
+
+### Validate definition
+
+```http
+POST /api/agents/definitions
+```
+
+Validates and previews an agent definition without saving it. Accepts raw markdown with YAML frontmatter.
+
+#### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `content` | string | Yes | Markdown content with YAML frontmatter |
+
+```text
+---
+name: researcher
+description: Deep research agent for web analysis
+model: openrouter/anthropic/claude-3.5-sonnet
+tools: [bash, read, write, web]
+permissions:
+  bash: dangerous
+  read: safe
+  write: dangerous
+---
+# Researcher Agent
+
+You are a deep research agent...
+```
+
+#### Response
+
+```json
+{
+  "valid": true,
+  "definition": {
+    "name": "researcher",
+    "description": "Deep research agent for web analysis",
+    "model": "openrouter/anthropic/claude-3.5-sonnet",
+    "tools": ["bash", "read", "write", "web"],
+    "scope": "project",
+    "source": "/tmp/agent-def-1234567890.md"
+  },
+  "full": {
+    "name": "researcher",
+    "description": "Deep research agent for web analysis",
+    "model": "openrouter/anthropic/claude-3.5-sonnet",
+    "tools": ["bash", "read", "write", "web"],
+    "permissions": { "bash": "dangerous", "read": "safe", "write": "dangerous" },
+    "instruction": "# Researcher Agent\n\nYou are a deep research agent...",
+    "source": "/tmp/agent-def-1234567890.md",
+    "scope": "project"
+  }
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `valid` | boolean | Whether the definition parsed successfully |
+| `definition` | object | Lightweight metadata for the parsed definition |
+| `full` | object | Complete `AgentDefinition` object including instruction body and permissions |
+
+#### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | `Missing content (markdown with YAML frontmatter)` — the `content` field was not provided |
+| 400 | `Invalid agent definition format` — the content could not be parsed as a valid agent definition |
+| 500 | Validation failed |
+
 ## Clone agent
 
 ```http
