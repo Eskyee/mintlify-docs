@@ -150,7 +150,10 @@
           "api-reference/gamification",
           "api-reference/jobs",
           "api-reference/platform-jobs",
-          "api-reference/git-city"
+          "api-reference/git-city",
+          "api-reference/wristband",
+          "api-reference/mpp",
+          "api-reference/guestlist"
         ]
       },
       {
