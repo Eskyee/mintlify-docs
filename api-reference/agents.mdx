@@ -962,7 +962,9 @@ Triggers an image update on the backend. Before replacing the service, the endpo
 POST /api/agents/:id/repair
 ```
 
-Returns the backend response directly.
+Repairs an agent by reconfiguring its environment and restarting the service.
+
+**Backend direct** — stops the container, heals legacy model configuration, removes the container, and recreates it with the same image.
 
 ```json
 {
@@ -971,13 +973,26 @@ Returns the backend response directly.
 }
 ```
 
+**Web proxy** (`POST /api/instance/:userId/repair`) — reconfigures the agent's environment variables on the managed runtime and restarts the service. The endpoint injects the user's unique gateway token retrieved from the `agent_registrations` table rather than a shared platform token. If no per-user token exists in the database, a new UUID is generated and used instead.
+
+```json
+{
+  "success": true,
+  "status": "repaired"
+}
+```
+
+<Note>The web proxy repair endpoint always uses the authenticated user's own gateway token from the database. This ensures each agent authenticates with a token unique to its owner.</Note>
+
 #### Errors
 
-| Code | Description |
-|------|-------------|
-| 403 | Forbidden — you do not own this agent |
-| 404 | Agent not found |
-| 500 | Repair failed |
+| Code | Source | Description |
+|------|--------|-------------|
+| 401 | Both | Unauthorized — missing or invalid authentication |
+| 403 | Both | Forbidden — you do not own this agent |
+| 404 | Backend | Agent not found |
+| 500 | Both | Repair failed |
+| 503 | Web proxy | Managed runtime controls are temporarily disabled |
 
 ### Reset agent memory
 
