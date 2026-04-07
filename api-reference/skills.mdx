@@ -91,6 +91,8 @@ Requires session authentication. Installs a skill on an agent.
 
 ### Response
 
+When the skill is installed and deployed to the gateway successfully:
+
 ```json
 {
   "success": true,
@@ -99,9 +101,37 @@ Requires session authentication. Installs a skill on an agent.
     "skillId": "dj-streaming",
     "agentId": "agent_456",
     "installedAt": "2026-03-20T00:00:00Z"
-  }
+  },
+  "deployed": true
 }
 ```
+
+When the skill is saved but the agent is offline or the gateway is unreachable:
+
+```json
+{
+  "success": true,
+  "installed": {
+    "id": "inst_123",
+    "skillId": "dj-streaming",
+    "agentId": "agent_456",
+    "installedAt": "2026-03-20T00:00:00Z"
+  },
+  "deployed": false,
+  "deployWarning": "Gateway unreachable - skill saved to database and will sync automatically"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `success` | boolean | Always `true` when the skill is saved to the database |
+| `installed` | object | The installation record |
+| `installed.id` | string | Unique installation identifier |
+| `installed.skillId` | string | ID of the installed skill |
+| `installed.agentId` | string | ID of the agent the skill was installed on |
+| `installed.installedAt` | string | ISO 8601 timestamp of the installation |
+| `deployed` | boolean | Whether the skill was successfully deployed to the gateway. `false` when the agent is offline or the gateway is unreachable. |
+| `deployWarning` | string \| undefined | Present only when `deployed` is `false`. Describes why the deployment did not complete. The skill is still saved and will sync automatically when the agent comes back online. |
 
 ### Errors
 
@@ -112,7 +142,7 @@ Requires session authentication. Installs a skill on an agent.
 | 404 | Agent not found or skill not found |
 | 500 | Internal error |
 
-<Note>When a skill is installed, the agent's complete state (including the newly installed skill) is automatically synced to the OpenClaw gateway. If the gateway sync fails, the skill is still recorded in the database — you can retry the sync manually using the [agent sync endpoint](/api-reference/agents#sync-agent-to-gateway).</Note>
+<Note>When a skill is installed, the agent's complete state (including the newly installed skill) is automatically synced to the OpenClaw gateway. If the gateway is unreachable, the response returns `"deployed": false` with a `deployWarning` message — the skill is still recorded in the database and will sync automatically when the agent comes back online. You can also retry the sync manually using the [agent sync endpoint](/api-reference/agents#sync-agent-to-gateway).</Note>
 
 ## Create skill
 
