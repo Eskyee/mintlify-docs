@@ -1082,7 +1082,7 @@ Each agent container receives a unique gateway auth token at provisioning time. 
 | Field | Description |
 |-------|-------------|
 | `gateway.auth.mode` | `token` |
-| `gateway.auth.token` | Unique hex token auto-generated per container. Provisioning generates a 48-character token (24 bytes of entropy). A 32-character token (16 bytes) is generated at startup if no token is passed via the `OPENCLAW_GATEWAY_TOKEN` environment variable. |
+| `gateway.auth.token` | Unique hex token auto-generated per container. The container manager and Railway provisioning paths generate a 64-character token (32 bytes of entropy). The backend provisioning path generates a 48-character token (24 bytes of entropy). A 64-character token (32 bytes) is generated at startup if no token is passed via the `OPENCLAW_GATEWAY_TOKEN` environment variable. |
 | `gateway.port` | `18789` |
 
 ### Token resolution order
@@ -1122,7 +1122,7 @@ The following environment variables are set on every agent container at launch. 
 | `TERM` | `xterm-256color` | Terminal type |
 | `NODE_COMPILE_CACHE` | `/var/tmp/openclaw-compile-cache` | Directory for the Node.js compile cache. Speeds up cold starts by caching compiled bytecode across process restarts. |
 | `OPENCLAW_NO_RESPAWN` | `1` | When set to `1`, prevents the OpenClaw process from automatically respawning after exit. Container-level restart policies (Docker `--restart` or orchestrator health checks) handle process recovery instead. |
-| `OPENCLAW_GATEWAY_TOKEN` | Auto-generated | Gateway authentication token. When not set, a 32-character hex token is generated at startup. See [per-agent gateway authentication](#per-agent-gateway-authentication). |
+| `OPENCLAW_GATEWAY_TOKEN` | Auto-generated | Gateway authentication token. When not set, a 64-character hex token (32 bytes of entropy) is generated at startup. See [per-agent gateway authentication](#per-agent-gateway-authentication). |
 | `OPENCLAW_GATEWAY_URL` | Platform URL | Gateway URL for the agent to communicate with the platform gateway. Set by the provisioning service. |
 | `OPENCLAW_GATEWAY_PORT` | `18789` | Port the gateway listens on inside the container |
 | `OPENCLAW_GATEWAY_BIND` | — | **Deprecated.** Previously set to `0.0.0.0` to allow Railway's reverse proxy to route traffic into the container. This variable is no longer injected by the provisioning service because it has no effect on OpenClaw. Traffic now reaches the gateway through a TCP proxy that forwards the Railway-assigned `PORT` to `127.0.0.1:18789`. |
