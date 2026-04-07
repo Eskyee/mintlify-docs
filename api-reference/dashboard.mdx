@@ -51,9 +51,9 @@ Requires session authentication. Returns all core dashboard data in a single req
 | `userId` | string | Authenticated user ID |
 | `credits` | number | Available referral credits |
 | `plan` | string | Current subscription plan (for example `free`, `solo`, `collective`, `label`, `network`) |
-| `openclawUrl` | string \| null | URL for the user's OpenClaw instance |
+| `openclawUrl` | string \| null | URL for the user's OpenClaw instance. Used as the base origin for control UI links (chat, skills, config views). When `null`, control UI links fall back to the platform default gateway URL. See [control UI URL resolution](/api-reference/gateway#control-ui-url-resolution). |
 | `openclawInstanceId` | string \| null | OpenClaw instance identifier. Falls back to the agent ID when not explicitly set. |
-| `gatewayToken` | string \| null | Effective gateway token for authenticating with the agent gateway. Falls back to the registration token when no gateway token is set. |
+| `gatewayToken` | string \| null | Effective gateway token for authenticating with the agent gateway. Falls back to the registration token when no gateway token is set. Passed in the control UI URL hash fragment for automatic authentication. |
 | `agent` | object \| null | Agent details, or `null` if no agent exists |
 | `agent.id` | string | Agent identifier |
 | `agent.status` | string | Current agent status |
@@ -197,9 +197,9 @@ Requires session authentication. Returns lightweight initialization data for the
 | `referralCode` | string \| null | User's referral code |
 | `referralCount` | number | Number of successful referrals |
 | `plan` | string \| null | Current subscription plan |
-| `openclawUrl` | string \| null | OpenClaw instance URL |
+| `openclawUrl` | string \| null | OpenClaw instance URL. Used as the base origin for [control UI links](/api-reference/gateway#control-ui-url-resolution) instead of the platform default. |
 | `openclawInstanceId` | string \| null | OpenClaw instance identifier |
-| `gatewayToken` | string \| null | The authenticated user's gateway token for auto-pairing with their agent instance, or `null` if no token is registered |
+| `gatewayToken` | string \| null | The authenticated user's gateway token for auto-pairing with their agent instance, or `null` if no token is registered. Included in control UI URL hash fragments for automatic authentication. |
 
 ### Errors
 
