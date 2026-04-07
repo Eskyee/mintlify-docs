@@ -33,6 +33,7 @@ Creates a team of agents using a pre-built template or a custom agent configurat
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `plan` | string | Yes | Plan tier. Must be one of `collective`, `label`, or `network`. |
+| `stripeSubscriptionId` | string | Conditional | Stripe subscription ID. Required unless the caller is an admin. Can also be passed via the `x-stripe-subscription-id` request header. When missing for non-admin callers, the endpoint returns `402`. |
 | `templateKey` | string | No | Key of the pre-built team template to use (default: `dev_team`). Ignored when `customAgents` is provided. See [list templates](#list-team-templates) for available options. |
 | `customAgents` | array | No | Custom agent configurations. When provided, overrides the template. The number of agents must not exceed the plan's agent limit. |
 
@@ -97,6 +98,8 @@ Each object in the `customAgents` array has the following fields:
 |------|-------------|
 | 400 | Invalid or missing `plan`. The error message reads `"Team provisioning requires collect, label, or network plan"` (the message says "collect" but the valid value is `collective`). Response includes `available_templates` listing valid template keys. |
 | 401 | Unauthorized — missing or invalid session |
+| 402 | Active subscription required. Returned when `stripeSubscriptionId` is missing (from both body and `x-stripe-subscription-id` header) and the caller is not an admin. Response includes `code: "PAYMENT_REQUIRED"`. |
+| 402 | Agent limit reached for your plan. Returned when the user's active agent count meets or exceeds the plan limit. Response includes `code: "AGENT_LIMIT_REACHED"`, `current` (current agent count), and `limit` (maximum allowed). Plan limits: `collective` 3, `label` 10, `network` 50. |
 | 500 | Team provisioning failed |
 
 ### Example request
