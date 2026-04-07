@@ -314,6 +314,7 @@ curl -X POST https://agentbot.sh/api/ai/chat \
 | `/api/git-city` | GET | Get repository city visualization data or list user repos |
 | `/api/git-city` | POST | Analyze a GitHub repository URL for city visualization |
 | `/api/generate-video` | POST | Generate and upload a video (requires session) |
+| `/api/generate-music` | POST | Submit a music generation request (requires session) |
 | `/api/webhooks/mux` | POST | Mux webhook receiver (signature-verified) |
 | `/api/webhooks/resend` | POST | Resend email webhook — inbound email processing and outbound event tracking (sent, delivered, bounced, opened, clicked, complained) |
 | `/api/webhooks/railway-status` | POST | Railway platform status and deployment webhook receiver (persists to Redis) |
@@ -380,6 +381,19 @@ curl -X POST https://agentbot.sh/api/ai/chat \
 | `/api/devices` | GET | List pending and approved paired devices |
 | `/api/devices` | POST | Approve, deny, or revoke a paired device |
 | `/api/market-intel` | GET | Live competitive landscape, infrastructure signals, and market opportunities |
+| `/api/export` | GET | Export all user data as JSON (requires session) |
+| `/api/calendar` | GET | List Google Calendar events or initiate OAuth flow (requires session) |
+| `/api/calendar` | POST | Create, update, or delete Google Calendar events (requires session) |
+| `/api/guestlist` | GET | List guestlist entries and event RSVPs |
+| `/api/guestlist` | POST | Add entries to a guestlist or check in attendees |
+| `/api/signals` | GET | Get platform signals and competitive intelligence |
+| `/api/fee-payer` | GET | Get fee payer status and supported networks |
+| `/api/fee-payer` | POST | Sponsor a transaction fee for a user on Tempo |
+| `/api/hashline` | GET | Read a file with content-addressed line hashes |
+| `/api/hashline` | POST | Apply an edit by hash reference |
+| `/api/hashline` | DELETE | Delete a hashline reference |
+| `/api/init-deep` | GET | Check which directories have generated context files |
+| `/api/init-deep` | POST | Generate hierarchical context files throughout the project |
 | `/v1/models` | GET | List all available models (OpenAI-compatible, no auth required) |
 | `/v1/models/:model` | GET | Get a single model by ID (OpenAI-compatible, no auth required) |
 | `/v1/embeddings` | POST | Generate embeddings (OpenAI-compatible, proxied to OpenRouter, requires auth) |
