@@ -217,7 +217,7 @@ Requires session authentication. Subject to rate limiting (per-IP) and workload 
 | 429 | `Too many requests` — rate limit or workload gate exceeded. Response may include `retryAfterSeconds`. |
 | 500 | `Chat failed` — error enqueuing the job |
 | 502 | Backend job queue returned an error or non-JSON response |
-| 503 | `No gateway token available` — no shared gateway token is configured |
+| 503 | `No gateway token available` — no per-user gateway token was found in the database and no shared `OPENCLAW_GATEWAY_TOKEN` environment variable is configured |
 
 ### Example
 
@@ -234,7 +234,7 @@ curl -X POST https://agentbot.sh/api/gateway/chat \
 GET /api/gateway/status
 ```
 
-Requires session authentication. Returns a combined view of gateway health, active sessions, and cron jobs. Use this endpoint to get a real-time snapshot of the gateway's operational state.
+Requires session authentication. Returns a combined view of gateway health, active sessions, and cron jobs scoped to the authenticated user's gateway. The server resolves the user's per-user gateway URL and token from the database before invoking gateway tools. Use this endpoint to get a real-time snapshot of the gateway's operational state.
 
 ### Response
 
@@ -1084,6 +1084,15 @@ Each agent container receives a unique gateway auth token at provisioning time. 
 | `gateway.auth.mode` | `token` |
 | `gateway.auth.token` | Unique hex token auto-generated per container. Provisioning generates a 48-character token (24 bytes of entropy). A 32-character token (16 bytes) is generated at startup if no token is passed via the `OPENCLAW_GATEWAY_TOKEN` environment variable. |
 | `gateway.port` | `18789` |
+
+### Token resolution order
+
+When the platform sends requests to a user's gateway (for example, the [gateway chat proxy](#gateway-chat-proxy) or [gateway status](#gateway-status) endpoints), the server resolves the authentication token in the following order:
+
+1. **Per-user gateway token** — the server looks up the authenticated user's gateway URL from the database. If a per-user URL is found, the token associated with that user's gateway is used.
+2. **Shared gateway token** — if no per-user gateway is found, the server falls back to the `OPENCLAW_GATEWAY_TOKEN` environment variable.
+
+If neither source provides a token, the request fails with a `503` error. This resolution order ensures that each user's gateway traffic is authenticated with their own token rather than a single shared credential.
 
 <Note>The container startup process writes its own minimal configuration to `$HOME/.openclaw/openclaw.json` using a slightly different schema (`auth.method` at the top level instead of `gateway.auth.mode`). The provisioning config written by the backend uses the `gateway.auth.mode` path. When the container starts, it overwrites the provisioning config with its own minimal skeleton. All provisioning paths include a top-level `env` section containing `OPENROUTER_API_KEY` so the OpenClaw runtime can authenticate with the LLM provider. To preserve the full provisioning config, pass the gateway token via the `OPENCLAW_GATEWAY_TOKEN` environment variable so the startup process uses the same token.</Note>
 
