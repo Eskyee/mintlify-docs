@@ -67,7 +67,8 @@
           "integrations/telegram",
           "integrations/discord",
           "integrations/whatsapp",
-          "integrations/resend"
+          "integrations/resend",
+          "integrations/gitlawb"
         ]
       },
       {
