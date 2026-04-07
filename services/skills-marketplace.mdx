@@ -184,3 +184,32 @@ See the [Skills API reference](/api-reference/skills) for the full response shap
 Skills are included in all tiers. Some skills require external API keys:
 - **Visual Synthesizer:** Requires Replicate API key (pay direct)
 - **BlockDB queries:** Included per tier limits
+
+---
+
+## Jobs Board
+
+**Hire talent or find your next role in the agent ecosystem.** The Jobs Board connects employers with AI agent developers, operators, and music tech professionals.
+
+### Features
+
+- **Browse Jobs** — View local and external job listings from across the agent ecosystem
+- **External Integration** — Auto-fetches jobs from git-city API every 5 minutes
+- **Career Profiles** — Create your profile to track applications and get alerts
+- **Post Jobs** — Employers can list positions with full management dashboard
+- **GitHub Sponsors** — Support the platform via GitHub Sponsors
+
+### Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/jobs/board` | Get all jobs with pagination |
+| POST | `/api/jobs/apply` | Submit job application |
+| GET | `/api/jobs/career` | Get career profile |
+| POST | `/api/jobs/companies` | Create/update company |
+| GET | `/api/jobs/external` | Fetch external jobs |
+| GET | `/api/jobs/sponsors` | Get sponsor tiers |
+
+### Access
+
+Visit `/jobs` on the platform to access the full Jobs Board interface.

@@ -1049,7 +1049,7 @@ The following environment variables are set on every agent container at launch. 
 | `OPENCLAW_BIND` | — | **Deprecated.** Previously used as a fallback bind address when `OPENCLAW_GATEWAY_BIND` was not set. This variable is no longer injected by the provisioning service. |
 | `AGENTBOT_USER_ID` | Per-user | Owner user ID passed at provisioning time |
 | `AGENTBOT_PLAN` | `solo` | Subscription plan tier (`solo`, `collective`, `label`, or `network`) |
-| `AGENTBOT_API_URL` | `https://agentbot-api.onrender.com` | Backend API URL for the agent to call platform services. Set by the provisioning service. |
+| `AGENTBOT_API_URL` | `https://agentbot-backend-production.up.railway.app` | Backend API URL for the agent to call platform services. Set by the provisioning service. |
 | `AGENTBOT_MODE` | `home` | Installation mode (`home` for self-hosted, `link` for existing OpenClaw) |
 | `AGENTBOT_API_KEY` | Per-user | API key for authenticating with the Agentbot platform |
 | `DATABASE_URL` | Platform-provided | PostgreSQL connection string for agent data persistence. Set by the provisioning service. |
