@@ -155,6 +155,7 @@
           "api-reference/wristband",
           "api-reference/mpp",
           "api-reference/guestlist",
+          "api-reference/partner",
           "api-reference/generate-video",
           "api-reference/generate-music"
         ]
