@@ -1075,6 +1075,41 @@ The wrapper stores all OpenClaw state under `{OPENCLAW_DATA_DIR}/.openclaw/` (de
 
 The wrapper manages the OpenClaw gateway process with automatic restart on crash. When the gateway exits unexpectedly, the wrapper schedules a restart with exponential backoff starting at 2 seconds, doubling each attempt, up to a maximum of 30 seconds. The gateway is considered ready when it accepts TCP connections on port `18789`. If the gateway does not become ready within 60 seconds, the wrapper marks it as crashed and schedules another restart attempt.
 
+## Control UI URL resolution
+
+The dashboard constructs control UI links (for the chat, skills, and config views) using the user's own gateway URL as the base origin. When a user has a deployed gateway instance, the `openclawUrl` stored in their account is used to derive the control UI base URL. The platform default gateway URL is only used as a fallback when no user-specific URL is available.
+
+### URL construction
+
+The control UI URL is built from the following components:
+
+| Component | Source | Description |
+|-----------|--------|-------------|
+| Base origin | User's `openclawUrl` | The origin (scheme + host) of the user's deployed gateway. Falls back to the platform default `OPENCLAW_GATEWAY_URL` when not set. |
+| View path | `/chat`, `/skills`, or `/config` | The control UI view to open |
+| Query parameters | View-specific | For the chat view, includes `session` (defaults to `main`) |
+| Hash fragment | Gateway credentials | Contains `token` (gateway auth token) and `gatewayUrl` (WebSocket URL). Passed in the URL fragment so they are never sent to the server. |
+
+### Example
+
+For a user with `openclawUrl` set to `https://my-agent.up.railway.app`:
+
+```
+https://my-agent.up.railway.app/chat?session=main#token=abc123&gatewayUrl=wss%3A%2F%2Fmy-agent.up.railway.app
+```
+
+When `openclawUrl` is not set, the platform default gateway URL is used instead:
+
+```
+https://gateway.agentbot.sh/chat?session=main#token=abc123&gatewayUrl=wss%3A%2F%2Fgateway.agentbot.sh
+```
+
+<Info>The gateway token and WebSocket URL are passed in the URL hash fragment, which is never sent to the server in HTTP requests. This ensures credentials remain client-side only.</Info>
+
+### WebSocket URL derivation
+
+The WebSocket gateway URL is derived from the user's gateway URL by replacing the scheme with `wss://` and using the same host. For example, `https://my-agent.up.railway.app` becomes `wss://my-agent.up.railway.app`.
+
 ## Per-agent gateway authentication
 
 Each agent container receives a unique gateway auth token at provisioning time. The internal gateway authenticates requests using token-based auth on port `18789`.
