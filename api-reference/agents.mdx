@@ -284,7 +284,7 @@ Admin users (configured via `ADMIN_EMAILS`) are exempt from the following restri
 
 Admin status is determined by checking the session email against `ADMIN_EMAILS`. This endpoint does not accept an `email` field in the request body — only the authenticated session email is used for the admin check. See [admin check](#admin-check) in the `POST /api/provision` section for the legacy endpoint's resolution order, which also supports a body email fallback when no session is present.
 
-<Note>The backend also supports a `TESTER_EMAILS` environment variable. When backend payment enforcement is re-enabled, emails listed in `TESTER_EMAILS` will bypass the Stripe subscription check, similar to admin emails. This feature is currently inactive because backend payment enforcement is disabled (see the `402` error note below).</Note>
+<Note>Backend payment enforcement is active. All paid plans require a valid Stripe subscription ID unless the caller is an admin (configured via `ADMIN_EMAILS`).</Note>
 
 ### Response (201 Created)
 
@@ -1309,7 +1309,8 @@ When calling the backend provisioning service directly, the response includes ad
     "name": "agentbot-agent-a1b2c3d4e5",
     "status": "running",
     "serviceId": "srv-abc123def456",
-    "renderUrl": "https://agentbot-agent-a1b2c3d4e5.up.railway.app"
+    "renderUrl": "https://agentbot-agent-a1b2c3d4e5.up.railway.app",
+    "controlUiUrl": "https://openclaw-production.up.railway.app/chat?session=agent%3Amain%3Amain#token=abc123&gatewayUrl=wss%3A%2F%2Fagentbot-agent-a1b2c3d4e5.up.railway.app"
   }
 }
 ```
@@ -1322,6 +1323,7 @@ When calling the backend provisioning service directly, the response includes ad
 | `container.status` | string | Container status (for example, `running`, `stopped`) |
 | `container.serviceId` | string | Railway service ID for the agent container. |
 | `container.renderUrl` | string | Public runtime URL for the agent container (for example, `https://agentbot-agent-{userId}.up.railway.app`). The field name is legacy; the runtime is now provisioned on Railway. |
+| `container.controlUiUrl` | string | Auto-connect URL for the OpenClaw Control UI. Includes the gateway token in the URL fragment (never sent to the server) and the WebSocket gateway URL. When no gateway token is available, the token and gateway URL fragments are omitted. |
 | `container.port` | number \| null | **Deprecated.** Previously held the container's local listening port. Removed in favor of `container.renderUrl`, which points to the public runtime URL. |
 | `container.gatewayUrl` | string | **Deprecated.** Previously held the local gateway URL. Replaced by `container.renderUrl`, which points to the public runtime URL. |
 
@@ -1334,7 +1336,7 @@ When calling the backend provisioning service directly, the response includes ad
 | 401 | Authentication required. Returned when no session is present and the resolved email (session email or body `email`) does not match a configured admin email (or no email is available). |
 | 403 | Active subscription required (web proxy). Returned when the authenticated user does not have an active subscription and is not an admin. The response body includes `success: false` and an `error` message: `Active subscription required. Please purchase a plan to deploy.` |
 | 402 | No free tier available. Returned when `plan` is `free` (the default when omitted). The response body includes `code: "PAYMENT_REQUIRED"` and the message `"No free tier. Choose a paid plan to get started."` You must explicitly specify a paid plan (`solo`, `collective`, `label`, or `network`). |
-| 402 | Active subscription required (backend). **Currently disabled.** This check is commented out in the backend while payment enforcement is being validated. When re-enabled, it will be returned when a valid paid plan is specified but no Stripe subscription ID is provided and the caller is not an admin or tester. The response body will include a `code` field set to `PAYMENT_REQUIRED`. |
+| 402 | Active subscription required (backend). Returned when a valid paid plan is specified but no Stripe subscription ID is provided and the caller is not an admin. The response body includes a `code` field set to `PAYMENT_REQUIRED` and the message `"Active subscription required. Subscribe at /pricing"`. |
 | 402 | Agent limit reached for your plan. The response body includes a `code` field set to `AGENT_LIMIT_REACHED`, along with `current` (current agent count) and `limit` (maximum allowed) fields. Provisioning limits: `solo` 1, `collective` 3, `label` 10, `network` unlimited. |
 | 500 | Internal server error |
 | 502 | Provisioning service unavailable or returned an error. All backend URLs failed or returned non-success responses. |
@@ -1350,7 +1352,7 @@ These models are configured inside the agent service at provisioning time and ar
 
 | Provider | Primary model | Fallback model | Base URL |
 |----------|--------------|----------------|----------|
-| `openrouter` | `openrouter/xiaomi/mimo-v2-pro` | `openrouter/openai/gpt-4o-mini` | `https://openrouter.ai/api/v1` |
+| `openrouter` | `moonshotai/kimi-k2.5` | `openrouter/openai/gpt-4o-mini` | `https://openrouter.ai/api/v1` |
 | `gemini` (or `google`) | `google/gemini-2.0-flash` | `openrouter/anthropic/claude-sonnet-4-5` | `https://generativelanguage.googleapis.com/v1beta/models` |
 | `groq` | `groq/gemma2-9b-it` | `openai/gpt-4o-mini` | `https://api.groq.com/openai/v1` |
 | `anthropic` | `anthropic/claude-sonnet-4-5` | `openai/gpt-4o` | `https://api.anthropic.com/v1` |
