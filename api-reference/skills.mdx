@@ -25,7 +25,7 @@ Returns all available skills in the marketplace. No authentication required for 
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `category` | string | Filter by category. Use `all` or omit for all skills. Options: `streaming`, `events`, `payments`, `finance`, `productivity`, `communication`, `development`, `channels`, `music`, `creative`, `marketing` |
+| `category` | string | Filter by category. Use `all` or omit for all skills. Options: `streaming`, `events`, `payments`, `finance`, `productivity`, `communication`, `development`, `channels`, `music`, `creative`, `marketing`, `ai` |
 | `featured` | string | Set to `true` to return only featured skills |
 | `agentId` | string | Agent identifier. When provided with an authenticated session, the response includes an `installedSkillIds` array indicating which skills are already installed on this agent. |
 
@@ -58,7 +58,8 @@ Returns all available skills in the marketplace. No authentication required for 
     "channels",
     "music",
     "creative",
-    "marketing"
+    "marketing",
+    "ai"
   ],
   "featured": [],
   "installedSkillIds": ["dj-streaming", "guestlist"]
@@ -332,6 +333,9 @@ Requires session authentication. Removes a skill from an agent.
 | AI Image Generator | `/ai-image-generator` | Generate images via Stable Diffusion, DALL-E, or Midjourney with batch processing |
 | Video Editor | `/video-editor` | Auto-edit video clips with transitions, captions, and background music |
 | Podcast Producer | `/podcast-producer` | Auto-edit podcasts, remove filler words, and add intro/outro music |
+| Video Generator | `/video-generator` | Generate videos via xAI Grok, Runway, or Wan for social media and marketing |
+| Music Generator | `/music-generator` | Create original music with Google Lyria or MiniMax with async generation and follow-up delivery |
+| ComfyUI Workflows | `/comfyui-workflows` | Run ComfyUI workflows locally or on Comfy Cloud for image, video, and music generation |
 
 ### Marketing
 
@@ -341,6 +345,14 @@ Requires session authentication. Removes a skill from an agent.
 | Content Calendar | `/content-calendar` | Plan and schedule social media posts across all platforms |
 | SEO Analyzer | `/seo-analyzer` | Analyze website SEO, suggest keywords, and audit backlinks |
 | Affiliate Tracker | `/affiliate-tracker` | Track affiliate links, clicks, and conversions across networks |
+
+### AI
+
+| Skill | Endpoint | Description |
+|-------|----------|-------------|
+| Qwen AI | `/qwen-ai` | Use Qwen models for chat, reasoning, and tool calling with fast inference |
+| Fireworks AI | `/fireworks-ai` | Access Fireworks AI models for generation and reasoning with high-throughput inference |
+| Bedrock Mantle | `/bedrock-mantle` | Use Amazon Bedrock Mantle models with automatic inference profile discovery |
 
 ## Use a skill
 
