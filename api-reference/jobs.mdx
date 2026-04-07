@@ -574,6 +574,89 @@ Returns job listings from external partner boards. Currently aggregates listings
 |------|-------------|
 | 500 | Failed to fetch external jobs. Returns `{ "jobs": [], "error": "Failed to fetch external jobs" }`. |
 
+## List sponsors
+
+```http
+GET /api/jobs/sponsors
+```
+
+Returns companies that have made hires through the platform, ordered by hire count. No authentication required.
+
+### Response
+
+```json
+{
+  "sponsors": [
+    {
+      "id": "clxyz456",
+      "name": "Acme Corp",
+      "slug": "acme-corp",
+      "logoUrl": "https://example.com/logo.png",
+      "website": "https://example.com",
+      "description": "Building the future of work",
+      "hiredCount": 12
+    }
+  ]
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `sponsors` | array | List of sponsor companies (max 20), ordered by hire count descending |
+| `sponsors[].id` | string | Company identifier |
+| `sponsors[].name` | string | Company name |
+| `sponsors[].slug` | string | URL-friendly company identifier |
+| `sponsors[].logoUrl` | string \| null | Company logo URL |
+| `sponsors[].website` | string | Company website |
+| `sponsors[].description` | string \| null | Company description |
+| `sponsors[].hiredCount` | number | Number of hires through the platform |
+
+<Note>If the sponsors list cannot be loaded, the endpoint returns an empty array instead of an error.</Note>
+
+## Register as a sponsor
+
+```http
+POST /api/jobs/sponsors
+```
+
+Creates a new company profile as a sponsor. Requires session authentication.
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | string | Yes | Company name. |
+| `website` | string | Yes | Company website URL. |
+| `description` | string | No | Company description. |
+| `tier` | string | No | Sponsorship tier. Accepted by the endpoint but not stored on the company record. |
+| `budget` | number | No | Sponsorship budget. Accepted by the endpoint but not stored on the company record. |
+| `contactEmail` | string | No | Contact email. Accepted by the endpoint but not stored on the company record. |
+
+<Note>The `slug` is automatically generated from the company name. The `tier`, `budget`, and `contactEmail` fields are accepted in the request but are not persisted on the company record.</Note>
+
+### Response (200)
+
+```json
+{
+  "sponsor": {
+    "id": "clxyz456",
+    "advertiserId": "user_123",
+    "name": "Acme Corp",
+    "slug": "acme-corp",
+    "website": "https://example.com",
+    "description": "Building the future of work",
+    "hiredCount": 0
+  }
+}
+```
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | Unauthorized |
+| 500 | Failed to create sponsor |
+
 ## Get job status
 
 ```http
