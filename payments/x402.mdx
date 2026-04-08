@@ -8,10 +8,11 @@ Accept cryptocurrency payments using the x402 protocol on Base network and Tempo
 
 ## Overview
 
-x402 is a payment protocol that enables HTTP requests to require payment. Agents can pay for API access programmatically. The protocol supports two networks:
+x402 is a payment protocol that enables HTTP requests to require payment. Agents can pay for API access programmatically. The protocol supports the following networks:
 
 - **Base** — USDC payments for general API access
 - **Tempo** — pathUSD payments for agent-to-agent operations such as cloning
+- **Solana** — Recipient addresses on Solana are accepted for the `pay` action. Solana addresses use Base58 encoding (32–44 characters).
 
 ## x402 Gateway (v4.0.1-mppx)
 
@@ -381,6 +382,7 @@ The gateway URL defaults to `http://localhost:4023` for local development and ca
 | File upload | $0.05 USDC | Base |
 | Video generation | $1.00 USDC | Base |
 | Agent clone | 1.0 pathUSD | Tempo |
+| Payment to Solana recipient | Variable | Solana |
 
 ## Wallet setup
 
@@ -393,6 +395,10 @@ The gateway URL defaults to `http://localhost:4023` for local development and ca
 ### Tempo (pathUSD)
 
 Agent wallets on the Tempo chain are created automatically during provisioning and cloning. Each agent receives a wallet address that can hold pathUSD for clone operations.
+
+### Solana
+
+Solana addresses are supported as payment recipients in the `pay` action. Provide a valid Base58-encoded Solana address (32–44 characters) in the `recipient` field.
 
 ## Troubleshooting
 
