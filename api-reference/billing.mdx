@@ -49,6 +49,11 @@ Returns the available plans, the authenticated user's current plan, subscription
   },
   "currentPlan": "solo",
   "subscriptionStatus": "active",
+  "trial": {
+    "expired": false,
+    "daysLeft": 7,
+    "endsAt": "2026-04-15T00:00:00.000Z"
+  },
   "byokEnabled": false,
   "usage": {
     "dailyUnits": 600,
@@ -65,6 +70,10 @@ Returns the available plans, the authenticated user's current plan, subscription
 | `plans` | object | Map of available plans with pricing and features |
 | `currentPlan` | string | User's current plan. One of `solo`, `collective`, `label`, or `network`. Users who subscribed via the Stripe checkout flow have plans like `solo`, `collective`, `label`, or `network`. |
 | `subscriptionStatus` | string | Stripe subscription status (`active`, `inactive`, etc.) |
+| `trial` | object \| null | Trial status. Present when the user has an active or expired trial. `null` when no trial data exists. |
+| `trial.expired` | boolean | Whether the trial period has ended |
+| `trial.daysLeft` | number | Number of days remaining in the trial |
+| `trial.endsAt` | string | ISO 8601 timestamp when the trial ends |
 | `byokEnabled` | boolean | Whether BYOK mode is active |
 | `usage.dailyUnits` | number | Daily unit allowance for the current plan |
 | `usage.used` | number | Units used today |
@@ -73,6 +82,8 @@ Returns the available plans, the authenticated user's current plan, subscription
 <Note>The `currentPlan` value is set by the Stripe webhook when a checkout completes. Plans created through the primary checkout flow (`/api/stripe/checkout`) use `solo`, `collective`, `label`, or `network`. The billing dashboard displays these with their plan names: `solo` appears as "Solo", `collective` as "Collective", and `label` as "Label".</Note>
 
 <Warning>The billing endpoint internally defines a legacy plan catalog (`starter` at $19/mo, `pro` at $39/mo, `scale` at $79/mo) which may appear in responses for users who subscribed before the current plan names were introduced. The primary checkout flow and provisioning endpoints use the current plan names (`solo`, `collective`, `label`, `network`). If you encounter legacy plan names in billing responses, they map to the current plans as follows: `starter` → `solo`, `pro` → `collective`, `scale` → `label`.</Warning>
+
+<Note>The `trial` object is only present when the user has trial data. When the user has never had a trial or the trial record has been removed, `trial` is `null`.</Note>
 
 ### Errors
 
