@@ -191,11 +191,13 @@ Returns registered installations belonging to the authenticated user. Results ar
 
 ## Get registration token (internal)
 
+<Warning>**Not yet available.** This endpoint is planned but not currently implemented in the backend registration router. The specification below describes the intended behavior for a future release.</Warning>
+
 ```http
 GET /api/registration/token
 ```
 
-Returns the gateway token for a user from the agent registrations table. This is an internal API used by the Edge Runtime dashboard to retrieve gateway tokens without direct database access from edge functions.
+Returns the gateway token for a user from the agent registrations table. This is an internal API intended for the Edge Runtime dashboard to retrieve gateway tokens without direct database access from edge functions.
 
 ### Query parameters
 

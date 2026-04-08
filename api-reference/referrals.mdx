@@ -52,3 +52,46 @@ Requires session authentication. Returns the authenticated user's referral code,
 | 500 | Failed to fetch referrals |
 
 <Note>Referral credits are also included in the [dashboard data](/api-reference/usage-tracking#dashboard-data) and [dashboard bootstrap](/api-reference/usage-tracking#dashboard-bootstrap) responses. Use this endpoint when you need the full referral breakdown including conversion statistics.</Note>
+
+## Get credit balance
+
+```http
+GET /api/credits
+```
+
+Requires session authentication. Returns the authenticated user's credit balance, referral code, referral count, and current plan.
+
+### Response
+
+```json
+{
+  "credits": 30,
+  "referralCode": "abc123",
+  "referralCount": 3,
+  "plan": "solo"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `credits` | number | Accumulated referral credits balance. |
+| `referralCode` | string \| null | Your referral code, or `null` if not set. |
+| `referralCount` | number | Number of users referred. |
+| `plan` | string | Current subscription plan. |
+
+When the user is not found in the database, the endpoint returns a zero-balance fallback without the `plan` field:
+
+```json
+{
+  "credits": 0,
+  "referralCode": null,
+  "referralCount": 0
+}
+```
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | Unauthorized — no valid session |
+| 500 | Returns `{ "credits": 0 }` on internal errors |
