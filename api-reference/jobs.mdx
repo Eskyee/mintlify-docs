@@ -673,14 +673,42 @@ Returns the status of a background job by its identifier. Requires session authe
 
 ### Response
 
+The response contains the full job object from the [platform jobs](/api-reference/platform-jobs) backend.
+
 ```json
 {
   "job": {
     "id": "job_abc123",
     "userId": "user_123",
+    "agentId": "agent_456",
+    "lane": "deploy",
+    "jobType": "provision_managed_runtime",
     "status": "completed",
+    "priority": 100,
+    "attempts": 1,
+    "maxAttempts": 5,
+    "runAt": "2026-04-07T04:00:00Z",
+    "lockedAt": null,
+    "startedAt": "2026-04-07T04:00:05Z",
+    "completedAt": "2026-04-07T04:00:30Z",
     "error": null,
-    "result": {}
+    "result": {
+      "plan": "solo",
+      "aiProvider": "openrouter",
+      "agentType": "creative",
+      "queuedUserId": "user_123",
+      "agentId": "agent_456"
+    },
+    "payload": {
+      "userId": "user_123",
+      "agentId": "agent_456",
+      "plan": "solo",
+      "aiProvider": "openrouter",
+      "agentType": "creative",
+      "autoProvision": false
+    },
+    "createdAt": "2026-04-07T04:00:00Z",
+    "updatedAt": "2026-04-07T04:00:30Z"
   }
 }
 ```
@@ -689,9 +717,22 @@ Returns the status of a background job by its identifier. Requires session authe
 |-------|------|-------------|
 | `job.id` | string | Job identifier (prefixed with `job_`) |
 | `job.userId` | string \| null | User who owns this job |
+| `job.agentId` | string \| null | Associated agent identifier |
+| `job.lane` | string | Processing lane (`deploy`, `runtime_exec`, or `recovery`) |
+| `job.jobType` | string | Job type (`provision_managed_runtime`, `gateway_chat_completion`, `runtime_sync`, or `retry_repair`) |
 | `job.status` | string | Job status (`queued`, `running`, `completed`, or `failed`) |
+| `job.priority` | number | Priority value. Higher values are processed first. |
+| `job.attempts` | number | Number of processing attempts so far |
+| `job.maxAttempts` | number | Maximum retry attempts before the job is marked as failed |
+| `job.runAt` | string | ISO 8601 timestamp of when the job is eligible to run |
+| `job.lockedAt` | string \| null | ISO 8601 timestamp of when a worker locked this job |
+| `job.startedAt` | string \| null | ISO 8601 timestamp of the first processing attempt |
+| `job.completedAt` | string \| null | ISO 8601 timestamp of completion or final failure |
 | `job.error` | string \| null | Error message if the job failed |
 | `job.result` | object \| null | Job result data when completed |
+| `job.payload` | object | Sanitized input payload |
+| `job.createdAt` | string | ISO 8601 creation timestamp |
+| `job.updatedAt` | string | ISO 8601 last update timestamp |
 
 ### Errors
 
