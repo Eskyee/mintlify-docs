@@ -11,6 +11,62 @@ Endpoints for interacting with AI models through a unified provider layer. These
 
 <Warning>All `/api/ai/*` endpoints share a rate limit of 30 requests per minute per IP, not just the chat endpoint.</Warning>
 
+## List models (web)
+
+```http
+GET /api/models
+```
+
+No authentication required. Returns available AI models from OpenRouter, sorted by price with featured models listed first. Free-tier models (`:free` suffix) are excluded.
+
+### Response
+
+```json
+{
+  "models": [
+    {
+      "id": "moonshot/kimi-k2.5-thinking",
+      "name": "Kimi K2.5 Thinking",
+      "contextLength": 128000,
+      "pricing": {
+        "prompt": 0.000003,
+        "completion": 0.000012
+      },
+      "featured": true,
+      "description": "Advanced reasoning model with thinking capabilities"
+    },
+    {
+      "id": "anthropic/claude-sonnet-4-20250514",
+      "name": "Claude Sonnet 4",
+      "contextLength": 200000,
+      "pricing": {
+        "prompt": 0.003,
+        "completion": 0.015
+      }
+    }
+  ]
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `models` | array | List of model objects sorted by featured status then price ascending |
+| `models[].id` | string | Model identifier |
+| `models[].name` | string | Human-readable model name |
+| `models[].contextLength` | number | Maximum context window in tokens |
+| `models[].pricing.prompt` | number | Cost per prompt token |
+| `models[].pricing.completion` | number | Cost per completion token |
+| `models[].featured` | boolean | Present on featured models. Featured models are sorted first. |
+| `models[].description` | string | Present on featured models. Short description of the model. |
+
+<Note>This is the web-facing endpoint for client model lists. It fetches models from OpenRouter at request time. The backend provides a separate [model listing endpoint](#list-models) with additional fields like `provider`, `tags`, and `available`.</Note>
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 500 | Failed to fetch models — upstream OpenRouter API error or invalid response |
+
 ## Health check
 
 ```http
