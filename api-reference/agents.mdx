@@ -258,9 +258,11 @@ POST /api/agents/provision
 
 Provisions a new agent. Requires an active subscription unless the caller is an admin.
 
-<Note>The agent is created immediately with a `provisioning` status and transitions to `running` once the backend deployment endpoint confirms the deployment. If deployment fails, the status changes to `error`.</Note>
+<Note>The agent is created immediately with a `provisioning` status and transitions to `running` once the backend deployment endpoint confirms the deployment. If deployment fails, the status changes to `error`. After a successful deployment, the provisioning endpoint also syncs the agent's skills, memories, and files to the OpenClaw gateway. If the gateway is unreachable, the agent is set to `pending_gateway_sync` instead of failing outright — the sync can be retried later.</Note>
 
 <Note>The provisioning endpoint calls `POST /api/deployments` on the backend to deploy the agent as a Render service. The request includes a 15-second timeout. When the model is set to `claude-opus-4-6`, the AI provider is automatically set to `anthropic`; otherwise it falls back to the provider specified in the agent configuration (default: `openrouter`). The plan sent to the backend defaults to `label` when no tier is specified.</Note>
+
+<Note>The provisioning endpoint connects to the OpenClaw gateway using the `OPENCLAW_GATEWAY_URL` environment variable. When this variable is not set, the endpoint falls back to the default internal gateway address. You can configure this variable in your environment to point to a custom gateway deployment. See [environment variables](/api-reference/gateway#environment-variables) for details.</Note>
 
 ### Request body
 
@@ -301,6 +303,10 @@ Admin status is determined by checking the session email against `ADMIN_EMAILS`.
   }
 }
 ```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `agent.status` | string | Agent status after provisioning. Possible values: `running` (fully deployed and gateway-synced), `pending_gateway_sync` (deployed but the gateway was unreachable during provisioning — skills, memories, and files have not been synced yet), or `error` (deployment failed). |
 
 ### Errors
 
