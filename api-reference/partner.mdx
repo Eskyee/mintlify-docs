@@ -31,8 +31,32 @@ Submits a partner program inquiry. When the partner type is `enterprise` or `ai_
 | `email` | string | Yes | Contact email address |
 | `company` | string | No | Company or organization name. Required for fast-track eligibility. |
 | `website` | string | No | Company website URL |
-| `type` | string | No | Partner category. One of `general`, `ai_provider`, `integration`, `reseller`, `content`, `infrastructure`, or `enterprise`. |
+| `type` | string | No | Partner category. One of `general`, `ai_provider`, `integration`, `reseller`, `content`, `infrastructure`, or `enterprise`. Defaults to `general` when omitted. |
 | `message` | string | Yes | Details about the partnership inquiry |
+
+### Example request (fast-track)
+
+```json
+{
+  "name": "Alex Chen",
+  "email": "alex@acme-ai.com",
+  "company": "Acme AI",
+  "website": "https://acme-ai.com",
+  "type": "ai_provider",
+  "message": "We'd like to integrate our language models with Agentbot for on-demand inference."
+}
+```
+
+### Example request (standard)
+
+```json
+{
+  "name": "Jordan Lee",
+  "email": "jordan@example.com",
+  "type": "content",
+  "message": "Interested in creating developer tutorials for the Agentbot platform."
+}
+```
 
 ### Fast-track eligibility
 
