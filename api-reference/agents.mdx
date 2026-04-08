@@ -141,7 +141,7 @@ The backend returns the agent object directly without a wrapper:
   "plan": "solo",
   "subdomain": "agent_123.agents.localhost",
   "url": "https://agent_123.agents.localhost",
-  "openclawVersion": "2026.3.24",
+  "openclawVersion": "2026.4.7",
   "verified": false,
   "verificationType": null,
   "attestationUid": null,
@@ -162,7 +162,7 @@ The web proxy wraps the agent in an object:
     "plan": "solo",
     "subdomain": "agent_123.agents.localhost",
     "url": "https://agent_123.agents.localhost",
-    "openclawVersion": "2026.3.24",
+    "openclawVersion": "2026.4.7",
     "verified": false,
     "verificationType": null,
     "attestationUid": null,
@@ -901,7 +901,7 @@ POST /api/agents/:id/restart
   "status": "active",
   "healedLegacyModel": false,
   "healMessage": "skip",
-  "openclawVersion": "2026.3.24"
+  "openclawVersion": "2026.4.7"
 }
 ```
 
@@ -931,16 +931,16 @@ Triggers an image update on the backend. Before replacing the service, the endpo
 {
   "success": true,
   "status": "active",
-  "image": "ghcr.io/openclaw/openclaw:2026.3.24",
-  "previousImage": "ghcr.io/openclaw/openclaw:2026.3.12",
+  "image": "ghcr.io/openclaw/openclaw:2026.4.7",
+  "previousImage": "ghcr.io/openclaw/openclaw:2026.3.24",
   "backupPath": "/opt/agentbot/data/backups/openclaw-updates/agent_123/20260320-000000.tar.gz",
-  "openclawVersion": "2026.3.24"
+  "openclawVersion": "2026.4.7"
 }
 ```
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `image` | string | New service image. The platform default is `ghcr.io/openclaw/openclaw:2026.3.24`. |
+| `image` | string | New service image. The platform default is `ghcr.io/openclaw/openclaw:2026.4.7`. |
 | `previousImage` | string | Previous service image before the update |
 | `backupPath` | string \| null | Path to the pre-update backup archive |
 | `openclawVersion` | string | Current OpenClaw runtime version |
@@ -1062,7 +1062,7 @@ Returns the current status and metadata for an agent instance.
   "subdomain": "user_123.agents.localhost",
   "url": "https://user_123.agents.localhost",
   "plan": "solo",
-  "openclawVersion": "2026.2.17"
+  "openclawVersion": "2026.4.7"
 }
 ```
 
@@ -1083,7 +1083,7 @@ Returns resource usage statistics for an agent instance.
   "memory": "128MiB",
   "status": "running",
     "plan": "solo",
-    "openclawVersion": "2026.3.24"
+    "openclawVersion": "2026.4.7"
 }
 ```
 
@@ -1473,7 +1473,7 @@ POST /api/deployments
   "subdomain": "agent_123.agents.localhost",
   "url": "https://agent_123.agents.localhost",
   "status": "active",
-  "openclawVersion": "2026.3.24"
+  "openclawVersion": "2026.4.7"
 }
 ```
 
@@ -1501,8 +1501,8 @@ Returns the current OpenClaw runtime version. Requires bearer token authenticati
 
 ```json
 {
-  "openclawVersion": "2026.3.24",
-  "image": "ghcr.io/openclaw/openclaw:2026.3.24",
+  "openclawVersion": "2026.4.7",
+  "image": "ghcr.io/openclaw/openclaw:2026.4.7",
   "deployedAt": "2026-03-20T00:00:00Z"
 }
 ```
@@ -1525,10 +1525,10 @@ Returns all running agent services. Requires bearer token authentication.
     {
       "agentId": "agent_123",
       "name": "openclaw-agent_123",
-      "image": "ghcr.io/openclaw/openclaw:2026.3.24",
+      "image": "ghcr.io/openclaw/openclaw:2026.4.7",
       "status": "Up 2 hours",
       "createdAt": "2026-03-20 00:00:00 +0000 UTC",
-      "version": "2026.3.24",
+      "version": "2026.4.7",
       "metadata": {
         "agentId": "agent_123",
         "createdAt": "2026-03-20T00:00:00Z",
