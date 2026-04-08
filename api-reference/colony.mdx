@@ -84,6 +84,8 @@ curl -X GET "https://agentbot.sh/api/colony/status?action=tree" \
   "root": {
     "address": "0x1234...5678",
     "designation": "Atlas Prime",
+    "dashboardUrl": "/dashboard/borg",
+    "serviceUrl": "https://soul.example.com",
     "fitness": {
       "total": 0.85,
       "prediction": 0.78,
@@ -182,12 +184,16 @@ curl -X GET "https://agentbot.sh/api/colony/status?action=tree" \
 |-------|------|-------------|
 | `address` | string | Root node wallet address. Falls back to the zero address when identity data is unavailable. |
 | `designation` | string \| null | Root node display name |
+| `dashboardUrl` | string | Internal dashboard path for the soul UI (for example, `/dashboard/borg`) |
+| `serviceUrl` | string | Soul service URL that served the request. Reflects the fallback host when `degraded` is `true`. |
 | `fitness` | object \| null | Multi-dimensional fitness scores with `total`, `prediction`, and `execution` |
-| `wallet_balance` | object \| null | Wallet balance with `formatted` amount and `token` symbol. Returns `{ "formatted": "0.00", "token": "USDC.e" }` when identity data is unavailable. |
+| `wallet_balance` | object \| null | On-chain wallet balance with `formatted` amount and `token` symbol. The balance is read from the Tempo network and checks USDC.e, pathUSD, and USDT0 token contracts. Returns `{ "formatted": "0.00", "token": "USDC.e" }` when identity data is unavailable. Returns `null` when the balance lookup fails entirely. |
 | `clone_available` | boolean | Whether this node can create clones |
 | `clone_price` | string | Price to clone this node |
 | `soul` | object | Soul cognitive state |
 | `colony` | object \| null | Colony coordination data, or `null` if unavailable |
+
+<Note>The `wallet_balance` field reads on-chain token balances from the Tempo network (chain ID 4217, RPC `https://rpc.tempo.xyz`). It checks the following ERC-20 tokens in order and returns the first non-zero balance: USDC.e, pathUSD, USDT0. If all balances are zero or the RPC call fails, the `formatted` value is `"0.00"` with `token` set to `"USDC.e"`.</Note>
 
 **Root soul fields (`root.soul`):**
 

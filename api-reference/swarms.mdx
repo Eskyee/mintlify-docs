@@ -5,9 +5,9 @@ description: "Create and manage agent swarms for coordinated multi-agent workflo
 
 # Swarms API
 
-<Warning>The Swarms API is not live on Agentbot. This page is kept as an internal roadmap/spec reference and is intentionally not linked from the main docs navigation.</Warning>
-
 Swarms let you group multiple agents into a coordinated unit. Use swarms to orchestrate multi-agent workflows where agents collaborate on tasks.
+
+<Note>The Swarms API supports creating and listing swarms. Update and delete operations are not yet available.</Note>
 
 <Note>All swarm endpoints require session authentication and are scoped to the authenticated user's data through [row-level security](/security#row-level-security).</Note>
 
@@ -79,7 +79,7 @@ Creates a new agent swarm. The swarm is enabled by default.
 | `name` | string | Yes | Swarm name. Must be between 1 and 100 characters |
 | `description` | string | No | Optional description |
 | `agents` | string[] | No | Array of agent IDs to include in the swarm. Defaults to an empty array |
-| `config` | object | No | Optional configuration object |
+| `config` | object | No | Reserved for future use. Accepted but not stored. |
 
 ### Response
 
