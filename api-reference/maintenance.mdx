@@ -31,7 +31,7 @@ Requires session authentication. Returns runtime state for a specific agent inst
   "subdomain": "agentbot-agent-abc123-production.up.railway.app",
   "url": "https://agentbot-agent-abc123-production.up.railway.app",
   "plan": "solo",
-  "openclawVersion": "2026.4.2"
+  "openclawVersion": "2026.4.7"
 }
 ```
 
@@ -80,7 +80,7 @@ Requires session authentication. Returns liveness and readiness status for the u
   "railwayUrl": "https://agentbot-agent-abc123-production.up.railway.app",
   "healthy": true,
   "ready": true,
-  "version": "2026.4.2",
+  "version": "2026.4.7",
   "uptime": "2d 5h",
   "status": "healthy"
 }
@@ -175,7 +175,7 @@ Restarts the agent container. The agent automatically runs `openclaw doctor --fi
 
 #### `factory-reset`
 
-Pins the agent to the known-good OpenClaw image (`v2026.4.2`), reconfigures environment variables, and restarts the container with `doctor --fix`. Use this when an agent is broken after updating to an incompatible version.
+Pins the agent to the known-good OpenClaw image (`v2026.4.7`), reconfigures environment variables, and restarts the container with `doctor --fix`. Use this when an agent is broken after updating to an incompatible version.
 
 **Request:**
 
@@ -190,8 +190,8 @@ Pins the agent to the known-good OpenClaw image (`v2026.4.2`), reconfigures envi
 ```json
 {
   "success": true,
-  "message": "Factory reset complete — pinned to ghcr.io/openclaw/openclaw:2026.4.2. Agent restarting with doctor --fix.",
-  "image": "ghcr.io/openclaw/openclaw:2026.4.2",
+  "message": "Factory reset complete — pinned to ghcr.io/openclaw/openclaw:2026.4.7. Agent restarting with doctor --fix.",
+  "image": "ghcr.io/openclaw/openclaw:2026.4.7",
   "serviceId": "abc123-service-id"
 }
 ```
@@ -239,7 +239,7 @@ When a restart or factory reset fails:
 POST /api/openclaw/ensure-compatibility
 ```
 
-Requires session authentication. Checks and migrates the authenticated user's agent setup for compatibility with OpenClaw 2026.4.2. This endpoint applies any necessary fixes automatically, including plugin config migration, agent pairing scope corrections, and token generation.
+Requires session authentication. Checks and migrates the authenticated user's agent setup for compatibility with OpenClaw 2026.4.7. This endpoint applies any necessary fixes automatically, including plugin config migration, agent pairing scope corrections, and token generation.
 
 ### Response
 
@@ -257,7 +257,7 @@ Requires session authentication. Checks and migrates the authenticated user's ag
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `compatible` | boolean | `true` when the user's setup is compatible with OpenClaw 2026.4.2 after applying any fixes |
+| `compatible` | boolean | `true` when the user's setup is compatible with OpenClaw 2026.4.7 after applying any fixes |
 | `fixes` | string[] | List of compatibility fixes that were applied. Empty when no fixes were needed. |
 | `errors` | string[] | List of errors encountered during the compatibility check. Empty on success. |
 | `message` | string | Summary message describing the result |
@@ -308,16 +308,16 @@ Returns the current OpenClaw runtime version and container image. Requires beare
 
 ```json
 {
-  "openclawVersion": "2026.4.2",
-  "image": "ghcr.io/openclaw/openclaw:2026.4.2",
+  "openclawVersion": "2026.4.7",
+  "image": "ghcr.io/openclaw/openclaw:2026.4.7",
   "deployedAt": "2026-04-01T12:00:00Z"
 }
 ```
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `openclawVersion` | string | Current OpenClaw runtime version, derived from the configured image tag (for example, `2026.4.2`). |
-| `image` | string | Docker image used for new agent containers. Defaults to the value of the `OPENCLAW_IMAGE` environment variable or `ghcr.io/openclaw/openclaw:2026.4.2`. |
+| `openclawVersion` | string | Current OpenClaw runtime version, derived from the configured image tag (for example, `2026.4.7`). |
+| `image` | string | Docker image used for new agent containers. Defaults to the value of the `OPENCLAW_IMAGE` environment variable or `ghcr.io/openclaw/openclaw:2026.4.7`. |
 | `deployedAt` | string | ISO 8601 timestamp of when the version info was served (returns the current server time, not the actual deployment time) |
 
 ## OpenClaw runtime version (web proxy)
@@ -328,14 +328,14 @@ GET /api/openclaw-version
 
 No authentication required. Proxies to the backend `GET /api/openclaw/version` endpoint using the internal API key. Returns the OpenClaw runtime version, container image, and deployment timestamp.
 
-When the backend is unreachable or returns an error, the endpoint returns a fallback version derived from the configured image tag (for example, `2026.4.2`) and includes the default image.
+When the backend is unreachable or returns an error, the endpoint returns a fallback version derived from the configured image tag (for example, `2026.4.7`) and includes the default image.
 
 ### Response
 
 ```json
 {
-  "openclawVersion": "2026.4.2",
-  "image": "ghcr.io/openclaw/openclaw:2026.4.2",
+  "openclawVersion": "2026.4.7",
+  "image": "ghcr.io/openclaw/openclaw:2026.4.7",
   "deployedAt": "2026-04-01T12:00:00Z"
 }
 ```
@@ -343,7 +343,7 @@ When the backend is unreachable or returns an error, the endpoint returns a fall
 | Field | Type | Description |
 |-------|------|-------------|
 | `openclawVersion` | string | OpenClaw runtime version from the backend. Falls back to the version derived from the configured image tag when the backend is unavailable or returns an error. |
-| `image` | string | Docker image identifier. When the backend is unavailable or does not return an image, defaults to the configured image (for example, `ghcr.io/openclaw/openclaw:2026.4.2`). |
+| `image` | string | Docker image identifier. When the backend is unavailable or does not return an image, defaults to the configured image (for example, `ghcr.io/openclaw/openclaw:2026.4.7`). |
 | `deployedAt` | string \| undefined | ISO 8601 deployment timestamp. Only present when the backend responds successfully. |
 
 <Note>This endpoint uses an 8-second request timeout when calling the backend. If the backend does not respond within that window, the fallback version is returned.</Note>
@@ -439,10 +439,10 @@ Returns all running OpenClaw agent containers with their image, status, and meta
     {
       "agentId": "agent_123",
       "name": "openclaw-agent_123",
-      "image": "ghcr.io/openclaw/openclaw:2026.4.2",
+      "image": "ghcr.io/openclaw/openclaw:2026.4.7",
       "status": "Up 2 days",
       "createdAt": "2026-04-01T00:00:00Z",
-      "version": "2026.4.2",
+      "version": "2026.4.7",
       "metadata": {}
     }
   ],
