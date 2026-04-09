@@ -165,7 +165,8 @@
           "api-reference/generate-video",
           "api-reference/generate-music",
           "api-reference/buddies",
-          "api-reference/solana"
+          "api-reference/solana",
+          "api-reference/feedback"
         ]
       },
       {
