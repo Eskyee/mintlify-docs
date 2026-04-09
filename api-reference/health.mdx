@@ -145,7 +145,7 @@ The `status` field for each service reflects the result of an HTTP health probe 
 | `degraded` | Health endpoint returned a non-2xx HTTP status |
 | `down` | Health endpoint was unreachable or timed out |
 
-<Note>The Tempo Soul service (x402-node binary) may return HTTP `503` from its `/health` endpoint until external dependencies are satisfied (connected peers, funded wallets, required environment variables). This causes the dashboard health endpoint to report the service as `degraded` even though the process is running and accepting TCP connections on port `4023`. Railway uses a TCP port check instead of an HTTP health check for this service.</Note>
+<Note>The dashboard health endpoint probes the Tempo Soul service at `/soul/status` (not `/health`). A host is considered healthy when `/soul/status` returns a JSON object containing an `active` field within 4 seconds. The Tempo Soul's generic `/health` endpoint may return HTTP `503` until external dependencies are satisfied (connected peers, funded wallets, required environment variables), but the dashboard bypasses this by using the more reliable `/soul/status` path. Railway uses a TCP port check on port `4023` instead of an HTTP health check for this service.</Note>
 
 | Code | Description |
 |------|-------------|

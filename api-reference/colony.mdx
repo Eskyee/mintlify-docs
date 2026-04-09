@@ -611,7 +611,7 @@ When no healthy soul host can be reached (including the fallback), the endpoint 
 | `root.dashboardUrl` | string | Soul dashboard path. Now an internal route (`/dashboard/borg`) instead of an external URL. |
 | `root.serviceUrl` | string | Soul service URL (replaces the former top-level `soul_url`) |
 
-<Note>The endpoint tries each configured soul host in order and uses the first healthy one. A host is considered healthy when its `/soul/status` path returns a JSON object containing an `active` field within 4 seconds. If no host passes the health check, the degraded response is returned. The `dashboardUrl` field now returns the internal path `/dashboard/borg` rather than an external soul service URL. The Borg Dashboard is served by the platform at `/dashboard/borg` and fetches soul data from this endpoint directly.</Note>
+<Note>The endpoint tries each configured soul host in order and uses the first healthy one. A host is considered healthy when its `/soul/status` path returns a JSON response with `Content-Type: application/json` containing an `active` field within 4 seconds. The `/soul/status` path is used instead of the generic `/health` endpoint because the live soul host exposes meaningful machine status at `/soul/status`, while `/health` may return an HTML page or `503` depending on service state. If no host passes the health check, the degraded response is returned. The `dashboardUrl` field returns the internal path `/dashboard/borg`. The Borg Dashboard is served by the platform at `/dashboard/borg` and fetches soul data from this endpoint directly.</Note>
 
 ### Unknown action
 
