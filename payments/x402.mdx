@@ -189,7 +189,7 @@ Response:
 }
 ```
 
-## 402 Index Listing
+## 402 Index listing
 
 Our gateway is registered on the [402 Index](https://402index.io) — a protocol-agnostic directory of paid APIs:
 
@@ -203,6 +203,18 @@ Our gateway is registered on the [402 Index](https://402index.io) — a protocol
 | Agentbot Stream | MPP | healthy |
 
 Domain verified: `x402-gw-v2-production.up.railway.app`
+
+### Domain verification endpoint
+
+402 Index verifies domain ownership through a static verification file served at a well-known path:
+
+```http
+GET /.well-known/402index-verify.txt
+```
+
+This endpoint returns a SHA-256 hash token that 402 Index uses to confirm you control the domain. The response is a plain-text string with no additional formatting.
+
+<Note>The verification token is managed by the 402 Index team. If you need to reset or rotate your token, contact [402 Index support](https://402index.io).</Note>
 
 ## Anti-scam guard
 
