@@ -1,17 +1,17 @@
 ---
 title: Cron API
-description: "Manage cron jobs on the OpenClaw gateway"
+description: "Manage cron jobs and automated platform tasks"
 ---
 
 # Cron API
 
-Create, list, and delete cron jobs directly on the OpenClaw gateway. Cron jobs run recurring tasks on your agent using the gateway's built-in scheduler.
+Create, list, and delete cron jobs directly on the OpenClaw gateway, and trigger platform-level automated tasks. Cron jobs run recurring tasks on your agent using the gateway's built-in scheduler.
 
 <Note>These endpoints manage cron jobs on the gateway itself via `POST /tools/invoke`. For application-level scheduled tasks stored in the database, see the [scheduled tasks API](/api-reference/scheduled-tasks).</Note>
 
 <Note>Cron is enabled by default on all new instances. The provisioning template sets a maximum of 2 concurrent runs and 24-hour session retention. You can adjust these limits using the [config API](/api-reference/config).</Note>
 
-All cron endpoints require session authentication.
+All gateway cron endpoints require session authentication. The blog-daily endpoint uses bearer-token authentication with `CRON_SECRET`.
 
 ## List cron jobs
 
@@ -185,4 +185,95 @@ Removes a cron job from the gateway.
 ```bash
 curl -X DELETE "https://agentbot.sh/api/cron?jobId=heartbeat" \
   -H "Cookie: next-auth.session-token=YOUR_SESSION"
+```
+
+---
+
+## Daily blog publish
+
+```http
+GET /api/cron/blog-daily
+```
+
+Generates and publishes a daily operations brief to the auto-blog. This endpoint is designed to be called by a Vercel cron schedule (hourly) but only publishes when the current hour is **9 AM Europe/London**, ensuring the post time does not drift during daylight-saving changes.
+
+Posts are stored in KV (Upstash Redis) and appear on the blog index alongside static posts.
+
+<Note>This endpoint is invoked automatically by the Vercel cron scheduler. You do not need to call it manually unless you want to force-publish outside the normal window.</Note>
+
+### Authentication
+
+Requires a `CRON_SECRET` bearer token in the `Authorization` header.
+
+```
+Authorization: Bearer <CRON_SECRET>
+```
+
+### Query parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `force` | string | No | Set to `"1"` to publish regardless of the current hour |
+
+### Response
+
+On successful publish:
+
+```json
+{
+  "success": true,
+  "slug": "daily-ops-2026-04-09",
+  "publishedAt": "2026-04-09T08:00:00.000Z"
+}
+```
+
+When skipped because the current hour is outside the publish window:
+
+```json
+{
+  "skipped": true,
+  "reason": "outside_publish_window",
+  "targetHour": 9,
+  "timezone": "Europe/London",
+  "isoDate": "2026-04-09"
+}
+```
+
+When skipped because today's post was already published:
+
+```json
+{
+  "success": true,
+  "skipped": true,
+  "reason": "already_published",
+  "slug": "daily-ops-2026-04-09"
+}
+```
+
+### Response fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `success` | boolean | `true` when the request completed without error |
+| `skipped` | boolean | `true` when no new post was created |
+| `reason` | string | Why the post was skipped — `outside_publish_window` or `already_published` |
+| `slug` | string | Slug of the published or existing post (format `daily-ops-YYYY-MM-DD`) |
+| `publishedAt` | string | ISO 8601 timestamp of the publish time (only on new publishes) |
+| `targetHour` | number | The London-local hour the cron targets (always `9`) |
+| `timezone` | string | Timezone used for the publish window (`Europe/London`) |
+| `isoDate` | string | Current date in `YYYY-MM-DD` format |
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | `Unauthorized` — missing or invalid `CRON_SECRET` bearer token |
+
+### Example
+
+Force-publish today's daily blog post:
+
+```bash
+curl -X GET "https://agentbot.sh/api/cron/blog-daily?force=1" \
+  -H "Authorization: Bearer YOUR_CRON_SECRET"
 ```
