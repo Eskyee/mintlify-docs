@@ -143,3 +143,92 @@ curl -X POST https://agentbot.sh/api/devices \
     "action": "revoke"
   }'
 ```
+
+---
+
+## OpenClaw devices proxy
+
+The following endpoints proxy device management requests to the agent's OpenClaw runtime. They are used by the devices dashboard for QR pairing, push notification testing, and unpairing.
+
+<Note>These proxy endpoints resolve the agent's URL from the database and forward requests to the running instance. If no agent is deployed, the endpoint returns a `404` with `status: "no_agent"`. If the agent is unreachable, the endpoint returns `502`.</Note>
+
+### List paired devices (runtime)
+
+```http
+GET /api/openclaw/devices
+```
+
+Returns the list of devices paired with the agent's runtime. Proxies to the agent's `GET /api/devices` endpoint.
+
+#### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | `Unauthorized` — no authenticated session |
+| 404 | `No agent deployed` — the user has no running agent instance |
+| 502 | `Agent unreachable` — the agent instance did not respond within 10 seconds |
+
+### Manage paired devices (runtime)
+
+```http
+POST /api/openclaw/devices
+```
+
+Perform device actions on the agent's runtime. The `action` field determines the behavior.
+
+#### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `action` | string | Yes | One of `pair`, `unpair`, or `test-push` |
+| `deviceId` | string | Conditional | Required for `unpair` and `test-push` actions |
+
+#### Actions
+
+| Action | Description | Proxies to |
+|--------|-------------|------------|
+| `pair` | Generate a QR code for pairing a new device | `POST /api/devices/pair` |
+| `unpair` | Unpair an existing device | `POST /api/devices/unpair` |
+| `test-push` | Send a test push notification to a paired device | `POST /api/devices/test-push` |
+
+#### Example: pair a new device
+
+```bash
+curl -X POST https://agentbot.sh/api/openclaw/devices \
+  -H "Content-Type: application/json" \
+  -d '{
+    "action": "pair"
+  }'
+```
+
+#### Example: unpair a device
+
+```bash
+curl -X POST https://agentbot.sh/api/openclaw/devices \
+  -H "Content-Type: application/json" \
+  -d '{
+    "action": "unpair",
+    "deviceId": "device_abc123"
+  }'
+```
+
+#### Example: test push notification
+
+```bash
+curl -X POST https://agentbot.sh/api/openclaw/devices \
+  -H "Content-Type: application/json" \
+  -d '{
+    "action": "test-push",
+    "deviceId": "device_abc123"
+  }'
+```
+
+#### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | `Invalid action` — the `action` field is not `pair`, `unpair`, or `test-push` |
+| 400 | `Invalid request body` — the request body is not valid JSON |
+| 401 | `Unauthorized` — no authenticated session |
+| 404 | `No agent deployed` — the user has no running agent instance |
+| 502 | `Agent unreachable` — the agent instance did not respond within 15 seconds |
