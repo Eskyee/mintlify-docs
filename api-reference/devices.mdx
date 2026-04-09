@@ -1,11 +1,11 @@
 ---
 title: Devices API
-description: "Manage paired devices with approve, deny, and revoke actions"
+description: "Manage paired devices with pairing, approval, denial, and revocation actions"
 ---
 
 # Devices API
 
-Manage device pairing for your agent. Devices start in a `pending` state and can be approved, denied, or revoked.
+Manage device pairing for your agent. Devices can be self-paired (auto-approved) or created via a pairing code flow where they start in a `pending` state and can be approved, denied, or revoked.
 
 <Note>All device endpoints require an authenticated session. Unauthenticated requests receive a `401` response.</Note>
 
@@ -65,6 +65,109 @@ Returns all pending and approved devices grouped by status.
 | Code | Description |
 |------|-------------|
 | 401 | `Unauthorized` — no authenticated session |
+
+---
+
+## Generate a pairing code
+
+```http
+PUT /api/devices
+```
+
+Creates a new device in `pending` status and returns a pairing code. Use this when you want another device to complete the pairing flow via a code or URL.
+
+### Query parameters
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `name` | string | No | `My Device` | Human-readable name for the device |
+
+### Response
+
+```json
+{
+  "success": true,
+  "deviceId": "dev_abc123",
+  "pairingCode": "X7K2M9",
+  "pairingUrl": "/dashboard/devices?pair=X7K2M9&id=dev_abc123"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `success` | boolean | `true` when the pairing code was generated |
+| `deviceId` | string | Identifier of the newly created device |
+| `pairingCode` | string | Six-character alphanumeric code for pairing |
+| `pairingUrl` | string | URL path to complete the pairing in the dashboard |
+
+### Example
+
+```bash
+curl -X PUT "https://agentbot.sh/api/devices?name=Living+Room+iPad"
+```
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | `Unauthorized` — no authenticated session |
+
+---
+
+## Self-pair a device
+
+```http
+POST /api/devices/pair
+```
+
+Pairs the current device directly with auto-approval. This is used for self-pairing flows such as the "Pair My iPhone" button, where the requesting device is the one being paired.
+
+### Request body
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `name` | string | No | `My iPhone` | Human-readable name for the device |
+
+### Response
+
+```json
+{
+  "success": true,
+  "device": {
+    "id": "dev_xyz789",
+    "name": "My iPhone",
+    "status": "approved",
+    "pairedAt": "2026-04-09T16:20:00Z"
+  }
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `success` | boolean | `true` when the device was paired |
+| `device` | object | The newly paired device |
+| `device.id` | string | Unique device identifier |
+| `device.name` | string | Human-readable device name |
+| `device.status` | string | Always `approved` for self-paired devices |
+| `device.pairedAt` | string | ISO 8601 timestamp of when the device was paired |
+
+### Example
+
+```bash
+curl -X POST https://agentbot.sh/api/devices/pair \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "My iPhone"
+  }'
+```
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | `Unauthorized` — no authenticated session |
+
+---
 
 ## Manage a device
 
@@ -146,11 +249,11 @@ curl -X POST https://agentbot.sh/api/devices \
 
 ---
 
-## OpenClaw devices proxy
+## OpenClaw devices proxy (deprecated)
 
-The following endpoints proxy device management requests to the agent's OpenClaw runtime. They are used by the devices dashboard for QR pairing, push notification testing, and unpairing.
+<Warning>These proxy endpoints are deprecated and will be removed in a future release. Device management now uses the local endpoints documented above (`/api/devices` and `/api/devices/pair`) instead of proxying to the agent runtime.</Warning>
 
-<Note>These proxy endpoints resolve the agent's URL from the database and forward requests to the running instance. If no agent is deployed, the endpoint returns a `404` with `status: "no_agent"`. If the agent is unreachable, the endpoint returns `502`.</Note>
+The following endpoints previously proxied device management requests to the agent's OpenClaw runtime. They have been replaced by the local device pairing API.
 
 ### List paired devices (runtime)
 
