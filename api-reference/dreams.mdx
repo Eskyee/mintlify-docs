@@ -1,0 +1,117 @@
+---
+title: Dreams API
+description: "Dream diary timeline, dream triggers, configuration, and memory consolidation"
+---
+
+# Dreams API
+
+Access your agent's dream diary, trigger dream cycles, and configure dreaming behavior. These endpoints proxy requests to the agent's OpenClaw runtime.
+
+<Note>All dreams endpoints require an authenticated session. The proxy resolves your agent's URL from the database and forwards requests to the running instance. If no agent is deployed, the endpoint returns a `404` with `status: "no_agent"`.</Note>
+
+## Get dream diary
+
+```http
+GET /api/openclaw/dreams
+```
+
+Returns the agent's dream diary timeline. Proxies to the agent's `GET /api/dreaming/diary` endpoint.
+
+### Response
+
+```json
+{
+  "entries": [
+    {
+      "id": "dream_001",
+      "timestamp": "2026-04-09T03:00:00Z",
+      "summary": "Consolidated 12 conversation threads into 3 memory clusters",
+      "depth": 48,
+      "memoriesProcessed": 12,
+      "clustersCreated": 3,
+      "status": "completed"
+    }
+  ],
+  "consolidationStats": {
+    "totalDreams": 24,
+    "totalMemoriesProcessed": 312,
+    "lastDreamAt": "2026-04-09T03:00:00Z"
+  }
+}
+```
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | `Unauthorized` — no authenticated session |
+| 404 | `No agent deployed` — the user has no running agent instance |
+| 502 | `Agent unreachable` — the agent instance did not respond within 10 seconds |
+
+---
+
+## Trigger a dream cycle
+
+```http
+POST /api/openclaw/dreams
+```
+
+Triggers a dream cycle or updates dreaming configuration. The `action` field determines the behavior.
+
+### Trigger action
+
+Initiates a memory consolidation dream cycle. Proxies to the agent's `POST /api/dreaming/trigger` endpoint.
+
+#### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `action` | string | Yes | Must be `"trigger"` |
+| `depth` | number | No | Number of hours of conversation history to process. Defaults to `48`. |
+
+#### Example
+
+```bash
+curl -X POST https://agentbot.sh/api/openclaw/dreams \
+  -H "Content-Type: application/json" \
+  -d '{
+    "action": "trigger",
+    "depth": 72
+  }'
+```
+
+### Config action
+
+Updates the agent's dreaming configuration. Proxies to the agent's `POST /api/dreaming/config` endpoint.
+
+#### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `action` | string | Yes | Must be `"config"` |
+| `enabled` | boolean | No | Whether automatic dreaming is enabled |
+| `depthHours` | number | No | Default depth in hours for automatic dream cycles |
+| `aggressiveness` | number | No | How aggressively the agent consolidates memories (higher values produce more aggressive consolidation) |
+
+#### Example
+
+```bash
+curl -X POST https://agentbot.sh/api/openclaw/dreams \
+  -H "Content-Type: application/json" \
+  -d '{
+    "action": "config",
+    "enabled": true,
+    "depthHours": 48,
+    "aggressiveness": 0.7
+  }'
+```
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | `Invalid action` — the `action` field is not `trigger` or `config` |
+| 400 | `Invalid request body` — the request body is not valid JSON |
+| 401 | `Unauthorized` — no authenticated session |
+| 404 | `No agent deployed` — the user has no running agent instance |
+| 502 | `Agent unreachable` — the agent instance did not respond within 15 seconds |

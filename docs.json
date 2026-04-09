@@ -135,6 +135,8 @@
           "api-reference/debug",
           "api-reference/config",
           "api-reference/devices",
+          "api-reference/dreams",
+          "api-reference/character-qa",
           "api-reference/bridge",
           "api-reference/permissions",
           "api-reference/hooks-classify",
