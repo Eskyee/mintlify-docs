@@ -5,9 +5,9 @@ description: "Automate web browsing tasks including navigation, screenshots, con
 
 # Browser automation API
 
-<Warning>This feature is in **beta**. A connected Playwright instance is required for full functionality. Responses currently return structured confirmations without performing real browser actions unless a Playwright backend is configured.</Warning>
+<Note>This feature is in **beta**. All actions are executed against a real headless Chrome instance via a Playwright backend. Requests have a 60-second timeout.</Note>
 
-The browser automation API lets your agents interact with web pages programmatically. You can navigate to URLs, capture screenshots, extract page content, fill forms, and chain multiple actions into automated workflows.
+The browser automation API lets your agents interact with web pages programmatically. You can navigate to URLs, capture screenshots, extract page content, fill forms, and chain multiple actions into automated workflows. Actions are proxied to a Playwright backend service running headless Chrome.
 
 ## Authentication
 
@@ -93,8 +93,7 @@ curl -X POST /api/browser \
   "success": true,
   "action": "navigate",
   "url": "https://example.com",
-  "message": "Navigated to https://example.com",
-  "note": "Browser automation is in beta. Connect a Playwright instance for full functionality."
+  "message": "Navigated to https://example.com"
 }
 ```
 
@@ -115,13 +114,14 @@ curl -X POST /api/browser \
 
 **Response:**
 
+The response contains the screenshot data from the Playwright backend. Screenshots are captured in full-page mode by default.
+
 ```json
 {
   "success": true,
   "action": "screenshot",
   "url": "https://example.com",
-  "message": "Screenshot captured from https://example.com",
-  "note": "Connect Playwright for actual screenshots."
+  "screenshot": "<base64-encoded image data>"
 }
 ```
 
@@ -178,8 +178,7 @@ curl -X POST /api/browser \
   "action": "extract",
   "url": "https://example.com",
   "selector": "article",
-  "message": "Extracted content from https://example.com",
-  "note": "Connect Playwright for DOM extraction."
+  "content": "<extracted text content>"
 }
 ```
 
@@ -219,8 +218,7 @@ curl -X POST /api/browser \
     { "selector": "#email", "value": "agent@example.com" },
     { "selector": "#submit", "action": "click" }
   ],
-  "message": "Form automation configured for https://example.com/signup",
-  "note": "Connect Playwright for form filling."
+  "message": "Form filled on https://example.com/signup"
 }
 ```
 
@@ -256,8 +254,7 @@ curl -X POST /api/browser \
     { "action": "type", "selector": "#email", "text": "user@example.com" },
     { "action": "screenshot" }
   ],
-  "message": "Automation workflow configured with 4 steps",
-  "note": "Connect Playwright for multi-step automation."
+  "message": "Automation workflow completed with 4 steps"
 }
 ```
 
@@ -267,18 +264,17 @@ All action responses include these fields:
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `success` | boolean | `true` when the action was accepted |
+| `success` | boolean | `true` when the action completed successfully |
 | `action` | string | The action that was performed |
 | `message` | string | Human-readable summary of the result |
-| `note` | string | Beta status information |
+
+Additional fields vary by action (for example, `screenshot` returns a `screenshot` field with base64-encoded image data, and `extract` returns a `content` field).
 
 ### Errors
 
-| Code | Description |
-|------|-------------|
-| 400 | Invalid or missing `action` parameter |
-| 400 | `url required` — the action requires a `url` but none was provided |
-| 400 | `url and steps required` — `fill-form` requires both `url` and `steps` |
-| 400 | `steps array required` — `automate` requires a `steps` array |
-| 400 | `Invalid request body` — the request body could not be parsed as JSON |
-| 401 | Unauthorized — no authenticated session |
+| Code | Body | Description |
+|------|------|-------------|
+| 400 | `{ "error": "Invalid action. Must be one of: navigate, screenshot, click, type, extract, fill-form, automate" }` | Invalid or missing `action` parameter |
+| 400 | `{ "error": "Invalid request body" }` | The request body could not be parsed as JSON |
+| 401 | `{ "error": "Unauthorized" }` | No authenticated session |
+| 502 | `{ "error": "<message>", "service": "playwright-backend" }` | The Playwright backend is unreachable or returned an error. The `service` field identifies the failing upstream service. |
