@@ -136,13 +136,15 @@ Tokens not in this list display a truncated mint address as the symbol.
 GET /api/solana/rpc-config
 ```
 
-Returns the custom Solana RPC URL saved for the authenticated user. Requires session authentication.
+Returns the Solana RPC URL for the authenticated user, along with the default fallback URL and the configuration source. Requires session authentication.
 
 ### Response
 
 ```json
 {
-  "rpcUrl": "https://my-custom-rpc.example.com"
+  "rpcUrl": "https://my-custom-rpc.example.com",
+  "defaultRpcUrl": "https://api.mainnet-beta.solana.com",
+  "source": "user"
 }
 ```
 
@@ -150,7 +152,9 @@ Returns the custom Solana RPC URL saved for the authenticated user. Requires ses
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `rpcUrl` | string | The saved custom RPC URL. Returns an empty string if no custom URL is configured. |
+| `rpcUrl` | string | The active RPC URL. Returns the user's saved custom URL if one exists, otherwise returns the platform default RPC URL. |
+| `defaultRpcUrl` | string | The platform default Solana RPC URL used as a fallback when no custom URL is configured. |
+| `source` | string | Indicates where the `rpcUrl` value comes from. Either `"user"` (a saved custom URL) or `"default"` (the platform fallback). |
 
 ### Errors
 
@@ -196,4 +200,5 @@ Saves or updates the custom Solana RPC URL for the authenticated user. Only HTTP
 | Code | Description |
 |------|-------------|
 | 400 | Missing `rpcUrl`, value is not a string, URL is invalid, or URL does not use HTTPS |
+| 400 | RPC URL contains a placeholder value (e.g. a template URL that ends with an empty `api-key=` parameter or includes an example hostname). You must provide a complete provider URL. |
 | 401 | Unauthorized — no valid session |
