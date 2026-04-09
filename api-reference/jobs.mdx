@@ -170,12 +170,22 @@ Creates a new job listing under a company you own. Requires session authenticati
     "badgeNoAiScreening": false,
     "company": {
       "id": "clxyz456",
+      "advertiserId": "user_123",
       "name": "Acme Corp",
-      "slug": "acme-corp"
+      "slug": "acme-corp",
+      "logoUrl": "https://example.com/logo.png",
+      "website": "https://example.com",
+      "description": "Building the future of work",
+      "githubOrg": "acme-corp",
+      "hiredCount": 0,
+      "createdAt": "2026-03-20T00:00:00Z",
+      "updatedAt": "2026-04-01T00:00:00Z"
     }
   }
 }
 ```
+
+<Note>The `company` object includes all company fields via the Prisma `include` relation, not a subset.</Note>
 
 ### Errors
 
@@ -300,18 +310,49 @@ Returns all job applications submitted by the authenticated user, ordered by mos
       "createdAt": "2026-04-07T04:00:00Z",
       "listing": {
         "id": "clxyz789",
+        "companyId": "clxyz456",
         "title": "Senior Frontend Engineer",
+        "description": "Build next-generation interfaces...",
+        "salaryMin": 120000,
+        "salaryMax": 180000,
+        "salaryCurrency": "USD",
+        "roleType": "frontend",
+        "techStack": ["React", "TypeScript", "Next.js"],
+        "seniority": "senior",
+        "contractType": "full-time",
+        "webType": "both",
+        "applyUrl": "https://example.com/apply",
+        "language": "en",
+        "languagePtBr": null,
         "status": "active",
+        "tier": "standard",
+        "viewCount": 42,
+        "applyCount": 5,
+        "badgeResponseGuaranteed": true,
+        "badgeNoAiScreening": false,
+        "publishedAt": "2026-04-01T00:00:00Z",
+        "createdAt": "2026-03-28T12:00:00Z",
+        "updatedAt": "2026-04-01T00:00:00Z",
         "company": {
           "id": "clxyz456",
+          "advertiserId": "user_456",
           "name": "Acme Corp",
-          "slug": "acme-corp"
+          "slug": "acme-corp",
+          "logoUrl": "https://example.com/logo.png",
+          "website": "https://example.com",
+          "description": "Building the future of work",
+          "githubOrg": "acme-corp",
+          "hiredCount": 0,
+          "createdAt": "2026-03-20T00:00:00Z",
+          "updatedAt": "2026-03-28T12:00:00Z"
         }
       }
     }
   ]
 }
 ```
+
+<Note>The `listing` object includes all listing fields and a full `company` object with all company fields. This is the complete Prisma relation — not a subset.</Note>
 
 ### Errors
 

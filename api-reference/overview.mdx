@@ -144,6 +144,8 @@ curl -X POST https://agentbot.sh/api/ai/chat \
 | `/api/v1/gateway` | POST | Route requests to plugins with Stripe or [MPP](/payments/mpp) payment |
 | `/api/agents` | GET | List all agents |
 | `/api/agents/:id` | GET | Get agent details |
+| `/api/agents/:id` | PUT | Update agent metadata (plan, AI provider, config) |
+| `/api/agents/:id` | DELETE | Delete an agent and remove its container |
 | `/api/agents/:id/config` | GET | Get agent configuration |
 | `/api/agents/:id/config` | PUT | Update agent configuration |
 | `/api/agents/:id/messages` | GET | Get agent messages |
@@ -274,6 +276,7 @@ curl -X POST https://agentbot.sh/api/ai/chat \
 | `/api/checkout/verify` | GET | Verify a Stripe checkout session and activate subscription |
 | `/api/stripe/checkout` | GET | Redirect to Stripe checkout (accepts `plan` query param: `solo`, `collective`, `label`, `network`). Prices are in GBP. |
 | `/api/stripe/credits` | GET | Redirect to Stripe credit purchase (accepts `price` query param) |
+| `/api/stripe/expert-setup-checkout` | GET | Create a Stripe checkout session for expert setup booking |
 | `/api/stripe/storage-upgrade` | POST | Upgrade storage plan |
 | `/api/metrics/:userId/historical` | GET | Get historical time-series metrics (backend only) |
 | `/api/metrics/:userId/performance` | GET | Get current performance metrics (backend only) |
@@ -350,6 +353,9 @@ curl -X POST https://agentbot.sh/api/ai/chat \
 | `/api/jobs/career` | GET | Get your career profile |
 | `/api/jobs/career` | PUT | Create or update your career profile |
 | `/api/jobs/companies` | GET | List your companies and listing stats |
+| `/api/jobs/external` | GET | List job listings from external partner boards |
+| `/api/jobs/sponsors` | GET | List companies that have made hires through the platform |
+| `/api/jobs/sponsors` | POST | Register as a sponsor company |
 | `/api/jobs/:jobId` | GET | Get background job status |
 | `/api/workflows` | GET | List all workflows |
 | `/api/workflows` | POST | Create a workflow |
