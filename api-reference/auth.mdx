@@ -1021,6 +1021,12 @@ GET /api/auth/token-gating/verify?address=0x...
 | `user.updated` | Profile updated |
 | `user.deleted` | Account deleted |
 
+### Automatic welcome email on signup
+
+When a new user signs up through an OAuth provider (Google, wallet, or Farcaster), a welcome email is automatically sent to their registered email address. This is triggered by the `signIn` event when `isNewUser` is `true`.
+
+The welcome email uses a branded template with example use cases. See [transactional email templates](/integrations/resend#transactional-email-templates) for details on the email content and configuration.
+
 ### Google RISC events (Cross-Account Protection)
 
 The following inbound events are processed by the [`POST /api/security/risc`](#cross-account-protection-receiver) endpoint when received from Google:

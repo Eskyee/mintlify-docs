@@ -854,6 +854,27 @@ When the backend is unavailable, mock data is returned with `"status": "mock"`:
 }
 ```
 
+## Agent status values
+
+Agent status is reported across multiple endpoints. The following table lists all possible status values:
+
+| Status | Source | Description |
+|--------|--------|-------------|
+| `running` | `GET /api/instance/:userId`, `GET .../stats` | Agent is fully operational (both health and readiness checks pass) |
+| `starting` | `GET /api/instance/:userId`, `POST .../start` | Agent is booting (health check passes, readiness check not yet ready) |
+| `stopped` | `POST .../stop` | Agent container is stopped |
+| `restarting` | `POST .../restart` (web proxy) | Agent container is restarting |
+| `reset` | `POST .../reset-memory` (web proxy) | Agent memory was wiped and container is restarting |
+| `repaired` | `POST .../repair` (web proxy) | Agent environment was rebuilt and container was restarted |
+| `updating` | `POST .../update` (web proxy) | Agent image update is in progress |
+| `unknown` | `GET /api/instance/:userId` | Neither health nor readiness checks returned a successful response |
+| `unreachable` | `GET .../stats` | Gateway health check failed |
+| `active` | Backend lifecycle endpoints | Container is running (backend Docker status) |
+| `provisioning` | Provisioning flow | Agent is being created |
+| `error` | Various | Operation or deployment failed |
+
+<Note>The web proxy and backend may return different status strings for the same action. For example, the start action returns `"starting"` from the web proxy but `"active"` from the backend. See each endpoint's documentation for the exact response shape.</Note>
+
 ## Agent lifecycle
 
 Lifecycle operations are available at two endpoint patterns depending on which service you call:
@@ -861,7 +882,7 @@ Lifecycle operations are available at two endpoint patterns depending on which s
 - **Web proxy:** `/api/instance/:userId/{action}` — requires session authentication and proxies to the backend.
 - **Backend direct:** `/api/agents/:id/{action}` — requires API key authentication.
 
-Both patterns support the same actions. The examples below use the backend pattern.
+Both patterns support the same actions. The examples below show both response shapes where they differ.
 
 <Note>The backend agents route uses local Docker commands (`docker start`, `docker stop`, `docker restart`) for lifecycle operations, not the Render API. The Render API is used by the provisioning route (`POST /api/provision`) for creating new agent services. When Docker is unavailable on the backend host, lifecycle operations return `500` with an error message. You can check availability using the [backend health endpoint](/api-reference/health#backend-health-check) — when the `docker` field is `unavailable`, lifecycle operations will fail.</Note>
 
@@ -873,12 +894,33 @@ POST /api/agents/:id/start
 
 Starts a stopped agent container using `docker start`.
 
+**Backend direct:**
+
 ```json
 {
   "success": true,
   "status": "active"
 }
 ```
+
+**Web proxy** (`POST /api/instance/:userId/start`):
+
+```json
+{
+  "success": true,
+  "status": "starting"
+}
+```
+
+#### Errors
+
+| Code | Source | Description |
+|------|--------|-------------|
+| 401 | Both | Unauthorized — missing or invalid authentication |
+| 403 | Both | Forbidden — you do not own this agent |
+| 404 | Backend | Agent not found |
+| 500 | Both | Start failed |
+| 503 | Web proxy | Managed runtime controls are temporarily disabled |
 
 ### Stop agent
 
@@ -888,6 +930,8 @@ POST /api/agents/:id/stop
 
 Stops the agent container using `docker stop`. The container retains its data and configuration and can be resumed with the [start endpoint](#start-agent).
 
+**Backend direct:**
+
 ```json
 {
   "success": true,
@@ -895,11 +939,32 @@ Stops the agent container using `docker stop`. The container retains its data an
 }
 ```
 
+**Web proxy** (`POST /api/instance/:userId/stop`):
+
+```json
+{
+  "success": true,
+  "status": "stopped"
+}
+```
+
+#### Errors
+
+| Code | Source | Description |
+|------|--------|-------------|
+| 401 | Both | Unauthorized — missing or invalid authentication |
+| 403 | Both | Forbidden — you do not own this agent |
+| 404 | Backend | Agent not found |
+| 500 | Both | Stop failed |
+| 503 | Web proxy | Managed runtime controls are temporarily disabled |
+
 ### Restart agent
 
 ```http
 POST /api/agents/:id/restart
 ```
+
+**Backend direct:**
 
 ```json
 {
@@ -917,6 +982,25 @@ POST /api/agents/:id/restart
 | `healMessage` | string | Description of the migration performed (`skip` when no migration was needed, or `skip:container-not-running` when the container is unavailable) |
 | `openclawVersion` | string | Current OpenClaw runtime version |
 
+**Web proxy** (`POST /api/instance/:userId/restart`):
+
+```json
+{
+  "success": true,
+  "status": "restarting"
+}
+```
+
+#### Errors
+
+| Code | Source | Description |
+|------|--------|-------------|
+| 401 | Both | Unauthorized — missing or invalid authentication |
+| 403 | Both | Forbidden — you do not own this agent |
+| 404 | Backend | Agent not found |
+| 500 | Both | Restart failed |
+| 503 | Web proxy | Managed runtime controls are temporarily disabled |
+
 ### Update agent image
 
 ```http
@@ -932,6 +1016,8 @@ Triggers an image update on the backend. Before replacing the service, the endpo
 | `image` | string | No | Custom image to deploy. When omitted, the platform default image is used. |
 
 #### Response
+
+**Backend direct:**
 
 ```json
 {
@@ -953,14 +1039,29 @@ Triggers an image update on the backend. Before replacing the service, the endpo
 
 <Note>When the new service fails to start, the endpoint reverts to `previousImage`. The caller still receives a `500` error, but the agent is restored to its prior working state. The pre-update backup remains available at `backupPath` for manual recovery if needed.</Note>
 
+**Web proxy** (`POST /api/instance/:userId/update`):
+
+```json
+{
+  "success": true,
+  "status": "updating",
+  "image": "ghcr.io/openclaw/openclaw:2026.4.7",
+  "openclawVersion": "2026.4.7"
+}
+```
+
+<Note>The web proxy update response does not include `previousImage` or `backupPath`. On failure, the web proxy returns `{ "success": false, "status": "error" }` — this differs from other web proxy lifecycle endpoints which use `{ "success": false, "error": "..." }`.</Note>
+
 #### Errors
 
-| Code | Description |
-|------|-------------|
-| 400 | Invalid docker image value |
-| 403 | Forbidden — you do not own this agent |
-| 404 | Agent not found |
-| 500 | Update failed. When automatic rollback succeeds, the agent continues running on the previous image. |
+| Code | Source | Description |
+|------|--------|-------------|
+| 400 | Backend | Invalid docker image value |
+| 401 | Both | Unauthorized — missing or invalid authentication |
+| 403 | Both | Forbidden — you do not own this agent |
+| 404 | Backend | Agent not found |
+| 500 | Both | Update failed. When automatic rollback succeeds on the backend, the agent continues running on the previous image. |
+| 503 | Web proxy | Managed runtime controls are temporarily disabled |
 
 ### Repair agent
 
@@ -1006,7 +1107,7 @@ Repairs an agent by reconfiguring its environment and restarting the service.
 POST /api/agents/:id/reset-memory
 ```
 
-Returns the backend response directly.
+**Backend direct:**
 
 ```json
 {
@@ -1015,13 +1116,24 @@ Returns the backend response directly.
 }
 ```
 
+**Web proxy** (`POST /api/instance/:userId/reset-memory`) — deletes all stored agent memory rows and restarts the container:
+
+```json
+{
+  "success": true,
+  "status": "reset"
+}
+```
+
 #### Errors
 
-| Code | Description |
-|------|-------------|
-| 403 | Forbidden — you do not own this agent |
-| 404 | Agent not found |
-| 500 | Reset failed |
+| Code | Source | Description |
+|------|--------|-------------|
+| 401 | Both | Unauthorized — missing or invalid authentication |
+| 403 | Both | Forbidden — you do not own this agent |
+| 404 | Backend | Agent not found |
+| 500 | Both | Reset failed |
+| 503 | Web proxy | Managed runtime controls are temporarily disabled |
 
 ### Lifecycle error responses
 
@@ -1033,7 +1145,16 @@ Backend lifecycle endpoints return the following shape on failure:
 }
 ```
 
-Web proxy lifecycle endpoints return a different error shape:
+Web proxy lifecycle endpoints return a different error shape. Most endpoints use:
+
+```json
+{
+  "success": false,
+  "error": "Error message describing the failure"
+}
+```
+
+The update endpoint is the exception and returns:
 
 ```json
 {
@@ -1042,13 +1163,23 @@ Web proxy lifecycle endpoints return a different error shape:
 }
 ```
 
+All web proxy lifecycle endpoints return `503` when managed runtime controls are disabled:
+
+```json
+{
+  "success": false,
+  "error": "Managed runtime controls are temporarily disabled until the Railway control path is fully verified."
+}
+```
+
 | Code | Source | Description |
 |------|--------|-------------|
 | 401 | Both | Unauthorized — missing or invalid authentication |
-| 403 | Both | Forbidden — authenticated user does not own this agent. The backend returns `{ "error": "Forbidden — you do not own this agent" }`. The web proxy returns `{ "success": false, "status": "error" }`. |
+| 403 | Both | Forbidden — authenticated user does not own this agent. The backend returns `{ "error": "Forbidden — you do not own this agent" }`. The web proxy returns `{ "success": false, "error": "..." }`. |
 | 404 | Backend | Agent not found — no metadata exists for this agent ID |
 | 500 | Backend | Internal server error (for example, Render API unavailable or service operation failed) |
 | 502 | Web proxy | Backend service unavailable |
+| 503 | Web proxy | Managed runtime controls are temporarily disabled. This applies to all lifecycle actions: start, stop, restart, update, repair, and reset-memory. |
 
 ## Get instance details
 
@@ -1085,13 +1216,45 @@ Returns resource usage statistics for an agent instance.
 ```json
 {
   "userId": "user_123",
-  "cpu": "0.15%",
-  "memory": "128MiB",
   "status": "running",
-    "plan": "solo",
-    "openclawVersion": "2026.4.7"
+  "health": "healthy",
+  "cpu": "0%",
+  "memory": "0MB",
+  "uptime": "active",
+  "messages": null,
+  "errors": null,
+  "openclawVersion": "2026.4.7"
 }
 ```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `userId` | string | Agent user identifier |
+| `status` | string | Instance status (`running` or `unreachable`) |
+| `health` | string | Health check result (`healthy` or `unreachable`) |
+| `cpu` | string | CPU usage (currently returns a placeholder value) |
+| `memory` | string | Memory usage (currently returns a placeholder value) |
+| `uptime` | string | Uptime status (`active` or `unknown`) |
+| `messages` | number \| null | Message count (reserved for future use) |
+| `errors` | number \| null | Error count (reserved for future use) |
+| `openclawVersion` | string | Current OpenClaw runtime version. Absent when the instance is unreachable. |
+
+When the instance is unreachable, the response uses placeholder values:
+
+```json
+{
+  "userId": "user_123",
+  "status": "unreachable",
+  "health": "unreachable",
+  "cpu": "0%",
+  "memory": "0MB",
+  "uptime": "unknown",
+  "messages": null,
+  "errors": null
+}
+```
+
+<Note>The `openclawVersion` field is omitted when the instance is unreachable. The `cpu` and `memory` fields currently return placeholder values and will report actual resource metrics in a future release.</Note>
 
 ## Get agent gateway token
 
