@@ -46,6 +46,7 @@ Agentbot supports 300+ models via OpenRouter. BYOK (Bring Your Own Key) — you 
 | Gemini 2.5 Flash | $0.15/M | $0.60/M | Fast, cost-effective |
 | Gemini Flash 1.5 | $0.075/M | $0.30/M | Fast, cost-effective |
 | DeepSeek R1 | $0.55/M | $2.19/M | Reasoning, math |
+| Solana Agent Kit | Via OpenRouter | Via OpenRouter | DeFi, NFTs, token operations (60+ Solana actions via MCP) |
 
 ### Free Models
 
@@ -78,9 +79,43 @@ The public plans unlock different model sets:
 |------|-----------------|
 | Solo (£29) | MiMo-V2-Pro, Claude Sonnet 4 |
 | Collective (£69) | + Gemini 2.5 Flash |
-| Label (£149) | + DeepSeek R1 |
+| Label (£149) | + DeepSeek R1, Solana Agent Kit |
 
 <Note>Custom and white-label deployments can unlock broader model access by arrangement, but the public self-serve plans are Solo, Collective, and Label.</Note>
+
+---
+
+## Solana Agent Kit
+
+The **Solana Agent Kit** model provides 60+ on-chain Solana actions through MCP (Model Context Protocol). It is available on the **Label plan**.
+
+### Capabilities
+
+- **DeFi** — Token swaps, liquidity provisioning, yield farming
+- **NFTs** — Minting, listing, and managing NFT collections
+- **Token operations** — Token creation, transfers, and balance queries
+- **On-chain data** — Market data, transaction history, wallet lookups
+
+### Specs
+
+| Spec | Value |
+|------|-------|
+| Model ID | `openrouter/solana/solana-agent-kit` |
+| Provider | Solana (via OpenRouter) |
+| Required Plan | Label |
+| Actions | 60+ Solana on-chain actions |
+
+### Configuration
+
+```json
+{
+  "models": {
+    "default": "openrouter/solana/solana-agent-kit"
+  }
+}
+```
+
+<Note>The Solana Agent Kit requires a Label plan. If you are on a Solo or Collective plan, upgrade to Label to access this model.</Note>
 
 ---
 
