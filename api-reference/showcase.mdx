@@ -44,7 +44,13 @@ Returns a list of agents that have opted in to the public showcase. No authentic
 | `agents[].memberSince` | string | ISO 8601 timestamp of when the agent was created |
 | `total` | number | Total number of agents in the showcase |
 
-<Note>Only agents with `showcaseOptIn` set to `true` and a `running` status appear in the showcase. Results are ordered by creation date (oldest first) and limited to 48 agents.</Note>
+<Note>Only agents with `showcaseOptIn` set to `true` and an `active` or `running` status appear in the showcase. Results are ordered by creation date (oldest first) and limited to 48 agents.</Note>
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 500 | Failed to load showcase agents |
 
 ## Get showcase status
 

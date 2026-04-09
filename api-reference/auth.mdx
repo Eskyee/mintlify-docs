@@ -375,17 +375,35 @@ Ends the current session by deleting the session record from the database and cl
 
 <Note>This endpoint always returns `200` even if no active session exists.</Note>
 
+## Get CSRF token
+
+```http
+GET /api/auth/csrf
+```
+
+Returns a fresh CSRF token for use in requests that require CSRF protection, such as [`POST /api/auth/login`](#sign-in). No authentication required.
+
+### Response
+
+```json
+{
+  "token": "random-token-value",
+  "signed": "hmac-signature",
+  "header": "random-token-value:hmac-signature"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `token` | string | The CSRF token value |
+| `signed` | string | HMAC signature of the token |
+| `header` | string | Pre-formatted value to use in the `x-csrf-token` request header (`{token}:{signed}`) |
+
+<Note>Use the `header` value directly in the `x-csrf-token` or `x-xsrf-token` request header when calling endpoints that require CSRF protection.</Note>
+
 ## OAuth sign in
 
 OAuth providers support automatic account linking. If a user with the same email address already exists, the OAuth account is linked to the existing user on first sign-in. This lets users who originally signed up with email and password add an OAuth login without creating a duplicate account.
-
-### GitHub
-
-```http
-GET /api/auth/github
-```
-
-Redirects to GitHub OAuth flow. Requires `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` to be configured.
 
 ### Google
 
@@ -517,54 +535,28 @@ Returns the endpoint status and list of supported event types.
 
 <Note>For details on how RISC fits into the platform security model and how to configure it in Google Cloud Console, see [Security — Google RISC Protocol](/security#google-risc-protocol).</Note>
 
-## Google RISC webhook (legacy)
+## Google RISC webhook (deprecated)
 
 ```http
 POST /api/auth/google/risc
 ```
 
-Receives security event notifications from Google via the [RISC (Risk Incident Sharing and Collaboration)](https://developers.google.com/identity/protocols/risc) protocol. This is the legacy endpoint — new integrations should use [`POST /api/security/risc`](#cross-account-protection-receiver) instead, which adds token validation, event deduplication, and more granular event handling.
+<Warning>This endpoint is deprecated and returns `410 Gone`. Use [`POST /api/security/risc`](#cross-account-protection-receiver) instead.</Warning>
 
-<Warning>This endpoint is intended to be called by Google's RISC infrastructure, not by application clients. You do not need to call it directly.</Warning>
-
-### Request body
-
-The request body is a raw [SET (Security Event Token)](https://datatracker.ietf.org/doc/html/rfc8417) JWT string. The JWT payload contains:
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `iss` | string | Issuer (Google) |
-| `sub` | string | Subject identifier — the user's email address |
-| `events` | object | Map of event URIs to event data |
-
-### Supported event types
-
-| Event URI | Action taken |
-|-----------|-------------|
-| `https://schemas.openid.net/secevent/risc/event-type/account-compromised` | Revokes all sessions for the affected user |
-| `https://schemas.openid.net/secevent/risc/event-type/account-disabled` | Revokes all sessions for the affected user |
-| `https://schemas.openid.net/secevent/risc/event-type/account-enabled` | No action taken — sessions are recreated on next login |
-| `https://schemas.openid.net/secevent/risc/event-type/sessions-revoked` | Revokes all active sessions for the user |
-| `https://schemas.openid.net/secevent/risc/event-type/identifier-changed` | Revokes all sessions to force re-authentication |
-
-Users are matched by email address.
+This legacy endpoint previously received security event notifications from Google via the RISC protocol. It has been replaced by the [`POST /api/security/risc`](#cross-account-protection-receiver) endpoint, which adds JWT signature validation, event deduplication, and more granular event handling.
 
 ### Response
 
 ```json
 {
-  "received": true
+  "error": "Deprecated endpoint",
+  "detail": "Use /api/security/risc for verified Google RISC events."
 }
 ```
 
-### Errors
-
 | Code | Description |
 |------|-------------|
-| 400 | Invalid JWT format (token does not have three parts) |
-| 500 | Internal error processing the security event |
-
-<Note>For details on how RISC fits into the platform security model and how to configure it in Google Cloud Console, see [Security — Google RISC Protocol](/security#google-risc-protocol).</Note>
+| 410 | Endpoint is deprecated. Migrate to `/api/security/risc`. |
 
 ## Wallet sign in (SIWE)
 
@@ -618,6 +610,9 @@ When a wallet signs in, the system checks for an existing user by the wallet-der
 | Code | Description |
 |------|-------------|
 | 400 | Missing address, message, or signature |
+| 400 | Missing nonce in SIWE message — the message must include a nonce obtained from [`GET /api/auth/nonce`](#get-nonce) |
+| 401 | Invalid nonce — the nonce in the SIWE message does not match the server-issued nonce |
+| 401 | Address mismatch — the wallet address in the SIWE message does not match the `address` field |
 | 401 | Invalid signature |
 | 500 | Auth failed |
 
@@ -1040,14 +1035,6 @@ The following inbound events are processed by the [`POST /api/security/risc`](#c
 | `account-credential-change-required` | Google flagged the account for a credential change. Logged for monitoring. |
 | `verification` | Sent by Google during RISC setup to verify the endpoint is reachable. |
 
-### Google RISC events (legacy)
+### Google RISC events (legacy — deprecated)
 
-The following inbound events are processed by the [`POST /api/auth/google/risc`](#google-risc-webhook-legacy) endpoint when received from Google:
-
-| Event | Description |
-|-------|-------------|
-| `account-compromised` | Google detected the account may be compromised. All sessions are revoked. |
-| `account-disabled` | The Google account was disabled. All sessions are revoked. |
-| `account-enabled` | The Google account was re-enabled. No action taken — sessions are recreated on next login. |
-| `sessions-revoked` | Google revoked the user's sessions. All local sessions are revoked. |
-| `identifier-changed` | The user's email or identifier changed on Google. All sessions are revoked to force re-authentication. |
+The legacy [`POST /api/auth/google/risc`](#google-risc-webhook-deprecated) endpoint is deprecated and returns `410 Gone`. Migrate to [`POST /api/security/risc`](#cross-account-protection-receiver) for event handling.
