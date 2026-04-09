@@ -1,0 +1,217 @@
+---
+title: Buddies API
+description: "Hatch, feed, play with, and manage your virtual buddies"
+---
+
+# Buddies API
+
+Create and interact with virtual buddies. Each authenticated user can own up to 20 buddies. All endpoints require session authentication.
+
+## List buddies
+
+```http
+GET /api/buddies
+```
+
+Returns all buddies owned by the authenticated user, ordered by creation date (oldest first).
+
+### Response
+
+```json
+{
+  "buddies": [
+    {
+      "id": "clx1abc2d0001ab12example",
+      "userId": "user_abc",
+      "name": "Sparky",
+      "type": "dragon",
+      "level": 1,
+      "xp": 0,
+      "energy": 100,
+      "happiness": 100,
+      "lastFed": "2026-04-09T04:00:00.000Z",
+      "lastPlayed": "2026-04-09T04:00:00.000Z",
+      "createdAt": "2026-04-09T04:00:00.000Z",
+      "updatedAt": "2026-04-09T04:00:00.000Z"
+    }
+  ]
+}
+```
+
+### Buddy object fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Unique buddy identifier |
+| `userId` | string | ID of the owning user |
+| `name` | string | Display name (max 30 characters) |
+| `type` | string | Buddy type: `crab`, `robot`, `ghost`, `dragon`, or `alien` |
+| `level` | integer | Current level (starts at 1) |
+| `xp` | integer | Experience points accumulated |
+| `energy` | integer | Energy level (0–100) |
+| `happiness` | integer | Happiness level (0–100) |
+| `lastFed` | string | ISO 8601 timestamp of last feed action |
+| `lastPlayed` | string | ISO 8601 timestamp of last play action |
+| `createdAt` | string | ISO 8601 timestamp when the buddy was created |
+| `updatedAt` | string | ISO 8601 timestamp of last update |
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | Unauthorized — no valid session |
+
+---
+
+## Hatch a buddy
+
+```http
+POST /api/buddies
+```
+
+Creates a new buddy for the authenticated user.
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | string | Yes | Display name for the buddy (max 30 characters) |
+| `type` | string | Yes | Buddy type: `crab`, `robot`, `ghost`, `dragon`, or `alien` |
+
+### Example request
+
+```json
+{
+  "name": "Sparky",
+  "type": "dragon"
+}
+```
+
+### Response (201)
+
+```json
+{
+  "buddy": {
+    "id": "clx1abc2d0001ab12example",
+    "userId": "user_abc",
+    "name": "Sparky",
+    "type": "dragon",
+    "level": 1,
+    "xp": 0,
+    "energy": 100,
+    "happiness": 100,
+    "lastFed": "2026-04-09T04:00:00.000Z",
+    "lastPlayed": "2026-04-09T04:00:00.000Z",
+    "createdAt": "2026-04-09T04:00:00.000Z",
+    "updatedAt": "2026-04-09T04:00:00.000Z"
+  }
+}
+```
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | Invalid name (missing, non-string, or exceeds 30 characters) |
+| 400 | Invalid buddy type (must be one of the valid types) |
+| 400 | Maximum of 20 buddies reached |
+| 400 | Invalid request body |
+| 401 | Unauthorized — no valid session |
+
+---
+
+## Feed or play with a buddy
+
+```http
+PATCH /api/buddies/{buddyId}
+```
+
+Perform an action on a buddy. The buddy must belong to the authenticated user.
+
+### Path parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `buddyId` | string | The buddy's unique identifier |
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `action` | string | Yes | Action to perform: `feed` or `play` |
+
+### Action effects
+
+| Action | Effect |
+|--------|--------|
+| `feed` | Energy +20 (capped at 100), happiness +10 (capped at 100), XP +10, updates `lastFed` |
+| `play` | Happiness +15 (capped at 100), XP +25, updates `lastPlayed` |
+
+### Example request
+
+```json
+{
+  "action": "feed"
+}
+```
+
+### Response
+
+```json
+{
+  "buddy": {
+    "id": "clx1abc2d0001ab12example",
+    "userId": "user_abc",
+    "name": "Sparky",
+    "type": "dragon",
+    "level": 1,
+    "xp": 10,
+    "energy": 100,
+    "happiness": 100,
+    "lastFed": "2026-04-09T05:00:00.000Z",
+    "lastPlayed": "2026-04-09T04:00:00.000Z",
+    "createdAt": "2026-04-09T04:00:00.000Z",
+    "updatedAt": "2026-04-09T05:00:00.000Z"
+  }
+}
+```
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | Invalid action (must be `feed` or `play`) |
+| 400 | Invalid request body |
+| 401 | Unauthorized — no valid session |
+| 404 | Buddy not found or does not belong to the authenticated user |
+
+---
+
+## Delete a buddy
+
+```http
+DELETE /api/buddies/{buddyId}
+```
+
+Permanently deletes a buddy. The buddy must belong to the authenticated user.
+
+### Path parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `buddyId` | string | The buddy's unique identifier |
+
+### Response
+
+```json
+{
+  "success": true
+}
+```
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | Unauthorized — no valid session |
+| 404 | Buddy not found or does not belong to the authenticated user |
