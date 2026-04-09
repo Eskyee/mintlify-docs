@@ -158,7 +158,8 @@
           "api-reference/partner",
           "api-reference/generate-video",
           "api-reference/generate-music",
-          "api-reference/buddies"
+          "api-reference/buddies",
+          "api-reference/solana"
         ]
       },
       {
