@@ -294,7 +294,28 @@ export async function GET(req: NextRequest) {
 }
 ```
 
-## Agent Payment Flow
+## Paying a Solana recipient
+
+You can send payments to Solana wallet addresses through the `pay` action. Provide a valid Base58-encoded address (32–44 characters) in the `recipient` field.
+
+```bash
+curl -X POST https://agentbot.sh/api/x402 \
+  -H "Content-Type: application/json" \
+  -H "Cookie: next-auth.session-token=YOUR_SESSION" \
+  -d '{
+    "agentId": "inst_abc123",
+    "action": "pay",
+    "amount": 5.0,
+    "currency": "USDC",
+    "recipient": "DRpbCBMxVnDK7maPGv7USk2Lgt2GXEimhi82kUhP2GBn"
+  }'
+```
+
+The gateway validates the address format before processing. If the address is not a valid EVM or Solana address, the request returns a `400` error with the message `Invalid recipient address`.
+
+<Note>Solana support is limited to the `pay` action. Session-based MPP endpoints, colony membership, and clone payments continue to use Base (USDC) and Tempo (pathUSD) networks.</Note>
+
+## Agent payment flow
 
 Agents can make paid API calls:
 
@@ -398,7 +419,13 @@ Agent wallets on the Tempo chain are created automatically during provisioning a
 
 ### Solana
 
-Solana addresses are supported as payment recipients in the `pay` action. Provide a valid Base58-encoded Solana address (32–44 characters) in the `recipient` field.
+Solana addresses are supported as payment recipients in the `pay` action. To use a Solana address:
+
+1. Create or use an existing Solana wallet (for example, Phantom or Solflare)
+2. Copy your wallet's Base58-encoded public address
+3. Pass it as the `recipient` in the [pay action](/api-reference/x402#pay)
+
+The address must be between 32 and 44 characters using Base58 encoding. Example: `DRpbCBMxVnDK7maPGv7USk2Lgt2GXEimhi82kUhP2GBn`.
 
 ## Troubleshooting
 
