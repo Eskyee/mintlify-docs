@@ -123,8 +123,31 @@ In this example, `t1` and `t2` are read-only and run in parallel. `t3` is mutati
 | 401 | Unauthorized — missing bearer token |
 | 403 | Forbidden — invalid bearer token |
 | 500 | Internal server error |
+| 502 | Backend unreachable — the Next.js proxy could not connect to the backend orchestration service. Returns `{ "error": "...", "detail": "..." }`. |
 
 <Note>Each tool object in the array must include both `id` and `toolName`. The API validates these fields and returns a `400` error if any tool object is missing either field.</Note>
+
+### Tool output structure
+
+Each tool result's `output` field contains a `ToolExecutionResult` object with the following fields:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `output` | string | The tool's standard output |
+| `error` | string \| undefined | Error output, if any |
+| `exitCode` | number \| undefined | Process exit code (for shell-based tools) |
+| `truncated` | boolean | `true` if the output exceeded the size limit and was truncated |
+
+### Safety limits
+
+The tool executor enforces these limits during batch execution:
+
+| Limit | Value | Description |
+|-------|-------|-------------|
+| Output size | 100 KB | Tool output exceeding 100 KB is truncated. The `truncated` field in the result is set to `true`. |
+| Default timeout | 30 seconds | Maximum execution time per tool call |
+| Extended timeout | 120 seconds | Applied to long-running tools such as `bash`, `exec`, and `shell` |
+| Directory traversal | Blocked | Tool inputs containing path traversal patterns (e.g. `../`) that attempt to escape the working directory are rejected |
 
 ### Serial failure behavior
 
@@ -267,10 +290,10 @@ For `bash`, `exec`, and `shell` tools, the classifier inspects the `command` inp
 
 | Category | Commands |
 |----------|----------|
-| Filesystem read | `cat`, `head`, `tail`, `ls`, `find`, `stat`, `wc`, `du`, `df` |
-| Text processing | `grep`, `sort`, `uniq`, `cut`, `awk` |
+| Filesystem read | `cat`, `head`, `tail`, `less`, `more`, `ls`, `dir`, `tree`, `find`, `locate`, `file`, `stat`, `wc`, `du`, `df` |
+| Text processing | `grep`, `egrep`, `fgrep`, `ag`, `rg`, `sort`, `uniq`, `cut`, `awk` |
 | Git read-only | `git status`, `git diff`, `git log`, `git show`, `git branch`, `git tag`, `git remote`, `git blame`, `git reflog` |
-| System info | `echo`, `pwd`, `whoami`, `date`, `uptime`, `hostname`, `env`, `which` |
+| System info | `echo`, `printf`, `pwd`, `whoami`, `id`, `date`, `uptime`, `uname`, `hostname`, `env`, `printenv`, `which`, `whereis` |
 | Package info | `npm list`, `npm view`, `npm outdated`, `pip list`, `pip show` |
 | Docker read-only | `docker ps`, `docker images`, `docker logs`, `docker inspect`, `docker stats` |
 | HTTP read | `curl` (without `-X`, `--request`, or `-d` flags) |
