@@ -1658,6 +1658,71 @@ If the agent service is already running, returns the existing deployment details
 | 401 | Unauthorized |
 | 500 | Deployment failed. When the Render API is not reachable, the error message indicates that provisioning is unavailable. Check the [backend health endpoint](/api-reference/health#backend-health-check) to verify Render API availability before deploying. |
 
+## Provision on Railway (backend)
+
+```http
+POST /api/railway/provision
+```
+
+Provisions a new agent service on Railway via the Railway GraphQL API. This endpoint creates a Railway service, configures environment variables, mounts a persistent volume, generates a public domain, and triggers a deployment. Requires bearer token authentication.
+
+<Note>This endpoint exists because direct calls from Vercel serverless functions to the Railway GraphQL API return `403`. The backend runs on Railway, so its outbound requests to the Railway API succeed. The endpoint requires `RAILWAY_API_KEY`, `RAILWAY_PROJECT_ID`, and `RAILWAY_ENVIRONMENT_ID` environment variables to be configured.</Note>
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `agentId` | string | Yes | Agent identifier. Must be a 16-character lowercase hex string. |
+| `plan` | string | No | Plan tier for resource allocation. Defaults to `solo`. Options: `underground`, `solo`, `collective`, `label`, `network`. |
+
+### Plan resource limits
+
+Each plan tier maps to specific Railway service resource limits:
+
+| Plan | Memory | CPU |
+|------|--------|-----|
+| `underground` | 2048 MB | 1 |
+| `solo` | 2048 MB | 1 |
+| `collective` | 4096 MB | 2 |
+| `label` | 8192 MB | 4 |
+| `network` | 16384 MB | 4 |
+
+### Response
+
+```json
+{
+  "success": true,
+  "agentId": "a1b2c3d4e5f6g7h8",
+  "url": "https://agentbot-agent-a1b2c3d4e5f6g7h8.up.railway.app",
+  "serviceId": "srv-abc123def456",
+  "status": "deploying"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `success` | boolean | Whether provisioning succeeded |
+| `agentId` | string | Agent identifier |
+| `url` | string | Public URL for the provisioned agent service |
+| `serviceId` | string | Railway service identifier |
+| `status` | string | Always `deploying` on success. The service may take a few minutes to become available. |
+
+<Note>The provisioned service is configured with a persistent volume mounted at `/data`, a health check on `/health` with a 60-second timeout, and an `ON_FAILURE` restart policy with up to 10 retries. Environment variable injection retries once on failure with a 2-second delay.</Note>
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | `agentId required` — the `agentId` field is missing or not a string |
+| 400 | `Invalid agentId format` — the `agentId` does not match the expected 16-character hex format |
+| 401 | Unauthorized — missing or invalid bearer token |
+| 502 | Railway provisioning failed. The error message contains details from the Railway API response. |
+| 503 | `Railway not configured on this backend` — the `RAILWAY_API_KEY` environment variable is not set |
+
+### Idempotency
+
+If a Railway service with the same name already exists (for example, after a partial failure), the endpoint looks up the existing service ID and continues with environment variable injection and deployment. This makes the endpoint safe to retry.
+
 ## OpenClaw version (backend)
 
 ```http
