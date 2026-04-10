@@ -1,0 +1,45 @@
+---
+title: Credits API
+description: "Check your credit balance, referral code, and plan information"
+---
+
+# Credits API
+
+Retrieve your current credit balance, referral statistics, and plan details.
+
+## Get credit balance
+
+```http
+GET /api/credits
+```
+
+Returns the authenticated user's credit balance, referral code, referral count, and current plan. Requires session authentication.
+
+### Response
+
+```json
+{
+  "credits": 50,
+  "referralCode": "abc123",
+  "referralCount": 3,
+  "plan": "solo"
+}
+```
+
+### Response fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `credits` | number | Total available credits (includes referral credits and claimed credits) |
+| `referralCode` | string \| null | Your referral code, or `null` if not set |
+| `referralCount` | number | Number of successful referrals |
+| `plan` | string | Current subscription plan (e.g. `free`, `solo`, `collective`, `label`, `network`) |
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | Unauthorized — no valid session |
+| 500 | Internal server error. Returns `{ "credits": 0 }` as a fallback. |
+
+<Note>Credits from token holder claims (see [Claim API](/api-reference/claim)) are added to the same `credits` balance returned by this endpoint. Use the [Referrals API](/api-reference/referrals) for a detailed breakdown of referral-specific statistics.</Note>

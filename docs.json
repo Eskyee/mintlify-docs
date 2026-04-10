@@ -166,6 +166,8 @@
           "api-reference/generate-music",
           "api-reference/buddies",
           "api-reference/solana",
+          "api-reference/claim",
+          "api-reference/credits",
           "api-reference/feedback"
         ]
       },
