@@ -175,7 +175,7 @@ Requires session authentication. Returns time-series trends for deployments, ski
 GET /api/dashboard/bootstrap
 ```
 
-Requires session authentication. Returns lightweight initialization data for the dashboard, including referral credits, plan information, and OpenClaw connection details. The `gatewayToken` is the authenticated user's own token, enabling automatic pairing with their agent instance.
+Requires session authentication. Returns lightweight initialization data for the dashboard, including referral credits, plan information, OpenClaw connection details, and community reward status. The `gatewayToken` is the authenticated user's own token, enabling automatic pairing with their agent instance.
 
 ### Response
 
@@ -187,7 +187,23 @@ Requires session authentication. Returns lightweight initialization data for the
   "plan": "solo",
   "openclawUrl": "https://openclaw-agent-abc.up.railway.app",
   "openclawInstanceId": "inst_abc123",
-  "gatewayToken": "a1b2c3d4e5f6..."
+  "gatewayToken": "a1b2c3d4e5f6...",
+  "communityRewards": {
+    "connected": true,
+    "walletAddress": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
+    "claimed": true,
+    "currentTier": {
+      "id": "builder",
+      "label": "Builder",
+      "credits": 250,
+      "minBalance": 10000
+    },
+    "balanceUi": 15000,
+    "creditsClaimed": 250,
+    "claimedAt": "2026-04-10T12:00:00.000Z",
+    "availability": "live",
+    "detail": null
+  }
 }
 ```
 
@@ -200,6 +216,22 @@ Requires session authentication. Returns lightweight initialization data for the
 | `openclawUrl` | string \| null | OpenClaw instance URL. Used as the base origin for [control UI links](/api-reference/gateway#control-ui-url-resolution) instead of the platform default. |
 | `openclawInstanceId` | string \| null | OpenClaw instance identifier |
 | `gatewayToken` | string \| null | The authenticated user's gateway token for auto-pairing with their agent instance, or `null` if no token is registered. Included in control UI URL hash fragments for automatic authentication. |
+| `communityRewards` | object | Community reward status for the authenticated user. See fields below. |
+| `communityRewards.connected` | boolean | `true` if the user has linked a Solana wallet for rewards |
+| `communityRewards.walletAddress` | string \| null | The linked Solana wallet address, or `null` if not connected |
+| `communityRewards.claimed` | boolean | `true` if the user has already claimed community rewards |
+| `communityRewards.currentTier` | object \| null | The reward tier matching the wallet's current balance, or `null` if below all thresholds |
+| `communityRewards.currentTier.id` | string | Tier identifier (`whale`, `builder`, or `holder`) |
+| `communityRewards.currentTier.label` | string | Tier display name |
+| `communityRewards.currentTier.credits` | number | Credits granted at this tier |
+| `communityRewards.currentTier.minBalance` | number | Minimum token balance required for this tier |
+| `communityRewards.balanceUi` | number \| null | Human-readable token balance, or `null` when unavailable |
+| `communityRewards.creditsClaimed` | number | Total credits claimed through community rewards (0 if unclaimed) |
+| `communityRewards.claimedAt` | string \| null | ISO 8601 timestamp of when the claim was made, or `null` |
+| `communityRewards.availability` | string | `"live"` when Solana RPC is reachable, `"degraded"` when it is not |
+| `communityRewards.detail` | string \| null | Human-readable explanation when `availability` is `"degraded"` |
+
+<Note>When the Solana RPC endpoint is temporarily unreachable, the `communityRewards` field degrades gracefully instead of failing the entire bootstrap request. The `availability` field changes to `"degraded"` and `detail` describes the issue. Balance and tier data may be unavailable in this state.</Note>
 
 ### Errors
 
