@@ -1,11 +1,11 @@
 ---
 title: Solana API
-description: "Look up Solana wallet balances and tokens, get live SOL price data, and manage custom RPC endpoints"
+description: "Look up Solana wallet balances and tokens, verify holder benefits, get live SOL price data, and manage custom RPC endpoints"
 ---
 
 # Solana API
 
-Query Solana wallet balances and token holdings, fetch live SOL market data, and save per-user RPC endpoint configurations.
+Query Solana wallet balances and token holdings, verify Agentbot token holder benefits for baseFM, fetch live SOL market data, and save per-user RPC endpoint configurations.
 
 ## Get SOL price
 
@@ -127,6 +127,76 @@ Tokens not in this list display a truncated mint address as the symbol.
 |------|-------------|
 | 400 | Invalid Solana address. The `address` must be a base58-encoded string between 32 and 44 characters. |
 | 500 | Failed to fetch wallet data from the Solana RPC endpoint |
+
+---
+
+## Verify holder benefits
+
+```http
+GET /api/solana/verify
+```
+
+Checks the Agentbot token balance for a Solana wallet address and returns the holder's baseFM benefit tier. No authentication required.
+
+### Query parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `address` | string | Yes | Solana wallet address (base58-encoded, 32–44 characters). Invalid addresses return a `400` error. |
+
+### Response
+
+```json
+{
+  "address": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
+  "token": "9V4m199eohMgy7bB7MbXhDacUur6NzpgZVrhfux5pump",
+  "balance": 15000,
+  "eligible": true,
+  "benefits": [
+    { "tier": "Holder", "perk": "Access to exclusive baseFM DJ streams" },
+    { "tier": "Builder", "perk": "Early access to new features + premium playlists" }
+  ],
+  "tiers": [
+    { "name": "Holder", "min": 1000, "credits": 50, "basefm": "Exclusive DJ streams" },
+    { "name": "Builder", "min": 10000, "credits": 100, "basefm": "Early features + premium playlists" },
+    { "name": "Whale", "min": 100000, "credits": 200, "basefm": "VIP chat + voting + revenue share" }
+  ]
+}
+```
+
+### Response fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `address` | string | The queried wallet address |
+| `token` | string | Agentbot token mint address on Solana |
+| `balance` | number | Token balance in human-readable units |
+| `eligible` | boolean | `true` when balance is at least 1,000 tokens (Holder tier minimum) |
+| `benefits` | array | List of benefit tiers the wallet qualifies for based on its current balance |
+| `benefits[].tier` | string | Tier name (`Holder`, `Builder`, or `Whale`) |
+| `benefits[].perk` | string | Description of the perk granted by this tier |
+| `tiers` | array | All available benefit tiers regardless of the wallet's balance |
+| `tiers[].name` | string | Tier name |
+| `tiers[].min` | number | Minimum token balance required for this tier |
+| `tiers[].credits` | number | Number of platform credits granted at this tier |
+| `tiers[].basefm` | string | baseFM perk description for this tier |
+
+### Benefit tiers
+
+| Tier | Minimum balance | Credits | baseFM perk |
+|------|----------------|---------|-------------|
+| **Holder** | 1,000 | 50 | Access to exclusive baseFM DJ streams |
+| **Builder** | 10,000 | 100 | Early access to new features + premium playlists |
+| **Whale** | 100,000 | 200 | VIP community chat + voting rights + revenue share |
+
+<Note>A wallet qualifies for all tiers at or below its balance. For example, a wallet with 15,000 tokens qualifies for both Holder and Builder benefits. The `benefits` array only includes tiers the wallet meets; the `tiers` array always returns all three tiers.</Note>
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | Invalid Solana address. The `address` must be a base58-encoded string between 32 and 44 characters. |
+| 502 | Failed to communicate with the Solana RPC endpoint |
 
 ---
 
