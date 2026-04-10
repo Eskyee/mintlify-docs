@@ -360,6 +360,33 @@ Requires session authentication. Removes a skill from an agent.
 | Fireworks AI | `/fireworks-ai` | Access Fireworks AI models for generation and reasoning with high-throughput inference |
 | Bedrock Mantle | `/bedrock-mantle` | Use Amazon Bedrock Mantle models with automatic inference profile discovery |
 
+## Production availability
+
+The following skill routes are demo-only and are disabled in production by default:
+
+- Booking Settlement (`/booking-settlement`)
+- Demo Submitter (`/demo-submitter`)
+- Event Scheduler (`/event-scheduler`)
+- Event Ticketing (`/event-ticketing`)
+- Festival Finder (`/festival-finder`)
+- Groupie Manager (`/groupie-manager`)
+- Instant Split (`/instant-split`)
+- Royalty Tracker (`/royalty-tracker`)
+- Setlist Oracle (`/setlist-oracle`)
+- Track Archaeologist (`/track-archaeologist`)
+- Venue Finder (`/venue-finder`)
+
+When called in production without the `ENABLE_DEMO_SKILLS` environment variable set to `true`, these routes return `501` with the following response:
+
+```json
+{
+  "error": "disabled_in_production",
+  "message": "{skill-name} is a demo route and is disabled in production."
+}
+```
+
+To enable demo skill routes in production, set the `ENABLE_DEMO_SKILLS=true` environment variable. In non-production environments, all skill routes are available without this flag.
+
 ## Use a skill
 
 ```http
@@ -550,3 +577,4 @@ Execute royalty splits instantly in USDC on Base.
 | 400 | Invalid request parameters |
 | 404 | Skill not found |
 | 500 | Internal error |
+| 501 | Demo skill route is disabled in production. Set `ENABLE_DEMO_SKILLS=true` to enable. See [production availability](#production-availability). |

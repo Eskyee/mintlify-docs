@@ -808,7 +808,7 @@ Returns paginated messages for an agent. Requires authentication and ownership.
 GET /api/agents/:id/stats
 ```
 
-Returns live service metrics when available, with a mock fallback.
+Returns live service metrics when available. When the backend is unavailable, the endpoint returns a `502` error with null metric fields instead of fabricated data.
 
 ### Response (live)
 
@@ -834,24 +834,34 @@ Returns live service metrics when available, with a mock fallback.
 }
 ```
 
-### Response (mock fallback)
+### Response (degraded — 502)
 
-When the backend is unavailable, mock data is returned with `"status": "mock"`:
+When the backend is unavailable, the endpoint returns `502` with `"status": "degraded"` and all metric fields set to `null`:
 
 ```json
 {
+  "error": "Agent stats temporarily unavailable",
   "stats": {
     "agentId": "agent_123",
-    "messagesProcessed": 1234,
-    "messagesPerHour": 456,
-    "averageResponseTime": 789,
-    "uptime": 12345,
-    "successRate": "95.42",
-    "errorRate": "4.58",
-    "timestamp": "2026-03-19T00:00:00Z"
+    "cpu": null,
+    "memory": null,
+    "memoryPercent": null,
+    "network": null,
+    "uptime": null,
+    "uptimeFormatted": null,
+    "status": "degraded",
+    "pids": null,
+    "messagesProcessed": null,
+    "messagesPerHour": null,
+    "averageResponseTime": null,
+    "successRate": null,
+    "errorRate": null
   },
-  "status": "mock"
+  "status": "degraded"
 }
+```
+
+<Warning>This endpoint no longer returns mock data when the backend is unavailable. Previous versions returned fabricated metrics with `"status": "mock"`. The endpoint now returns `502` with null fields so callers can distinguish between real metrics and a backend outage.</Warning>
 ```
 
 ## Agent status values
@@ -1255,6 +1265,33 @@ When the instance is unreachable, the response uses placeholder values:
 ```
 
 <Note>The `openclawVersion` field is omitted when the instance is unreachable. The `cpu` and `memory` fields currently return placeholder values and will report actual resource metrics in a future release.</Note>
+
+## Sync agent to gateway
+
+```http
+POST /api/agents/:id/sync
+```
+
+Syncs agent skills, memories, and files to the OpenClaw gateway. Requires session authentication and ownership of the agent. The endpoint verifies that the authenticated user owns the agent by checking the database before proceeding with the sync.
+
+### Response
+
+```json
+{
+  "success": true,
+  "synced": true
+}
+```
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | Unauthorized — no valid session |
+| 404 | Agent not found — the agent does not exist or does not belong to the authenticated user |
+| 500 | Sync failed |
+
+<Note>This endpoint enforces strict ownership. The agent must belong to the authenticated user's account. Requests for agents owned by other users return `404` to prevent information leakage about agent IDs.</Note>
 
 ## Get agent gateway token
 
