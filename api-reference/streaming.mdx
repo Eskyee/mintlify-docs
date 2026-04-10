@@ -60,7 +60,10 @@ Returns all currently active Mux live streams. No authentication required.
 POST /api/basefm/streams
 ```
 
-Creates a new Mux live stream. Access is gated by RAVE token balance — the caller's wallet must hold at least 1,250,000 RAVE tokens on the Base network.
+Creates a new Mux live stream. Access is granted if the caller meets either of the following conditions:
+
+- The wallet holds at least **1,250,000 RAVE** tokens on the Base network, or
+- The caller has an active **community guest pass** (available to Builder and Whale tier claimed holders via the community program)
 
 <Note>The `wallet` address used for RAVE token verification must be a Coinbase Smart Wallet on Base. The platform enforces `smartWalletOnly` as its connector policy — injected wallets (such as MetaMask) are not supported for DJ streaming.</Note>
 
@@ -84,7 +87,8 @@ Creates a new Mux live stream. Access is gated by RAVE token balance — the cal
     "rtmpUrl": "rtmp://global-live.mux.com:5222/app",
     "fullRtmpUrl": "rtmp://global-live.mux.com:5222/app/sk-ab12-cd34-ef56",
     "playbackId": "xYz789",
-    "status": "created"
+    "status": "created",
+    "accessGrantedBy": "rave"
   },
   "obsSettings": {
     "server": "rtmp://global-live.mux.com:5222/app",
@@ -106,6 +110,7 @@ Creates a new Mux live stream. Access is gated by RAVE token balance — the cal
 | `stream.rtmpUrl` | string | RTMP ingest server URL |
 | `stream.fullRtmpUrl` | string | Full RTMP URL including stream key (for OBS) |
 | `stream.playbackId` | string \| null | Mux playback ID for viewers |
+| `stream.accessGrantedBy` | string | How access was granted. Either `rave` (token balance) or `community-pass` (Builder/Whale community program perk). |
 | `obsSettings.recommended` | object | Recommended OBS audio encoding settings |
 
 ### Errors
@@ -113,7 +118,7 @@ Creates a new Mux live stream. Access is gated by RAVE token balance — the cal
 | Code | Description |
 |------|-------------|
 | 400 | Wallet address required |
-| 403 | Insufficient RAVE tokens. The wallet must hold at least 1,250,000 RAVE. |
+| 403 | Insufficient RAVE tokens or community guest pass. The wallet must hold at least 1,250,000 RAVE, or the authenticated user must have a Builder or Whale tier community claim. |
 | 500 | Mux is not configured or stream creation failed |
 
 ## Generate video

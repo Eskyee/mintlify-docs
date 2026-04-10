@@ -85,6 +85,8 @@ POST /api/claim
 
 Verifies wallet ownership via a signed message, checks the caller's Solana token balance, and grants credits based on the matching tier. Each wallet can claim once. If no authenticated session exists, an account is created automatically from the wallet address.
 
+A successful claim also grants a **Founding Community** badge and enrolls the wallet in the community program. Builder and Whale tier holders unlock additional perks such as governance voting rights and a baseFM guest pass. See the [community program API](/api-reference/community-program) for details.
+
 ### Request body
 
 | Field | Type | Required | Description |

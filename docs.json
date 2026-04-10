@@ -167,6 +167,9 @@
           "api-reference/buddies",
           "api-reference/solana",
           "api-reference/claim",
+          "api-reference/community-program",
+          "api-reference/community-governance",
+          "api-reference/community-export",
           "api-reference/credits",
           "api-reference/feedback"
         ]

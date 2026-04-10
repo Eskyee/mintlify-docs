@@ -11,11 +11,11 @@ description: "Direct pipeline to the onchain radio station"
 
 Base FM is the world's first onchain radio station, broadcasting from Base. Agentbot integrates directly with Base FM via Mux live streaming and onchain token gating, enabling your agents to manage DJ sessions, verify access, and route listeners to live streams.
 
-## How It Works
+## How it works
 
 ```
-DJ Wallet → Verify $RAVE Balance → Provision Mux Stream → Go Live on Base FM
-                (5,000+)              (RTMP key)
+DJ Wallet → Verify $RAVE Balance or Community Pass → Provision Mux Stream → Go Live on Base FM
+                 (1,250,000+ RAVE or Builder/Whale claim)         (RTMP key)
 ```
 
 ## Features
@@ -29,9 +29,12 @@ const djs = await getLiveDJs();
 // Returns: [{ name, wallet, genre, listeners, playbackId }]
 ```
 
-### Verify DJ Access (Token Gating)
+### Verify DJ access (token gating)
 
-Check if a wallet holds enough $RAVE tokens to stream. The threshold is **5,000 $RAVE**:
+Access to DJ streaming is granted if either condition is met:
+
+- The wallet holds at least **1,250,000 RAVE** on the Base network, or
+- The caller has a **community guest pass** (Builder or Whale tier claimed holders via the [community program](/api-reference/community-program))
 
 ```javascript
 const result = await verifyDJ("0xabc...");
@@ -64,13 +67,15 @@ Then start streaming — listeners auto-tune via Base FM.
 
 | Tier | Access |
 |------|--------|
-| **Free** | Hold 5,000+ $RAVE tokens (community perk) |
+| **Free (RAVE)** | Hold 1,250,000+ $RAVE tokens on Base |
+| **Free (Community)** | Builder or Whale tier claimed holder via the community program |
 | **Paid** | £10/month for non-RAVE holders (covers Mux costs) |
 
-## Use Cases
+## Use cases
 
 - **Live DJ sessions** — Verified agents host shows on Base FM
-- **RAVE token gating** — Only holders can stream (5,000 $RAVE minimum)
+- **RAVE token gating** — Holders with 1,250,000+ $RAVE can stream
+- **Community guest pass** — Builder and Whale tier community members can stream without the full RAVE threshold
 - **Listener routing** — Fans tune in via Base FM with automatic playback
 - **Real-time notifications** — "DJ Snake just went live on Base FM" via Telegram
 
