@@ -930,7 +930,7 @@ Starts a stopped agent container using `docker start`.
 | 403 | Both | Forbidden — you do not own this agent |
 | 404 | Backend | Agent not found |
 | 500 | Both | Start failed |
-| 503 | Web proxy | Managed runtime controls are temporarily disabled |
+| 503 | Web proxy | Managed runtime controls are disabled, or service/config resolution failed |
 
 ### Stop agent
 
@@ -966,7 +966,7 @@ Stops the agent container using `docker stop`. The container retains its data an
 | 403 | Both | Forbidden — you do not own this agent |
 | 404 | Backend | Agent not found |
 | 500 | Both | Stop failed |
-| 503 | Web proxy | Managed runtime controls are temporarily disabled |
+| 503 | Web proxy | Managed runtime controls are disabled, or service/config resolution failed |
 
 ### Restart agent
 
@@ -1009,7 +1009,7 @@ POST /api/agents/:id/restart
 | 403 | Both | Forbidden — you do not own this agent |
 | 404 | Backend | Agent not found |
 | 500 | Both | Restart failed |
-| 503 | Web proxy | Managed runtime controls are temporarily disabled |
+| 503 | Web proxy | Managed runtime controls are disabled, or service/config resolution failed |
 
 ### Update agent image
 
@@ -1071,7 +1071,7 @@ Triggers an image update on the backend. Before replacing the service, the endpo
 | 403 | Both | Forbidden — you do not own this agent |
 | 404 | Backend | Agent not found |
 | 500 | Both | Update failed. When automatic rollback succeeds on the backend, the agent continues running on the previous image. |
-| 503 | Web proxy | Managed runtime controls are temporarily disabled |
+| 503 | Web proxy | Managed runtime controls are disabled, or service/config resolution failed |
 
 ### Repair agent
 
@@ -1109,7 +1109,7 @@ Repairs an agent by reconfiguring its environment and restarting the service.
 | 403 | Both | Forbidden — you do not own this agent |
 | 404 | Backend | Agent not found |
 | 500 | Both | Repair failed |
-| 503 | Web proxy | Managed runtime controls are temporarily disabled |
+| 503 | Web proxy | Managed runtime controls are disabled, or service/config resolution failed |
 
 ### Reset agent memory
 
@@ -1143,7 +1143,7 @@ POST /api/agents/:id/reset-memory
 | 403 | Both | Forbidden — you do not own this agent |
 | 404 | Backend | Agent not found |
 | 500 | Both | Reset failed |
-| 503 | Web proxy | Managed runtime controls are temporarily disabled |
+| 503 | Web proxy | Managed runtime controls are disabled, or service/config resolution failed |
 
 ### Lifecycle error responses
 
@@ -1173,7 +1173,7 @@ The update endpoint is the exception and returns:
 }
 ```
 
-All web proxy lifecycle endpoints return `503` when managed runtime controls are disabled:
+All web proxy lifecycle endpoints return `503` when managed runtime controls are disabled or when the platform cannot resolve the agent's service configuration:
 
 ```json
 {
@@ -1182,14 +1182,23 @@ All web proxy lifecycle endpoints return `503` when managed runtime controls are
 }
 ```
 
+When service or configuration resolution fails, the error message describes the specific issue:
+
+```json
+{
+  "success": false,
+  "error": "RAILWAY_ENVIRONMENT_ID not configured"
+}
+```
+
 | Code | Source | Description |
 |------|--------|-------------|
 | 401 | Both | Unauthorized — missing or invalid authentication |
 | 403 | Both | Forbidden — authenticated user does not own this agent. The backend returns `{ "error": "Forbidden — you do not own this agent" }`. The web proxy returns `{ "success": false, "error": "..." }`. |
 | 404 | Backend | Agent not found — no metadata exists for this agent ID |
-| 500 | Backend | Internal server error (for example, Render API unavailable or service operation failed) |
+| 500 | Both | The lifecycle action failed. On the backend, this means the Docker command or Railway mutation failed. On the web proxy, this means the Railway API call succeeded in resolving the service but the mutation itself failed. |
 | 502 | Web proxy | Backend service unavailable |
-| 503 | Web proxy | Managed runtime controls are temporarily disabled. This applies to all lifecycle actions: start, stop, restart, update, repair, and reset-memory. |
+| 503 | Web proxy | Managed runtime controls are disabled, or the platform could not resolve the agent's managed service. This applies to all lifecycle actions: start, stop, restart, update, repair, and reset-memory. See [503 error details](/api-reference/maintenance#503-error-details) for the full list of possible error messages. |
 
 ## Get instance details
 

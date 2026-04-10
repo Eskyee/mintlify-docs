@@ -163,8 +163,8 @@ Requires session authentication and instance ownership. Triggers a deploy of the
 |------|-------------|
 | 401 | Unauthorized — no valid session |
 | 403 | Forbidden — the authenticated user does not own the requested instance |
-| 500 | Failed to start the service |
-| 503 | Managed runtime controls are disabled |
+| 500 | Failed to start the service (for example, the Railway deploy mutation failed) |
+| 503 | Managed runtime controls are disabled, or service/config resolution failed. See [503 error details](#503-error-details) for the full list of causes. |
 
 ---
 
@@ -197,8 +197,8 @@ Requires session authentication and instance ownership. Stops (suspends) the use
 |------|-------------|
 | 401 | Unauthorized — no valid session |
 | 403 | Forbidden — the authenticated user does not own the requested instance |
-| 500 | Failed to stop the service |
-| 503 | Managed runtime controls are disabled |
+| 500 | Failed to stop the service (for example, the Railway suspend mutation failed) |
+| 503 | Managed runtime controls are disabled, or service/config resolution failed. See [503 error details](#503-error-details) for the full list of causes. |
 
 ---
 
@@ -231,8 +231,8 @@ Requires session authentication and instance ownership. Restarts the user's agen
 |------|-------------|
 | 401 | Unauthorized — no valid session |
 | 403 | Forbidden — the authenticated user does not own the requested instance |
-| 500 | Failed to restart the service |
-| 503 | Managed runtime controls are disabled |
+| 500 | Failed to restart the service (for example, the Railway restart mutation failed) |
+| 503 | Managed runtime controls are disabled, or service/config resolution failed. See [503 error details](#503-error-details) for the full list of causes. |
 
 ---
 
@@ -267,8 +267,8 @@ The repair uses the user's per-user gateway token from the database. If no token
 |------|-------------|
 | 401 | Unauthorized — no valid session |
 | 403 | Forbidden — the authenticated user does not own the requested instance |
-| 500 | Failed to repair the service |
-| 503 | Managed runtime controls are disabled |
+| 500 | Failed to repair the service (for example, the environment variable update or Railway restart mutation failed) |
+| 503 | Managed runtime controls are disabled, or service/config resolution failed. See [503 error details](#503-error-details) for the full list of causes. |
 
 ---
 
@@ -304,7 +304,7 @@ Requires session authentication and instance ownership. Wipes all stored agent m
 | 401 | Unauthorized — no valid session |
 | 403 | Forbidden — the authenticated user does not own the requested instance |
 | 500 | Failed to reset agent memory or restart the service |
-| 503 | Managed runtime controls are disabled |
+| 503 | Managed runtime controls are disabled, or service/config resolution failed. See [503 error details](#503-error-details) for the full list of causes. |
 
 ---
 
@@ -347,7 +347,7 @@ Requires session authentication and instance ownership. Updates the agent contai
 | 401 | Unauthorized — no valid session |
 | 403 | Forbidden — the authenticated user does not own the requested instance |
 | 500 | Failed to update the service |
-| 503 | Managed runtime controls are disabled |
+| 503 | Managed runtime controls are disabled, or service/config resolution failed. See [503 error details](#503-error-details) for the full list of causes. |
 
 ---
 
@@ -383,6 +383,46 @@ Requires session authentication and instance ownership. Returns the gateway toke
 |------|-------------|
 | 403 | Unauthorized — no valid session or the authenticated user does not own the requested instance |
 | 503 | No gateway token is configured on the platform |
+
+---
+
+## 503 error details
+
+All lifecycle endpoints (start, stop, restart, repair, reset-memory, and update) return `503` in two scenarios:
+
+### Controls disabled
+
+When managed runtime controls are disabled via the `ENABLE_OPENCLAW_CONTROLS` or `NEXT_PUBLIC_ENABLE_OPENCLAW_CONTROLS` environment variables, all lifecycle endpoints return:
+
+```json
+{
+  "success": false,
+  "error": "Managed runtime controls are temporarily disabled until the Railway control path is fully verified."
+}
+```
+
+### Service or configuration resolution failure
+
+When the platform cannot resolve the Railway service for the agent, lifecycle endpoints return `503` with a descriptive error message. This happens before the lifecycle action is attempted and indicates a configuration problem on the platform side, not an issue with the agent itself.
+
+```json
+{
+  "success": false,
+  "error": "RAILWAY_ENVIRONMENT_ID not configured"
+}
+```
+
+Possible error messages include:
+
+| Error message | Cause |
+|---------------|-------|
+| `RAILWAY_API_KEY not configured` | The platform's Railway API key is missing |
+| `RAILWAY_ENVIRONMENT_ID not configured` | The Railway environment ID is not set |
+| `RAILWAY_PROJECT_ID not configured` | The Railway project ID is not set |
+| `No managed service reference found` | The platform could not determine the service name to look up |
+| `Managed Railway service not found for <candidates>` | No matching service was found in the Railway project for the expected service name(s) |
+
+<Note>Service resolution errors are distinct from operation errors. A `503` means the platform could not locate the agent's service to act on. A `500` means the service was found but the requested action (deploy, suspend, restart, or env var update) failed.</Note>
 
 ---
 
