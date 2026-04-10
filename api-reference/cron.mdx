@@ -277,3 +277,119 @@ Force-publish today's daily blog post:
 curl -X GET "https://agentbot.sh/api/cron/blog-daily?force=1" \
   -H "Authorization: Bearer YOUR_CRON_SECRET"
 ```
+
+---
+
+## Weekly MoltX update
+
+```http
+GET /api/cron/moltx-weekly
+```
+
+Generates and publishes a weekly platform summary to MoltX. The post includes live agent counts, installed skills, service health, and recent blog highlights. Content is automatically trimmed to stay within the MoltX 500-character post limit.
+
+Posts are deduplicated by ISO week key (for example `2026-W15`). If the current week has already been posted, the endpoint returns a success response with `skipped: true` unless you pass `force=1`.
+
+<Note>This endpoint requires the `MOLTX_API_KEY` environment variable. When the key is not configured, the endpoint returns the generated content without posting.</Note>
+
+### Authentication
+
+Accepts either of:
+
+- A `CRON_SECRET` bearer token in the `Authorization` header.
+- An authenticated admin session cookie.
+
+```
+Authorization: Bearer <CRON_SECRET>
+```
+
+### Query parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `force` | string | No | Set to `"1"` to re-post even if this week was already published |
+| `dryRun` | string | No | Set to `"1"` to return the generated content without posting to MoltX |
+
+### Response
+
+On successful publish:
+
+```json
+{
+  "success": true,
+  "weekKey": "2026-W15",
+  "content": "Weekly Agentbot/baseFM update\n50+ deployed / 12 live agents\n...",
+  "response": { "id": "post_abc123" }
+}
+```
+
+When skipped because this week was already posted:
+
+```json
+{
+  "success": true,
+  "skipped": true,
+  "reason": "already_posted",
+  "weekKey": "2026-W15",
+  "existing": { "postedAt": "2026-04-07T09:00:00.000Z", "weekKey": "2026-W15" }
+}
+```
+
+When running in dry-run mode:
+
+```json
+{
+  "success": true,
+  "dryRun": true,
+  "weekKey": "2026-W15",
+  "content": "Weekly Agentbot/baseFM update\n..."
+}
+```
+
+When `MOLTX_API_KEY` is not configured:
+
+```json
+{
+  "success": false,
+  "skipped": true,
+  "reason": "missing_moltx_api_key",
+  "weekKey": "2026-W15",
+  "content": "Weekly Agentbot/baseFM update\n..."
+}
+```
+
+### Response fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `success` | boolean | `true` when the post was published or the request completed without error |
+| `skipped` | boolean | `true` when no new post was created |
+| `reason` | string | Why the post was skipped — `already_posted` or `missing_moltx_api_key` |
+| `weekKey` | string | ISO week identifier (format `YYYY-Www`) |
+| `content` | string | The generated post content |
+| `dryRun` | boolean | `true` when the request was a dry run |
+| `response` | object | The response body from the MoltX API (only on successful publish) |
+| `existing` | object | Previous post state for this week (only when `reason` is `already_posted`) |
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | `Unauthorized` — missing or invalid `CRON_SECRET` bearer token and no admin session |
+| 502 | `moltx_post_failed` — the MoltX API rejected the post. The response includes the upstream `status` and `body`. |
+
+### Example
+
+Dry-run to preview this week's post:
+
+```bash
+curl -X GET "https://agentbot.sh/api/cron/moltx-weekly?dryRun=1" \
+  -H "Authorization: Bearer YOUR_CRON_SECRET"
+```
+
+Force-publish this week's update:
+
+```bash
+curl -X GET "https://agentbot.sh/api/cron/moltx-weekly?force=1" \
+  -H "Authorization: Bearer YOUR_CRON_SECRET"
+```
