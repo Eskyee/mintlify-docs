@@ -558,19 +558,20 @@ This legacy endpoint previously received security event notifications from Googl
 |------|-------------|
 | 410 | Endpoint is deprecated. Migrate to `/api/security/risc`. |
 
-## Wallet sign in (SIWE)
+## Wallet sign in
 
 ```http
 POST /api/wallet-auth
 ```
 
-Sign in using an Ethereum wallet via [Sign-In with Ethereum (SIWE)](https://eips.ethereum.org/EIPS/eip-4361). This flow is designed for Coinbase Smart Wallets on Base and supports ERC-6492 signature verification for pre-deployed wallets.
+Sign in using an Ethereum-compatible wallet. This endpoint supports two wallet types:
+
+- **Base (Coinbase Smart Wallet)** — uses [Sign-In with Ethereum (SIWE)](https://eips.ethereum.org/EIPS/eip-4361) on Base Mainnet (chain ID 8453). Supports ERC-6492 signature verification for pre-deployed smart wallets.
+- **Tempo** — uses `personal_sign` on the Tempo network (chain ID 4217). Users can connect via an injected provider or through [wallet.tempo.xyz](https://wallet.tempo.xyz).
 
 <Note>This endpoint replaced the previous NextAuth wallet callback (`/api/auth/callback/wallet`). If you are migrating from an older integration, update your wallet sign-in requests to use `/api/wallet-auth`.</Note>
 
-<Warning>The platform uses `coinbaseWallet({ preference: 'smartWalletOnly' })` as its only wallet connector. Injected wallets (such as MetaMask) are not supported. Users must connect through a Coinbase Smart Wallet on the Base network.</Warning>
-
-### How it works
+### How it works (Base)
 
 1. The client requests a nonce from [`GET /api/auth/nonce`](#get-nonce).
 2. The client opens the Base Account SDK popup and requests a SIWE signature on Base Mainnet.
@@ -579,13 +580,46 @@ Sign in using an Ethereum wallet via [Sign-In with Ethereum (SIWE)](https://eips
 5. If no account exists for the wallet address, a new user is created automatically.
 6. If an account with the same wallet-derived email already exists, the wallet is linked to the existing account.
 
+### How it works (Tempo)
+
+1. The client requests a nonce from [`GET /api/auth/nonce`](#get-nonce).
+2. The client connects to the Tempo network (chain ID `0x1079` / 4217) via an injected Ethereum provider or [wallet.tempo.xyz](https://wallet.tempo.xyz). If the chain is not present in the wallet, it is added automatically with RPC URL `https://rpc.tempo.xyz`.
+3. The client constructs a plaintext message containing the nonce, chain identifier, and timestamp, then signs it with `personal_sign`.
+4. The wallet address, signed message, signature, and `chain: "tempo"` are sent to `POST /api/wallet-auth`.
+5. The server verifies the signature and nonce, then creates or links the user account.
+
 ### Request body
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `address` | string | Yes | Ethereum wallet address (0x-prefixed) |
-| `message` | string | Yes | The full SIWE message string |
-| `signature` | string | Yes | The wallet signature of the SIWE message (0x-prefixed) |
+| `message` | string | Yes | The signed message string (SIWE format for Base, plaintext for Tempo) |
+| `signature` | string | Yes | The wallet signature (0x-prefixed) |
+| `chain` | string | No | Target chain for authentication. Accepted values: `"tempo"`. When omitted, defaults to Base (SIWE). |
+
+### Tempo message format
+
+When using Tempo wallet sign-in, the signed message follows this format:
+
+```
+Sign in to Agentbot
+
+Nonce: <server-issued-nonce>
+Chain: Tempo (4217)
+Timestamp: <unix-milliseconds>
+```
+
+### Tempo chain parameters
+
+If the user's wallet does not have the Tempo network configured, the client adds it using:
+
+| Parameter | Value |
+|-----------|-------|
+| Chain ID | `0x1079` (4217) |
+| Chain name | Tempo |
+| Native currency | pathUSD (18 decimals) |
+| RPC URL | `https://rpc.tempo.xyz` |
+| Block explorer | `https://explorer.tempo.xyz` |
 
 ### Response
 
@@ -603,16 +637,16 @@ A `Set-Cookie` header is included with the `agentbot-session` token. The cookie 
 
 ### Account linking
 
-When a wallet signs in, the system checks for an existing user by the wallet-derived email address (`<address>@wallet.agentbot`). If a matching user is found, the wallet is linked to that existing account. This prevents duplicate accounts and lets users access the same data regardless of which sign-in method they use.
+When a wallet signs in, the system checks for an existing user by the wallet-derived email address (`<address>@wallet.agentbot`). If a matching user is found, the wallet is linked to that existing account. This prevents duplicate accounts and lets users access the same data regardless of which sign-in method they use. This applies to both Base and Tempo wallet sign-ins.
 
 ### Errors
 
 | Code | Description |
 |------|-------------|
 | 400 | Missing address, message, or signature |
-| 400 | Missing nonce in SIWE message — the message must include a nonce obtained from [`GET /api/auth/nonce`](#get-nonce) |
-| 401 | Invalid nonce — the nonce in the SIWE message does not match the server-issued nonce |
-| 401 | Address mismatch — the wallet address in the SIWE message does not match the `address` field |
+| 400 | Missing nonce in signed message — the message must include a nonce obtained from [`GET /api/auth/nonce`](#get-nonce) |
+| 401 | Invalid nonce — the nonce in the signed message does not match the server-issued nonce |
+| 401 | Address mismatch — the wallet address in the signed message does not match the `address` field |
 | 401 | Invalid signature |
 | 500 | Auth failed |
 
@@ -626,7 +660,7 @@ GET /api/auth/nonce
 POST /api/auth/nonce
 ```
 
-Generates a random nonce for use in SIWE message construction. Both `GET` and `POST` methods return the same response.
+Generates a random nonce for use in wallet sign-in message construction (SIWE for Base, plaintext for Tempo). Both `GET` and `POST` methods return the same response.
 
 ### Response
 
