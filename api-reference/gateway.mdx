@@ -119,21 +119,13 @@ If the session is missing, expired, or has insufficient balance, the gateway ret
 
 ## Response
 
-### Success (200)
+### Success
 
-```json
-{
-  "plugin": "agent",
-  "message": "Request processed by agent plugin",
-  "timestamp": "2026-03-20T03:33:15.000Z",
-  "payment": {
-    "method": "stripe",
-    "receipt": null
-  }
-}
-```
+The gateway forwards the request body to the matched plugin's upstream URL and returns the plugin's response directly. The HTTP status code and `Content-Type` header are preserved from the upstream response.
 
-When paid via MPP, the response includes a `Payment-Receipt` header and the `payment.receipt` field contains the transaction hash. When paid via a session, the `payment.receipt` field contains the voucher reference (formatted as `session:<sessionId>:<nonce>`).
+<Warning>The gateway no longer returns a synthetic response with `plugin`, `message`, `timestamp`, and `payment` fields. Responses are now proxied directly from the upstream plugin service. The response shape depends entirely on the plugin being called. Requests have a 30-second timeout.</Warning>
+
+When paid via MPP, the response includes a `Payment-Receipt` header with the transaction hash. When paid via a session, the `Payment-Receipt` header contains the voucher reference (formatted as `session:<sessionId>:<nonce>`).
 
 ### Response headers
 
@@ -1171,6 +1163,8 @@ The following environment variables are set on every agent container at launch. 
 | `OPENROUTER_API_KEY` | Platform-provided | OpenRouter API key for AI model access. Set by the provisioning service. |
 | `INTERNAL_API_KEY` | Platform-provided | Internal API key for authenticating agent-to-platform requests. Set by the provisioning service. |
 | `WALLET_ENCRYPTION_KEY` | Platform-provided | Encryption key for securing agent wallet data at rest. Set by the provisioning service. |
+| `CONTROL_UI_ORIGIN` | _(empty)_ | Primary origin allowed to connect to the Control UI via WebSocket. When not set, falls back to `NEXT_PUBLIC_APP_URL`, then `https://agentbot.sh`. |
+| `CONTROL_UI_COMPAT_ORIGIN` | _(empty)_ | Optional secondary origin for Control UI WebSocket connections. When set, this origin is added alongside the primary origin in the `controlUi.allowedOrigins` list. |
 
 ### Gateway settings
 
@@ -1188,9 +1182,11 @@ The following environment variables are set on every agent container at launch. 
 | `gateway.trustedProxies` | `["127.0.0.1", "10.0.0.0/8", "100.64.0.0/10", "172.16.0.0/12", "192.168.0.0/16"]` | IP addresses trusted as reverse proxies. Requests from these addresses have their `X-Forwarded-For` headers honored for origin detection. Includes loopback, RFC 1918 private ranges, and the `100.64.0.0/10` CGNAT range used by Railway's internal network. |
 | `gateway.http.endpoints.chatCompletions.enabled` | `true` | Enables the OpenAI-compatible `POST /v1/chat/completions` endpoint on the gateway. Required for the REST-based [`POST /api/chat`](/api-reference/agents#send-message) endpoint. Set during provisioning. |
 | `gateway.controlUi.enabled` | `true` | Gateway control UI is enabled in containers. |
-| `gateway.controlUi.allowedOrigins` | `["*"]` | Origins permitted to connect to the Control UI via WebSocket. Set to `["*"]` to allow connections from any origin. When not configured, the gateway may reject WebSocket connections with an "origin not allowed" error if the request origin does not match the gateway's hostname. |
-| `gateway.controlUi.dangerouslyDisableDeviceAuth` | `true` | Disables the interactive device authentication flow for the Control UI. Required for headless deployments (such as Railway) where no browser is available to complete the device auth handshake. |
-| `gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback` | `true` | Allows the gateway to fall back to the `Host` header when the `Origin` header is missing from a WebSocket upgrade request. Required for reverse-proxy environments (such as Railway) where the proxy does not forward the `Origin` header. |
+| `gateway.controlUi.allowedOrigins` | Derived from environment | Origins permitted to connect to the Control UI via WebSocket. Defaults to the value of `CONTROL_UI_ORIGIN` (or `NEXT_PUBLIC_APP_URL`, falling back to `https://agentbot.sh`). An optional second origin can be added via `CONTROL_UI_COMPAT_ORIGIN`. When not configured, the gateway may reject WebSocket connections with an "origin not allowed" error if the request origin does not match. |
+| `gateway.controlUi.dangerouslyDisableDeviceAuth` | `false` | When `true`, disables the interactive device authentication flow for the Control UI. Defaults to `false` — device auth is now required. For headless deployments where no browser is available, you may need to use token-based authentication instead of the device auth handshake. |
+| `gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback` | `false` | When `true`, allows the gateway to fall back to the `Host` header when the `Origin` header is missing from a WebSocket upgrade request. Defaults to `false` — the `Origin` header is now required. |
+
+<Warning>The `controlUi.allowedOrigins`, `controlUi.dangerouslyDisableDeviceAuth`, and `controlUi.dangerouslyAllowHostHeaderOriginFallback` defaults have changed. Previously, `allowedOrigins` was set to `["*"]`, and both `dangerouslyDisableDeviceAuth` and `dangerouslyAllowHostHeaderOriginFallback` were `true`. The new defaults restrict origins to the platform URL and require device authentication and the `Origin` header for WebSocket connections.</Warning>
 
 ### Tool settings
 

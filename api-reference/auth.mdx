@@ -916,9 +916,11 @@ The `sessionToken` is an HMAC-SHA256 signed token in the format `{base64url-data
 | `iat` | number | Issued-at timestamp (Unix seconds) |
 | `exp` | number | Expiry timestamp (24 hours after issuance) |
 
-The token is signed using the `FARCASTER_SESSION_SECRET` environment variable. If not set, the signing key falls back to `NEXTAUTH_SECRET`.
+The token is signed using the `FARCASTER_SESSION_SECRET` environment variable. If not set, the signing key falls back to `NEXTAUTH_SECRET`. In production, one of these environment variables must be configured — the endpoint returns a `500` error if neither is set. In non-production environments, a build-time placeholder is used when both are missing.
 
 <Warning>Session tokens are no longer plain base64-encoded JSON. Tokens issued before this change are not compatible with the new HMAC verification and must be refreshed.</Warning>
+
+<Warning>In production, the Farcaster verification endpoint now requires `FARCASTER_SESSION_SECRET` or `NEXTAUTH_SECRET` to be configured. Requests fail with a `500` error if neither secret is available. This is a breaking change from the previous behavior which used a hardcoded fallback secret in all environments.</Warning>
 
 #### Errors
 
