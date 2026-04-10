@@ -316,7 +316,9 @@ curl -X POST https://agentbot.sh/api/ai/chat \
 | `/api/coinbase` | POST | Coinbase CDP wallet actions (create_wallet, get_balance, create_payment, onramp) |
 | `/api/basename` | GET | Resolve a Base Name (.base.eth) for a wallet address |
 | `/api/basefm/live` | GET | List active Mux live streams |
-| `/api/basefm/streams` | POST | Create a Mux live stream (RAVE token-gated) |
+| `/api/basefm/streams` | POST | Create a Mux live video + audio stream (RAVE token-gated, 2h sessions) |
+| `/api/basefm/streams` | GET | Check active DJ session status and remaining time |
+| `/api/basefm/streams` | DELETE | End an active DJ session |
 | `/api/solana/price` | GET | Get live SOL price and 24-hour market data |
 | `/api/solana/wallet` | GET | Look up Solana wallet balance, tokens, and account info |
 | `/api/solana/verify` | GET | Verify Agentbot token balance and baseFM holder benefit tier |
