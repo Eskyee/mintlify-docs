@@ -198,7 +198,9 @@ curl -X POST https://agentbot.sh/api/ai/chat \
 | `/api/memory` | GET | Get agent memory (omit or pass `agentId=all` for all agents) |
 | `/api/memory` | POST | Store agent memory |
 | `/api/metrics` | GET | Get platform-wide metrics |
-| `/api/credits` | GET | Get credit balance |
+| `/api/claim` | POST | Verify Solana token balance and claim free credits |
+| `/api/claim` | GET | Check token claim eligibility |
+| `/api/credits` | GET | Get credit balance, referral code, and plan |
 | `/api/keys` | GET | List API keys |
 | `/api/keys` | POST | Create API key (max 10 per account) |
 | `/api/keys/:id` | GET | Get API key details |
