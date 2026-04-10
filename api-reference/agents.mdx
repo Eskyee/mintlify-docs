@@ -2055,34 +2055,37 @@ POST /api/agent
 POST /api/chat
 ```
 
-Requires session authentication.
+Sends a message to your deployed agent. The message is queued for processing via the platform job system and the response is returned asynchronously. Requires session authentication.
 
 ### Request body
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `message` | string | Yes | Message to send |
-| `topic` | string | No | Conversation topic |
+| `message` | string | Yes | Message to send to the agent |
 
 ```json
 {
-  "message": "Hello!",
-  "topic": "general"
+  "message": "Hello!"
 }
 ```
 
-### Response
+### Response (`202 Accepted`)
+
+The endpoint enqueues the message as a background job and returns immediately with a job reference. Poll the job status using the returned `jobId`.
 
 ```json
 {
-  "id": "msg_123",
-  "message": "Hello!",
-  "topic": "general",
-  "status": "sent",
-  "timestamp": "2026-03-19T00:00:00Z",
-  "reply": "Message received by agent"
+  "queued": true,
+  "jobId": "job_abc123",
+  "status": "queued"
 }
 ```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `queued` | boolean | Always `true` when the message was accepted |
+| `jobId` | string | Unique identifier for the queued chat job |
+| `status` | string | Current job status (typically `queued` on creation) |
 
 ### Errors
 
@@ -2090,7 +2093,11 @@ Requires session authentication.
 |------|-------------|
 | 400 | Message required |
 | 401 | Unauthorized |
+| 404 | User not found, or no agent deployed for the authenticated user |
+| 429 | Rate limited — too many requests or no workload slot available. May include a `retryAfterSeconds` field in the response body. |
 | 500 | Failed to send message |
+| 502 | Failed to queue the chat job on the backend |
+| 503 | Gateway not configured for the user's agent |
 
 ## List messages
 
