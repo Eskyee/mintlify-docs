@@ -1,11 +1,11 @@
 ---
 title: Streaming API
-description: "Mux-powered live streaming, video generation, and webhook endpoints"
+description: "Mux-powered live video and audio streaming, session management, video generation, and webhook endpoints"
 ---
 
 # Streaming API
 
-Endpoints for live streaming via Mux, video generation, and streaming webhook processing.
+Endpoints for live video and audio streaming via Mux, DJ session management, video generation, and streaming webhook processing.
 
 ## List live streams
 
@@ -90,15 +90,35 @@ Creates a new Mux live stream. Access is granted if the caller meets either of t
     "status": "created",
     "accessGrantedBy": "rave"
   },
+  "session": {
+    "id": "sess_abc123",
+    "maxDuration": 7200,
+    "remaining": 7200,
+    "expiresAt": "2026-04-11T02:00:00.000Z"
+  },
   "obsSettings": {
     "server": "rtmp://global-live.mux.com:5222/app",
     "streamKey": "sk-ab12-cd34-ef56",
     "recommended": {
-      "audioBitrate": "256-320 kbps",
-      "encoder": "AAC",
-      "sampleRate": "44.1 kHz",
-      "channels": "Stereo"
+      "video": {
+        "resolution": "1280x720 (720p) or 1920x1080 (1080p)",
+        "bitrate": "2500-4500 kbps",
+        "framerate": "30 fps",
+        "encoder": "H.264",
+        "keyframeInterval": "2 seconds"
+      },
+      "audio": {
+        "bitrate": "256-320 kbps",
+        "encoder": "AAC",
+        "sampleRate": "44.1 kHz",
+        "channels": "Stereo"
+      }
     }
+  },
+  "streamType": "video+audio",
+  "playback": {
+    "hls": "https://stream.mux.com/xYz789.m3u8",
+    "web": "https://stream.mux.com/xYz789.html"
   }
 }
 ```
@@ -111,7 +131,20 @@ Creates a new Mux live stream. Access is granted if the caller meets either of t
 | `stream.fullRtmpUrl` | string | Full RTMP URL including stream key (for OBS) |
 | `stream.playbackId` | string \| null | Mux playback ID for viewers |
 | `stream.accessGrantedBy` | string | How access was granted. Either `rave` (token balance) or `community-pass` (Builder/Whale community program perk). |
-| `obsSettings.recommended` | object | Recommended OBS audio encoding settings |
+| `session.id` | string | DJ session record ID |
+| `session.maxDuration` | number | Maximum session duration in seconds (7200 = 2 hours) |
+| `session.remaining` | number | Remaining seconds in the session |
+| `session.expiresAt` | string | ISO 8601 timestamp when the session expires |
+| `obsSettings.recommended.video` | object | Recommended OBS video encoding settings |
+| `obsSettings.recommended.video.resolution` | string | Recommended resolution (`1280x720` or `1920x1080`) |
+| `obsSettings.recommended.video.bitrate` | string | Recommended video bitrate range |
+| `obsSettings.recommended.video.framerate` | string | Recommended frame rate |
+| `obsSettings.recommended.video.encoder` | string | Recommended video encoder (`H.264`) |
+| `obsSettings.recommended.video.keyframeInterval` | string | Recommended keyframe interval |
+| `obsSettings.recommended.audio` | object | Recommended OBS audio encoding settings |
+| `streamType` | string | Type of stream. Currently always `video+audio`. |
+| `playback.hls` | string \| null | HLS playlist URL for playback |
+| `playback.web` | string \| null | Embeddable web player URL |
 
 ### Errors
 
@@ -119,7 +152,107 @@ Creates a new Mux live stream. Access is granted if the caller meets either of t
 |------|-------------|
 | 400 | Wallet address required |
 | 403 | Insufficient RAVE tokens or community guest pass. The wallet must hold at least 1,250,000 RAVE, or the authenticated user must have a Builder or Whale tier community claim. |
+| 409 | An active session already exists for this wallet. The response includes a `remaining` field (seconds left) and the `sessionId`. |
 | 500 | Mux is not configured or stream creation failed |
+
+## Check session status
+
+```http
+GET /api/basefm/streams?wallet={wallet}
+```
+
+Returns the active DJ session for a wallet, including elapsed time and remaining duration.
+
+### Query parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `wallet` | string | Yes | Wallet address to check |
+
+### Response — active session
+
+```json
+{
+  "active": true,
+  "session": {
+    "id": "sess_abc123",
+    "djName": "DJ Rave",
+    "playbackId": "xYz789",
+    "startedAt": "2026-04-11T00:00:00.000Z",
+    "elapsed": 1800,
+    "remaining": 5400,
+    "remainingMinutes": 90,
+    "expiresAt": "2026-04-11T02:00:00.000Z"
+  }
+}
+```
+
+### Response — no active session
+
+```json
+{
+  "active": false,
+  "message": "No active session. Start a new stream!"
+}
+```
+
+If the session has expired (exceeded the 2-hour maximum), it is automatically ended and the response returns `active: false`.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `active` | boolean | Whether the wallet has an active session |
+| `session.id` | string | Session record ID |
+| `session.djName` | string | DJ display name |
+| `session.playbackId` | string \| null | Mux playback ID |
+| `session.startedAt` | string | ISO 8601 timestamp when the session started |
+| `session.elapsed` | number | Seconds elapsed since the session started |
+| `session.remaining` | number | Seconds remaining before the session expires |
+| `session.remainingMinutes` | number | Minutes remaining (rounded down) |
+| `session.expiresAt` | string | ISO 8601 timestamp when the session expires |
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | Wallet query parameter is required |
+
+## End session
+
+```http
+DELETE /api/basefm/streams?wallet={wallet}
+```
+
+Ends any active DJ session for the given wallet.
+
+### Query parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `wallet` | string | Yes | Wallet address whose session should be ended |
+
+### Response
+
+```json
+{
+  "success": true,
+  "ended": 1,
+  "message": "Session ended"
+}
+```
+
+If no active session exists, `ended` is `0` and `message` is `"No active session found"`.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `success` | boolean | Always `true` |
+| `ended` | number | Number of sessions ended (0 or 1) |
+| `message` | string | Human-readable status message |
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | Wallet query parameter is required |
 
 ## Generate video
 
