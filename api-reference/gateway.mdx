@@ -1153,7 +1153,7 @@ The following environment variables are set on every agent container at launch. 
 |----------|---------|-------------|
 | `NODE_ENV` | `production` | Node.js environment. Set by the provisioning service. |
 | `PORT` | Railway-assigned | Port the agent process listens on inside the container. This value is injected by Railway automatically and is no longer set by the provisioning service. A TCP proxy inside the container forwards traffic from the Railway-assigned port to the OpenClaw gateway on `127.0.0.1:18789`. |
-| `HOME` | `/home/node` | Home directory for the `node` user that the official OpenClaw image runs as |
+| `HOME` | `/root` | Home directory for the container user. Managed runtime containers run as `root` with the OpenClaw data directory at `/root/.openclaw`. |
 | `TERM` | `xterm-256color` | Terminal type |
 | `NODE_COMPILE_CACHE` | `/var/tmp/openclaw-compile-cache` | Directory for the Node.js compile cache. Speeds up cold starts by caching compiled bytecode across process restarts. |
 | `OPENCLAW_NO_RESPAWN` | `1` | When set to `1`, prevents the OpenClaw process from automatically respawning after exit. Container-level restart policies (Docker `--restart` or orchestrator health checks) handle process recovery instead. |
@@ -1199,7 +1199,7 @@ The following environment variables are set on every agent container at launch. 
 | `tools.profile` | `messaging` or `coding` | `messaging` for solo plan, `coding` for all other plans |
 | `tools.deny` | `["browser", "canvas"]` | Tools disabled in container environments |
 | `tools.exec.allowedCommands` | Array of whitelisted commands | Commands the agent is permitted to execute (includes `git`, `node`, `npm`, `python3`, `curl`, `ls`, `cat`, `grep`, `find`, `wget`, `mkdir`, `cp`, `mv`, `rm`, `echo`, `date`, `whoami`, `chmod`, `chown`, `touch`, `head`, `tail`, `wc`, `sort`, `uniq`, `awk`, `sed`, `tar`, `zip`, `unzip`, `docker`, `ps`, `df`, `du`) |
-| `tools.exec.allowedPaths` | `["~/.openclaw/workspace", "/tmp", "/home/node"]` | Filesystem paths the agent can access. The official OpenClaw image runs as the `node` user (`/home/node`). Configuration is stored at `/home/node/.openclaw/openclaw.json`. |
+| `tools.exec.allowedPaths` | `["/root/.openclaw/workspace", "/tmp", "/root"]` | Filesystem paths the agent can access. Managed runtime containers run as `root` with configuration stored at `/root/.openclaw/openclaw.json`. |
 | `tools.exec.denyPaths` | `["/etc/shadow", "/etc/passwd", "/proc", "/sys"]` | Filesystem paths the agent is blocked from accessing |
 | `tools.web.maxChars` | `50000` | Maximum characters returned from web tool requests |
 | `tools.loopDetection.maxIterations` | `20` | Maximum loop iterations before the agent is interrupted |
@@ -1217,7 +1217,7 @@ The following environment variables are set on every agent container at launch. 
 
 | Parameter | Value | Description |
 |-----------|-------|-------------|
-| `agents.defaults.workspace` | `~/.openclaw/workspace` | Default workspace directory |
+| `agents.defaults.workspace` | `/root/.openclaw/workspace` | Default workspace directory. Managed runtime containers mount a persistent volume at `/root/.openclaw`. |
 | `agents.defaults.imageMaxDimensionPx` | `1200` | Maximum image dimension in pixels (optimizes vision token usage) |
 | `agents.defaults.userTimezone` | `Europe/London` | Default timezone (overridden by signup timezone when available) |
 | `agents.defaults.timeFormat` | `24h` | Time format |

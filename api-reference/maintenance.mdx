@@ -31,7 +31,11 @@ Requires session authentication. Returns runtime state for a specific agent inst
   "subdomain": "agentbot-agent-abc123-production.up.railway.app",
   "url": "https://agentbot-agent-abc123-production.up.railway.app",
   "plan": "solo",
-  "openclawVersion": "2026.4.7"
+  "openclawVersion": "2026.4.7",
+  "provisionedAt": "2026-04-01T00:00:00.000Z",
+  "lastSeenAt": "2026-04-04T03:10:00.000Z",
+  "gatewayProcessStatus": "active",
+  "subscriptionStatus": "active"
 }
 ```
 
@@ -39,11 +43,15 @@ Requires session authentication. Returns runtime state for a specific agent inst
 |-------|------|-------------|
 | `userId` | string | The instance identifier from the request path |
 | `status` | string | Runtime status derived from health probes: `running`, `starting`, or `unknown` |
-| `startedAt` | string | ISO 8601 timestamp of when the status was checked |
+| `startedAt` | string \| null | ISO 8601 timestamp of when the agent was first registered or created. Falls back to the agent's creation date when no registration record exists. |
 | `subdomain` | string | Hostname of the agent's public URL |
 | `url` | string | Full URL of the agent instance. Uses the persisted `openclawUrl` from the database when available, otherwise falls back to `https://agentbot-agent-{userId}-production.up.railway.app`. |
 | `plan` | string | The user's subscription plan (for example, `solo`, `collective`, `label`). Defaults to `free` when no plan is set. |
 | `openclawVersion` | string | OpenClaw runtime version reported by the agent's `/healthz` endpoint. Falls back to the platform default version when the probe fails or the agent does not report a version. |
+| `provisionedAt` | string \| null | ISO 8601 timestamp of when the instance was originally provisioned. Derived from the agent registration record or the agent's creation date. Returns `null` when neither is available. |
+| `lastSeenAt` | string \| null | ISO 8601 timestamp of when the agent last checked in with the platform. Returns `null` when the agent has not reported since provisioning. |
+| `gatewayProcessStatus` | string \| null | Status of the gateway process as reported by the registration record (for example, `active`). Returns `null` when no registration record exists. |
+| `subscriptionStatus` | string \| null | The user's subscription status (for example, `active`, `canceled`, `past_due`). Returns `null` when no subscription is associated with the user. |
 
 ### Status values
 
@@ -61,6 +69,320 @@ Requires session authentication. Returns runtime state for a specific agent inst
 |------|-------------|
 | 403 | Forbidden — not authenticated (no valid session) |
 | 404 | No instance found — the authenticated user does not have a deployed agent, or does not own the requested instance. The response message is: `No instance found. Please deploy first.` |
+
+---
+
+## Get instance stats
+
+```http
+GET /api/instance/:userId/stats
+```
+
+Requires session authentication and instance ownership. Returns runtime stats for a specific agent instance by probing the agent's gateway. Resource-level metrics (CPU, memory) are not yet exposed by the gateway and return placeholder values.
+
+### Path parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `userId` | string | The instance identifier (matches the user's `openclawInstanceId`) |
+
+### Response
+
+```json
+{
+  "userId": "abc123",
+  "status": "running",
+  "health": "healthy",
+  "cpu": "0%",
+  "memory": "0MB",
+  "uptime": "active",
+  "messages": null,
+  "errors": null,
+  "openclawVersion": "2026.4.7",
+  "telemetry": {
+    "resourceMetricsAvailable": false,
+    "lifecycleMetricsAvailable": false,
+    "messageMetricsAvailable": false
+  }
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `userId` | string | The instance identifier from the request path |
+| `status` | string | `running` when the gateway health check succeeds, `unreachable` otherwise |
+| `health` | string | `healthy` when the gateway is reachable, `unreachable` otherwise |
+| `cpu` | string | CPU usage. Currently returns `0%` as the gateway does not expose CPU metrics. |
+| `memory` | string | Memory usage. Currently returns `0MB` as the gateway does not expose memory metrics. |
+| `uptime` | string | `active` when the gateway is reachable, `unknown` otherwise |
+| `messages` | number \| null | Message count. Currently returns `null` as message metrics are not yet available. |
+| `errors` | number \| null | Error count. Currently returns `null` as error metrics are not yet available. |
+| `openclawVersion` | string | OpenClaw runtime version. Only present when the gateway is reachable. |
+| `telemetry` | object | Indicates which metric categories are available |
+| `telemetry.resourceMetricsAvailable` | boolean | `true` when CPU and memory metrics are available. Currently always `false`. |
+| `telemetry.lifecycleMetricsAvailable` | boolean | `true` when lifecycle metrics (restart count, last exit) are available. Currently always `false`. |
+| `telemetry.messageMetricsAvailable` | boolean | `true` when message-level metrics are available. Currently always `false`. |
+
+<Note>The `telemetry` object is included to signal which metric categories the API supports. All three categories are currently `false` because the managed runtime does not yet expose restart counts, last-exit details, or per-message telemetry. These fields will transition to `true` as the underlying runtime adds support.</Note>
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | Unauthorized — no valid session |
+| 403 | Forbidden — the authenticated user does not own the requested instance |
+
+---
+
+## Start instance
+
+```http
+POST /api/instance/:userId/start
+```
+
+Requires session authentication and instance ownership. Triggers a deploy of the user's agent service on Railway. When managed runtime controls are disabled, this endpoint returns `503`.
+
+### Path parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `userId` | string | The instance identifier |
+
+### Response
+
+```json
+{
+  "success": true,
+  "status": "starting"
+}
+```
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | Unauthorized — no valid session |
+| 403 | Forbidden — the authenticated user does not own the requested instance |
+| 500 | Failed to start the service |
+| 503 | Managed runtime controls are disabled |
+
+---
+
+## Stop instance
+
+```http
+POST /api/instance/:userId/stop
+```
+
+Requires session authentication and instance ownership. Stops (suspends) the user's agent service on Railway. When managed runtime controls are disabled, this endpoint returns `503`.
+
+### Path parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `userId` | string | The instance identifier |
+
+### Response
+
+```json
+{
+  "success": true,
+  "status": "stopped"
+}
+```
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | Unauthorized — no valid session |
+| 403 | Forbidden — the authenticated user does not own the requested instance |
+| 500 | Failed to stop the service |
+| 503 | Managed runtime controls are disabled |
+
+---
+
+## Restart instance
+
+```http
+POST /api/instance/:userId/restart
+```
+
+Requires session authentication and instance ownership. Restarts the user's agent gateway on Railway. When managed runtime controls are disabled, this endpoint returns `503`.
+
+### Path parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `userId` | string | The instance identifier |
+
+### Response
+
+```json
+{
+  "success": true,
+  "status": "restarting"
+}
+```
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | Unauthorized — no valid session |
+| 403 | Forbidden — the authenticated user does not own the requested instance |
+| 500 | Failed to restart the service |
+| 503 | Managed runtime controls are disabled |
+
+---
+
+## Repair instance
+
+```http
+POST /api/instance/:userId/repair
+```
+
+Requires session authentication and instance ownership. Performs a full reconfigure of the agent service: rewrites all environment variables on Railway and restarts the container. Use this to fix broken gateway tokens, corrupted configuration, or stuck containers. When managed runtime controls are disabled, this endpoint returns `503`.
+
+The repair uses the user's per-user gateway token from the database. If no token exists, a new one is generated automatically.
+
+### Path parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `userId` | string | The instance identifier |
+
+### Response
+
+```json
+{
+  "success": true,
+  "status": "repaired"
+}
+```
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | Unauthorized — no valid session |
+| 403 | Forbidden — the authenticated user does not own the requested instance |
+| 500 | Failed to repair the service |
+| 503 | Managed runtime controls are disabled |
+
+---
+
+## Reset instance memory
+
+```http
+POST /api/instance/:userId/reset-memory
+```
+
+Requires session authentication and instance ownership. Wipes all stored agent memories from the database and restarts the container. The agent starts fresh as if newly provisioned. When managed runtime controls are disabled, this endpoint returns `503`.
+
+<Warning>This action permanently deletes all agent memory entries for the user. The workspace on Railway is ephemeral and resets on restart.</Warning>
+
+### Path parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `userId` | string | The instance identifier |
+
+### Response
+
+```json
+{
+  "success": true,
+  "status": "reset"
+}
+```
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | Unauthorized — no valid session |
+| 403 | Forbidden — the authenticated user does not own the requested instance |
+| 500 | Failed to reset agent memory or restart the service |
+| 503 | Managed runtime controls are disabled |
+
+---
+
+## Update instance image
+
+```http
+POST /api/instance/:userId/update
+```
+
+Requires session authentication and instance ownership. Updates the agent container to the platform's current default OpenClaw image and triggers a redeploy. When managed runtime controls are disabled, this endpoint returns `503`.
+
+### Path parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `userId` | string | The instance identifier |
+
+### Response
+
+```json
+{
+  "success": true,
+  "status": "updating",
+  "image": "ghcr.io/openclaw/openclaw:2026.4.7",
+  "openclawVersion": "2026.4.7"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `success` | boolean | `true` when the update was initiated |
+| `status` | string | `updating` when the image change and redeploy were triggered |
+| `image` | string | The Docker image the agent is being updated to |
+| `openclawVersion` | string | The OpenClaw version corresponding to the new image |
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | Unauthorized — no valid session |
+| 403 | Forbidden — the authenticated user does not own the requested instance |
+| 500 | Failed to update the service |
+| 503 | Managed runtime controls are disabled |
+
+---
+
+## Get instance gateway token
+
+```http
+GET /api/instance/:userId/token
+```
+
+Requires session authentication and instance ownership. Returns the gateway token for the user's agent instance.
+
+### Path parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `userId` | string | The instance identifier |
+
+### Response
+
+```json
+{
+  "token": "a1b2c3...64-char-hex"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `token` | string | The gateway token used to authenticate with the agent's OpenClaw instance |
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 403 | Unauthorized — no valid session or the authenticated user does not own the requested instance |
+| 503 | No gateway token is configured on the platform |
 
 ---
 
