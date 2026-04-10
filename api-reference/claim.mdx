@@ -37,9 +37,9 @@ Credits are determined by your Agentbot token balance at the time of the claim:
 
 | Tier | Minimum balance | Credits granted |
 |------|----------------|----------------|
-| Whale | 100,000 | 200 |
-| Builder | 10,000 | 50 |
-| Holder | 1,000 | 10 |
+| Whale | 100,000 | 500 |
+| Builder | 10,000 | 150 |
+| Holder | 1,000 | 50 |
 
 The first matching tier is used (highest balance threshold first).
 
@@ -49,9 +49,9 @@ The first matching tier is used (highest balance threshold first).
 {
   "success": true,
   "tier": "Builder 🔧",
-  "credits": 50,
+  "credits": 150,
   "balance": 15000,
-  "message": "Claimed 50 free agent credits as Builder 🔧!"
+  "message": "Claimed 150 free agent credits as Builder 🔧!"
 }
 ```
 
@@ -82,7 +82,7 @@ The first matching tier is used (highest balance threshold first).
 {
   "error": "Already claimed",
   "claimedAt": "2026-04-10T12:00:00.000Z",
-  "credits": 50
+  "credits": 150
 }
 ```
 
@@ -126,12 +126,12 @@ curl "https://agentbot.sh/api/claim?address=7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZR
   "balance": 15000,
   "eligible": true,
   "tier": "Builder 🔧",
-  "credits": 50,
+  "credits": 150,
   "alreadyClaimed": false,
   "tiers": [
-    { "minBalance": 100000, "credits": 200, "label": "Whale 🐋", "current": false },
-    { "minBalance": 10000, "credits": 50, "label": "Builder 🔧", "current": true },
-    { "minBalance": 1000, "credits": 10, "label": "Holder 💎", "current": false }
+    { "minBalance": 100000, "credits": 500, "label": "Whale 🐋", "current": false },
+    { "minBalance": 10000, "credits": 150, "label": "Builder 🔧", "current": true },
+    { "minBalance": 1000, "credits": 50, "label": "Holder 💎", "current": false }
   ]
 }
 ```
