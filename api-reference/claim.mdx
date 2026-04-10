@@ -19,10 +19,19 @@ Verifies the caller's Solana token balance and grants credits based on the match
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `solana_address` | string | Yes | Solana wallet address (base58-encoded, 32–44 characters) |
+| `solana_address` or `solanaAddress` | string | Yes | Solana wallet address (base58-encoded, 32–44 characters). Both snake_case and camelCase are accepted. |
 | `email` | string | Yes | Email address to associate with the claim. If no account exists, one is created with the `free` plan. |
 
 ### Example request
+
+```json
+{
+  "solanaAddress": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
+  "email": "user@example.com"
+}
+```
+
+You can also use the snake_case form:
 
 ```json
 {
@@ -69,7 +78,7 @@ The first matching tier is used (highest balance threshold first).
 
 | Code | Description |
 |------|-------------|
-| 400 | Missing `solana_address` or `email` |
+| 400 | Missing `solanaAddress` (or `solana_address`) or `email` |
 | 400 | Invalid Solana address format |
 | 400 | Insufficient balance. Response includes `balance`, `minimumRequired`, and a `message` explaining the minimum threshold. |
 | 409 | Wallet has already claimed. Response includes `claimedAt` (timestamp) and `credits` (amount previously granted). |
