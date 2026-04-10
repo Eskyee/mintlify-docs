@@ -7,6 +7,8 @@ description: "Submit corrections and view feedback history for agent behavior"
 
 Submit corrections to improve agent behavior over time. You describe what the agent did wrong and what it should do instead. The agent stores these corrections in memory and uses them to adjust future responses.
 
+Use feedback when your agent produces output that is technically correct but misses the mark on style, tone, length, or format. Over time, corrections accumulate and the agent adapts its behavior without you needing to rewrite its system prompt.
+
 <Note>All feedback endpoints require session authentication. Feedback entries are scoped to the authenticated user.</Note>
 
 ## Submit feedback
@@ -29,13 +31,16 @@ Record a correction for agent behavior. You must provide both the original behav
 
 ### Example request
 
-```json
-{
-  "message": "The agent sent a tweet with 5 emojis and 3 hashtags",
-  "correction": "No emojis. No hashtags in body. Short punchy sentences. One idea per tweet.",
-  "category": "format",
-  "agentId": "agent_123"
-}
+```bash
+curl -X POST https://agentbot.sh/api/feedback \
+  -H "Content-Type: application/json" \
+  -b "session=YOUR_SESSION_COOKIE" \
+  -d '{
+    "message": "The agent sent a tweet with 5 emojis and 3 hashtags",
+    "correction": "No emojis. No hashtags in body. Short punchy sentences. One idea per tweet.",
+    "category": "format",
+    "agentId": "agent_123"
+  }'
 ```
 
 ### Response
@@ -83,6 +88,13 @@ GET /api/feedback
 ```
 
 Retrieve the most recent feedback entries for the authenticated user. Returns up to 50 entries, ordered by most recent first.
+
+### Example request
+
+```bash
+curl -X GET https://agentbot.sh/api/feedback \
+  -b "session=YOUR_SESSION_COOKIE"
+```
 
 ### Response
 
