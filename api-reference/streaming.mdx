@@ -13,7 +13,7 @@ Endpoints for live video and audio streaming via Mux, DJ session management, vid
 GET /api/basefm/live
 ```
 
-Returns all currently active Mux live streams. No authentication required.
+Returns all currently active Mux live streams. No authentication required. When Mux credentials are unavailable or the Mux API returns an error, the endpoint falls back to cached session data from the database and returns a degraded response.
 
 ### Response
 
@@ -28,11 +28,25 @@ Returns all currently active Mux live streams. No authentication required.
       "streamKey": "sk-ab12-cd34-ef56",
       "status": "active",
       "startedAt": 1710806400,
+      "source": "mux",
       "hlsUrl": "https://stream.mux.com/xYz789.m3u8",
       "embedUrl": "https://stream.mux.com/xYz789.html"
     }
   ],
-  "count": 1
+  "count": 1,
+  "primaryDj": {
+    "id": "aB1cD2eF3g",
+    "name": "DJ Rave",
+    "wallet": "0x1234...abcd",
+    "playbackId": "xYz789",
+    "streamKey": "sk-ab12-cd34-ef56",
+    "status": "active",
+    "startedAt": 1710806400,
+    "source": "mux",
+    "hlsUrl": "https://stream.mux.com/xYz789.m3u8",
+    "embedUrl": "https://stream.mux.com/xYz789.html"
+  },
+  "availability": "live"
 }
 ```
 
@@ -42,17 +56,25 @@ Returns all currently active Mux live streams. No authentication required.
 | `djs[].name` | string | DJ display name (defaults to `Anonymous DJ`) |
 | `djs[].wallet` | string \| null | DJ wallet address from stream metadata |
 | `djs[].playbackId` | string \| null | Mux playback ID |
-| `djs[].streamKey` | string | RTMP stream key |
+| `djs[].streamKey` | string \| null | RTMP stream key. `null` when the DJ is served from the session cache. |
 | `djs[].status` | string | Stream status (`active`) |
-| `djs[].startedAt` | number | Unix timestamp when the stream was created |
+| `djs[].startedAt` | number \| string | Unix timestamp (from Mux) or ISO 8601 string (from session cache) |
+| `djs[].source` | string | Where the DJ data was resolved from: `mux` (live Mux API) or `session-cache` (database fallback) |
 | `djs[].hlsUrl` | string \| null | HLS playlist URL for playback |
 | `djs[].embedUrl` | string \| null | Embeddable player URL |
+| `count` | number | Number of live DJs |
+| `primaryDj` | object \| null | The first DJ in the list, or `null` when no DJs are live |
+| `availability` | string | Data source status: `live` (real-time from Mux) or `degraded` (served from session cache) |
+
+When the response has `"availability": "degraded"`, it may also include an `error` field with a human-readable description of why the Mux API could not be reached.
 
 ### Errors
 
 | Code | Description |
 |------|-------------|
-| 500 | Mux is not configured or an internal error occurred |
+| 500 | Internal error and no cached sessions are available |
+
+<Note>When Mux credentials are missing or the Mux API is unreachable, the endpoint returns cached live sessions from the database with `"availability": "degraded"` and HTTP status `200` (as long as cached data exists). A `500` is only returned when both the Mux API and the session cache are unavailable.</Note>
 
 ## Create live stream
 
@@ -92,9 +114,11 @@ Creates a new Mux live stream. Access is granted if the caller meets either of t
   },
   "session": {
     "id": "sess_abc123",
+    "wallet": "0x1234...abcd",
     "maxDuration": 7200,
     "remaining": 7200,
-    "expiresAt": "2026-04-11T02:00:00.000Z"
+    "expiresAt": "2026-04-11T02:00:00.000Z",
+    "accessToken": "eyJhbGciOiJIUzI1NiIs..."
   },
   "obsSettings": {
     "server": "rtmp://global-live.mux.com:5222/app",
@@ -119,6 +143,10 @@ Creates a new Mux live stream. Access is granted if the caller meets either of t
   "playback": {
     "hls": "https://stream.mux.com/xYz789.m3u8",
     "web": "https://stream.mux.com/xYz789.html"
+  },
+  "ffmpeg": {
+    "command": "ffmpeg -re -i INPUT_MEDIA -c:v libx264 ... -f flv rtmp://global-live.mux.com:5222/app/sk-ab12-cd34-ef56",
+    "inputHint": "Replace INPUT_MEDIA with your rendered video/audio source inside the agent runtime."
   }
 }
 ```
@@ -132,9 +160,11 @@ Creates a new Mux live stream. Access is granted if the caller meets either of t
 | `stream.playbackId` | string \| null | Mux playback ID for viewers |
 | `stream.accessGrantedBy` | string | How access was granted. Either `rave` (token balance) or `community-pass` (Builder/Whale community program perk). |
 | `session.id` | string | DJ session record ID |
+| `session.wallet` | string | The wallet address used for the session. When access is granted via a community guest pass, this is the claimed Agentbot wallet (not the wallet sent in the request). |
 | `session.maxDuration` | number | Maximum session duration in seconds (7200 = 2 hours) |
 | `session.remaining` | number | Remaining seconds in the session |
 | `session.expiresAt` | string | ISO 8601 timestamp when the session expires |
+| `session.accessToken` | string | A signed session token that can be used to authenticate subsequent `GET` and `DELETE` requests on this session without requiring a full user session. Valid for the session duration plus a 1-hour grace period. |
 | `obsSettings.recommended.video` | object | Recommended OBS video encoding settings |
 | `obsSettings.recommended.video.resolution` | string | Recommended resolution (`1280x720` or `1920x1080`) |
 | `obsSettings.recommended.video.bitrate` | string | Recommended video bitrate range |
@@ -145,6 +175,8 @@ Creates a new Mux live stream. Access is granted if the caller meets either of t
 | `streamType` | string | Type of stream. Currently always `video+audio`. |
 | `playback.hls` | string \| null | HLS playlist URL for playback |
 | `playback.web` | string \| null | Embeddable web player URL |
+| `ffmpeg.command` | string | A pre-built ffmpeg command template for autonomous agent broadcasting. Replace `INPUT_MEDIA` with the audio/video source path. |
+| `ffmpeg.inputHint` | string | Human-readable hint explaining how to use the ffmpeg command |
 
 ### Errors
 
@@ -152,22 +184,38 @@ Creates a new Mux live stream. Access is granted if the caller meets either of t
 |------|-------------|
 | 400 | Wallet address required |
 | 403 | Insufficient RAVE tokens or community guest pass. The wallet must hold at least 1,250,000 RAVE, or the authenticated user must have a Builder or Whale tier community claim. |
+| 403 | Community guest pass only works with the claimed Agentbot wallet. Returned when the caller has a community pass but the `wallet` in the request does not match their claimed wallet address. The response includes the expected `wallet`. |
 | 409 | An active session already exists for this wallet. The response includes a `remaining` field (seconds left) and the `sessionId`. |
 | 500 | Mux is not configured or stream creation failed |
+
+<Note>When access is granted via a community guest pass (not RAVE tokens), the stream is created using the caller's claimed Agentbot wallet address regardless of the `wallet` value in the request. The `stream.wallet` and `session.wallet` fields in the response reflect the claimed wallet.</Note>
 
 ## Check session status
 
 ```http
-GET /api/basefm/streams?wallet={wallet}
+GET /api/basefm/streams
 ```
 
-Returns the active DJ session for a wallet, including elapsed time and remaining duration.
+Returns the active DJ session for the authenticated caller. Authentication is resolved from either a session token or a user session (see [authentication](#authentication) below).
+
+### Authentication
+
+The endpoint accepts two forms of authentication, checked in this order:
+
+1. **Session token** — pass the `accessToken` returned by `POST /api/basefm/streams` as a `sessionToken` query parameter or an `x-basefm-session` header.
+2. **User session** — a standard authenticated session (cookie-based). The endpoint looks up the most recent active session for the authenticated user.
 
 ### Query parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `wallet` | string | Yes | Wallet address to check |
+| `sessionToken` | string | No | Session access token from `POST /api/basefm/streams`. Alternative to the `x-basefm-session` header. |
+
+### Headers
+
+| Header | Required | Description |
+|--------|----------|-------------|
+| `x-basefm-session` | No | Session access token. Alternative to the `sessionToken` query parameter. |
 
 ### Response — active session
 
@@ -176,6 +224,7 @@ Returns the active DJ session for a wallet, including elapsed time and remaining
   "active": true,
   "session": {
     "id": "sess_abc123",
+    "wallet": "0x1234...abcd",
     "djName": "DJ Rave",
     "playbackId": "xYz789",
     "startedAt": "2026-04-11T00:00:00.000Z",
@@ -200,9 +249,10 @@ If the session has expired (exceeded the 2-hour maximum), it is automatically en
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `active` | boolean | Whether the wallet has an active session |
+| `active` | boolean | Whether the caller has an active session |
 | `session.id` | string | Session record ID |
-| `session.djName` | string | DJ display name |
+| `session.wallet` | string | Wallet address for the session |
+| `session.djName` | string \| null | DJ display name |
 | `session.playbackId` | string \| null | Mux playback ID |
 | `session.startedAt` | string | ISO 8601 timestamp when the session started |
 | `session.elapsed` | number | Seconds elapsed since the session started |
@@ -214,21 +264,30 @@ If the session has expired (exceeded the 2-hour maximum), it is automatically en
 
 | Code | Description |
 |------|-------------|
-| 400 | Wallet query parameter is required |
+| 401 | Unauthorized — no valid session token or user session |
+| 403 | Forbidden — the session token does not match the session owner |
+
+<Warning>The `wallet` query parameter is no longer used. Session lookup is now based on the authenticated caller (session token or user session). Requests using the old `?wallet=` parameter are ignored — you must provide authentication instead.</Warning>
 
 ## End session
 
 ```http
-DELETE /api/basefm/streams?wallet={wallet}
+DELETE /api/basefm/streams
 ```
 
-Ends any active DJ session for the given wallet.
+Ends the active DJ session for the authenticated caller. Uses the same [authentication](#authentication) as the check session endpoint (session token or user session).
 
 ### Query parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `wallet` | string | Yes | Wallet address whose session should be ended |
+| `sessionToken` | string | No | Session access token from `POST /api/basefm/streams`. Alternative to the `x-basefm-session` header. |
+
+### Headers
+
+| Header | Required | Description |
+|--------|----------|-------------|
+| `x-basefm-session` | No | Session access token. Alternative to the `sessionToken` query parameter. |
 
 ### Response
 
@@ -245,14 +304,17 @@ If no active session exists, `ended` is `0` and `message` is `"No active session
 | Field | Type | Description |
 |-------|------|-------------|
 | `success` | boolean | Always `true` |
-| `ended` | number | Number of sessions ended (0 or 1) |
+| `ended` | number | Number of sessions ended (`0` or `1`) |
 | `message` | string | Human-readable status message |
 
 ### Errors
 
 | Code | Description |
 |------|-------------|
-| 400 | Wallet query parameter is required |
+| 401 | Unauthorized — no valid session token or user session |
+| 403 | Forbidden — the session token does not match the session owner |
+
+<Warning>The `wallet` query parameter is no longer used. Session lookup is now based on the authenticated caller (session token or user session). Requests using the old `?wallet=` parameter are ignored — you must provide authentication instead.</Warning>
 
 ## Generate video
 
@@ -322,8 +384,12 @@ The endpoint performs the following checks:
 | Event | Behavior |
 |-------|----------|
 | `video.asset.ready` | Archives HD assets (1080p or higher) longer than 15 minutes. Shorter or lower-resolution assets are queued for deletion. |
-| `video.live_stream.active` | Logs that a live stream has become active |
-| `video.live_stream.idle` | Logs that a live stream has stopped |
+| `video.live_stream.active` | Marks the corresponding DJ session as `live` in the database and updates the playback ID. Triggers social amplification. |
+| `video.live_stream.connected` | Same behavior as `video.live_stream.active`. |
+| `video.live_stream.idle` | Transitions DJ sessions with status `live` back to `active` in the database. Triggers AI set summary generation. |
+| `video.live_stream.disconnected` | Same behavior as `video.live_stream.idle`. |
+
+<Note>The webhook handler now syncs DJ session state to the database when live stream events are received. This enables the session cache used by the [`GET /api/basefm/live`](#list-live-streams) endpoint for degraded-mode fallback.</Note>
 
 ### Response
 

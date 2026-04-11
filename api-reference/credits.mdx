@@ -13,7 +13,7 @@ Check your credit balance and spend credits on AI chat completions through the c
 POST /api/v1/credits
 ```
 
-Send an AI chat completion request using your credits. Each call costs 1 credit, debited from your referral credits balance. If the upstream AI gateway is unavailable, the credit is automatically refunded.
+Send an AI chat completion request using your credits. Each call costs 1 credit, debited from your referral credits balance. If the upstream AI gateway is unavailable or returns an error, the credit is automatically refunded.
 
 Only free-tier models are available through this endpoint:
 
@@ -75,6 +75,13 @@ When `stream` is `true`, the response is a server-sent event stream with `Conten
 | `_credits.cost` | number | Credits consumed by this call (always `1`) |
 | `_credits.remaining` | number | Credits remaining after this call |
 
+### Response headers
+
+| Header | Description |
+|--------|-------------|
+| `X-Credits-Remaining` | Updated credit balance after the call |
+| `X-Credits-Refunded` | Set to `1` when the credit was refunded due to an upstream gateway error. Only present on error responses where a refund occurred. |
+
 ### Errors
 
 | Code | Description |
@@ -82,10 +89,11 @@ When `stream` is `true`, the response is a server-sent event stream with `Conten
 | 401 | Unauthorized — no valid session |
 | 402 | Insufficient credits. The response includes `error: "insufficient_credits"` and your current `credits` balance. |
 | 404 | User not found |
-| 502 | AI gateway unavailable. The credit is automatically refunded. |
-| 500 | Internal server error |
+| 4xx/5xx | Upstream gateway error. When the AI gateway returns a non-success status, the credit is automatically refunded. The upstream response body and status code are forwarded to the caller. The `X-Credits-Refunded: 1` and `X-Credits-Remaining` headers are included. |
+| 502 | AI gateway unavailable (connection failure). The credit is automatically refunded. |
+| 500 | Internal server error. If a credit was already debited, it is refunded on a best-effort basis. |
 
-<Warning>Credits are debited before the AI call is made to prevent double-spend. If the call fails, credits are refunded automatically.</Warning>
+<Warning>Credits are debited before the AI call is made to prevent double-spend. If the call fails for any reason — connection error, upstream 4xx/5xx, or internal error — credits are refunded automatically. Check the `X-Credits-Refunded` header to determine whether a refund occurred.</Warning>
 
 ---
 
