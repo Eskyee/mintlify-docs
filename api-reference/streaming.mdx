@@ -15,6 +15,8 @@ GET /api/basefm/live
 
 Returns all currently active Mux live streams. No authentication required. When Mux credentials are unavailable or the Mux API returns an error, the endpoint falls back to cached session data from the database and returns a degraded response.
 
+When Mux is available, active streams are enriched with metadata from the corresponding DJ session record (matched by stream ID). This means fields like `name`, `wallet`, `playbackId`, and `startedAt` can resolve from session data even when Mux stream metadata is sparse or missing.
+
 ### Response
 
 ```json
@@ -27,7 +29,7 @@ Returns all currently active Mux live streams. No authentication required. When 
       "playbackId": "xYz789",
       "streamKey": "sk-ab12-cd34-ef56",
       "status": "active",
-      "startedAt": 1710806400,
+      "startedAt": "2026-04-11T00:00:00.000Z",
       "source": "mux",
       "hlsUrl": "https://stream.mux.com/xYz789.m3u8",
       "embedUrl": "https://stream.mux.com/xYz789.html"
@@ -41,7 +43,7 @@ Returns all currently active Mux live streams. No authentication required. When 
     "playbackId": "xYz789",
     "streamKey": "sk-ab12-cd34-ef56",
     "status": "active",
-    "startedAt": 1710806400,
+    "startedAt": "2026-04-11T00:00:00.000Z",
     "source": "mux",
     "hlsUrl": "https://stream.mux.com/xYz789.m3u8",
     "embedUrl": "https://stream.mux.com/xYz789.html"
@@ -53,12 +55,12 @@ Returns all currently active Mux live streams. No authentication required. When 
 | Field | Type | Description |
 |-------|------|-------------|
 | `djs[].id` | string | Mux live stream ID |
-| `djs[].name` | string | DJ display name (defaults to `Anonymous DJ`) |
-| `djs[].wallet` | string \| null | DJ wallet address from stream metadata |
-| `djs[].playbackId` | string \| null | Mux playback ID |
+| `djs[].name` | string | DJ display name. Resolved from Mux stream metadata first, then from the DJ session record, and defaults to `Anonymous DJ` if neither is available. |
+| `djs[].wallet` | string \| null | DJ wallet address. Resolved from Mux stream metadata first, then from the DJ session record. |
+| `djs[].playbackId` | string \| null | Mux playback ID. Resolved from the Mux stream first, then from the DJ session record. |
 | `djs[].streamKey` | string \| null | RTMP stream key. `null` when the DJ is served from the session cache. |
 | `djs[].status` | string | Stream status (`active`) |
-| `djs[].startedAt` | number \| string | Unix timestamp (from Mux) or ISO 8601 string (from session cache) |
+| `djs[].startedAt` | number \| string | ISO 8601 string when a matching DJ session record exists, otherwise a Unix timestamp from the Mux stream. Session-cache entries always return an ISO 8601 string. |
 | `djs[].source` | string | Where the DJ data was resolved from: `mux` (live Mux API) or `session-cache` (database fallback) |
 | `djs[].hlsUrl` | string \| null | HLS playlist URL for playback |
 | `djs[].embedUrl` | string \| null | Embeddable player URL |
