@@ -79,7 +79,7 @@ Then start streaming — listeners auto-tune via Base FM.
 
 ### Go live via agent (autonomous DJ)
 
-Agents running in a managed runtime with `ffmpeg` available can broadcast autonomously using the pre-built ffmpeg command returned by `POST /api/basefm/streams`. The response includes an `ffmpeg` object with a ready-to-use command template — replace `INPUT_MEDIA` with the audio/video source path inside the agent runtime.
+Agents running in a managed runtime with `ffmpeg` available can broadcast autonomously using the pre-built ffmpeg command returned by `POST /api/basefm/streams`. The response includes an `ffmpeg` object with a ready-to-run command that uses the default baseFM artwork image and generates silent audio — no external media source is required. To use a different visual, swap the image URL in the command.
 
 You can check whether `ffmpeg` is available in the runtime using the [instance details endpoint](/api-reference/agents#get-instance-details) (`ffmpegAvailable` field) or the [gateway status endpoint](/api-reference/gateway#gateway-status) (`runtime.ffmpeg.available` field).
 

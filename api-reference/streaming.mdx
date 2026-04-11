@@ -145,8 +145,8 @@ Creates a new Mux live stream. Access is granted if the caller meets either of t
     "web": "https://stream.mux.com/xYz789.html"
   },
   "ffmpeg": {
-    "command": "ffmpeg -re -i INPUT_MEDIA -c:v libx264 ... -f flv rtmp://global-live.mux.com:5222/app/sk-ab12-cd34-ef56",
-    "inputHint": "Replace INPUT_MEDIA with your rendered video/audio source inside the agent runtime."
+    "command": "ffmpeg -re -loop 1 -i \"https://...basefm-artwork.jpg\" -f lavfi -i anullsrc=channel_layout=stereo:sample_rate=44100 -c:v libx264 -preset veryfast -tune stillimage -pix_fmt yuv420p -vf \"scale=1280:720:...\" ... -f flv rtmp://global-live.mux.com:5222/app/sk-ab12-cd34-ef56",
+    "inputHint": "Uses the default baseFM artwork image and generated silent audio. Swap the image URL if you want a different visual."
   }
 }
 ```
@@ -175,7 +175,7 @@ Creates a new Mux live stream. Access is granted if the caller meets either of t
 | `streamType` | string | Type of stream. Currently always `video+audio`. |
 | `playback.hls` | string \| null | HLS playlist URL for playback |
 | `playback.web` | string \| null | Embeddable web player URL |
-| `ffmpeg.command` | string | A pre-built ffmpeg command template for autonomous agent broadcasting. Replace `INPUT_MEDIA` with the audio/video source path. |
+| `ffmpeg.command` | string | A pre-built ffmpeg command for autonomous agent broadcasting. Uses the default baseFM artwork image and generates silent audio, so no external media source is required. Replace the image URL to use a different visual. |
 | `ffmpeg.inputHint` | string | Human-readable hint explaining how to use the ffmpeg command |
 
 ### Errors
