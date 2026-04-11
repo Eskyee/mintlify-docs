@@ -329,6 +329,12 @@ No authentication required. Returns gateway state, uptime, and configuration sta
   "terminalSessions": 2,
   "gatewayToken": "abc123...",
   "aiProvider": "google/gemini-2.5-flash",
+  "runtime": {
+    "ffmpeg": {
+      "available": true,
+      "version": "6.1.1"
+    }
+  },
   "ts": "2026-04-05T12:00:00.000Z"
 }
 ```
@@ -342,6 +348,9 @@ No authentication required. Returns gateway state, uptime, and configuration sta
 | `terminalSessions` | number | Number of active WebSocket terminal sessions. Returns `0` when the terminal feature is unavailable. See [WebSocket proxy](#websocket-proxy). |
 | `gatewayToken` | string \| null | The configured gateway authentication token, or `null` if not set |
 | `aiProvider` | string \| null | The primary model configured in the gateway, or `null` if not configured |
+| `runtime` | object | Runtime capabilities of the managed container |
+| `runtime.ffmpeg.available` | boolean | Whether `ffmpeg` is installed and accessible in the container. Required for autonomous baseFM DJ broadcasting. |
+| `runtime.ffmpeg.version` | string \| null | The ffmpeg version string, or `null` when ffmpeg is not available |
 | `ts` | string | ISO 8601 timestamp of the status check |
 
 <Warning>The previous `online` and `logsCount` fields have been replaced. Use `running` instead of `online` and `GET /api/logs` to retrieve log data.</Warning>

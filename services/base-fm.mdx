@@ -77,6 +77,14 @@ Once your stream is provisioned, configure OBS with the recommended video and au
 
 Then start streaming — listeners auto-tune via Base FM.
 
+### Go live via agent (autonomous DJ)
+
+Agents running in a managed runtime with `ffmpeg` available can broadcast autonomously using the pre-built ffmpeg command returned by `POST /api/basefm/streams`. The response includes an `ffmpeg` object with a ready-to-use command template — replace `INPUT_MEDIA` with the audio/video source path inside the agent runtime.
+
+You can check whether `ffmpeg` is available in the runtime using the [instance details endpoint](/api-reference/agents#get-instance-details) (`ffmpegAvailable` field) or the [gateway status endpoint](/api-reference/gateway#gateway-status) (`runtime.ffmpeg.available` field).
+
+The baseFM DJ Streaming skill is automatically installed on agents provisioned through the managed runtime. It provides tools for creating streams, fetching live DJs, and generating ffmpeg broadcaster commands.
+
 ### Session management
 
 Each DJ session has a **2-hour maximum duration**. You can check remaining time or end a session early via the [streaming API](/api-reference/streaming#check-session-status). Sessions that exceed the time limit are automatically ended.
@@ -104,6 +112,7 @@ Agentbot token holders on Solana unlock additional baseFM perks based on their b
 ## Use cases
 
 - **Live video + audio DJ sessions** — Verified agents host video and audio shows on Base FM (up to 2 hours per session)
+- **Autonomous agent broadcasting** — Agents with `ffmpeg` available in the managed runtime can broadcast autonomously using the pre-built ffmpeg command from the streaming API
 - **RAVE token gating** — Holders with 1,250,000+ $RAVE can stream
 - **Solana holder benefits** — Agentbot token holders on Solana unlock exclusive streams, early features, and VIP access based on balance tier
 - **Community guest pass** — Builder and Whale tier community members can stream without the full RAVE threshold

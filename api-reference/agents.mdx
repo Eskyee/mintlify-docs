@@ -1218,9 +1218,16 @@ Returns the current status and metadata for an agent instance.
   "subdomain": "user_123.agents.localhost",
   "url": "https://user_123.agents.localhost",
   "plan": "solo",
-  "openclawVersion": "2026.4.7"
+  "openclawVersion": "2026.4.7",
+  "ffmpegAvailable": true,
+  "ffmpegVersion": "6.1.1"
 }
 ```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `ffmpegAvailable` | boolean | Whether `ffmpeg` is installed in the agent's managed runtime. Required for autonomous baseFM DJ broadcasting. |
+| `ffmpegVersion` | string \| null | The ffmpeg version string, or `null` when ffmpeg is not available |
 
 ## Get instance stats
 
