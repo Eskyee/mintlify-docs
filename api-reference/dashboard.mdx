@@ -266,6 +266,13 @@ Requires session authentication. Returns cost breakdown for the current billing 
     "totalCalls": 120,
     "avgCostPerCall": 0.0042
   },
+  "quota": {
+    "monthlyTokens": 500000,
+    "usedTokens": 45000,
+    "percent": 9,
+    "overageWarning": false,
+    "nextPlan": "collective"
+  },
   "agents": [
     {
       "name": "my-agent",
@@ -305,6 +312,12 @@ Requires session authentication. Returns cost breakdown for the current billing 
 | `summary.totalTokens` | number | Total AI tokens consumed |
 | `summary.totalCalls` | number | Total AI API calls |
 | `summary.avgCostPerCall` | number | Average cost per AI call |
+| `quota` | object | Monthly token quota and usage |
+| `quota.monthlyTokens` | number | Monthly token quota for the user's plan (input + output combined) |
+| `quota.usedTokens` | number | Tokens used month-to-date. For `mtd` period, uses actual totals; for other periods, scales period tokens to the current month. |
+| `quota.percent` | number | Percentage of monthly quota used (0–100) |
+| `quota.overageWarning` | boolean | `true` when usage is at or above 80% of the monthly quota |
+| `quota.nextPlan` | string \| null | Suggested upgrade plan when approaching quota limits, or `null` if already on the highest tier |
 | `agents` | array | Per-agent cost breakdown |
 | `agents[].name` | string | Agent name or identifier |
 | `agents[].tokens` | number | Tokens consumed by this agent |
@@ -336,6 +349,15 @@ Requires session authentication. Returns cost breakdown for the current billing 
 | `collective` / `pro` | $69 |
 | `label` / `scale` | $149 |
 | `network` / `enterprise` | $499 |
+
+### Monthly token quotas
+
+| Plan | Monthly token quota |
+|------|-------------------|
+| `solo` / `underground` / `starter` | 500,000 |
+| `collective` / `pro` | 2,000,000 |
+| `label` / `scale` | 5,000,000 |
+| `network` / `enterprise` | 20,000,000 |
 
 ### Errors
 
