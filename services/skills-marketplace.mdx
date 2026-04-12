@@ -226,9 +226,24 @@ const artwork = await agent.generate.artwork({
 });
 ```
 
+## Marketplace safety and trust tiers
+
+Every skill in the marketplace is automatically scanned for dangerous code patterns before it can be created or installed. The scanner assigns a trust tier to each skill:
+
+| Tier | Description |
+|------|-------------|
+| **Trusted** | Platform-authored or manually approved partner skills. Auto-install allowed and eligible for featured placement. |
+| **Verified** | User-created skills with a source URL that pass static checks. Installable with a visible trust badge. |
+| **Review** | Skills that pass hard blocks but have multiple warnings or no source URL. Installable but not promoted. |
+| **Blocked** | Skills that match dangerous code patterns. Cannot be created or installed. |
+
+Skills containing patterns like shell injection, `eval()`, `process.env` access, or destructive commands are automatically blocked. You can pre-check a skill before submitting it using the [verify endpoint](/api-reference/skills#verify-skill).
+
+See the [Skills API reference](/api-reference/skills#scan-object) for the full scan response shape.
+
 ## Custom skills
 
-You can publish your own skills to the marketplace using the create endpoint. Custom skills are visible to all users once created.
+You can publish your own skills to the marketplace using the create endpoint. Custom skills are visible to all users once created. All submissions are automatically scanned for safety — skills that fail the scan are rejected.
 
 ```bash
 curl -X POST https://agentbot.sh/api/skills/create \
@@ -238,7 +253,8 @@ curl -X POST https://agentbot.sh/api/skills/create \
     "name": "Mix Analyzer",
     "description": "Analyzes track mix quality and returns mastering suggestions",
     "category": "music",
-    "code": ""
+    "code": "",
+    "sourceUrl": "https://github.com/example/mix-analyzer"
   }'
 ```
 
@@ -248,6 +264,9 @@ curl -X POST https://agentbot.sh/api/skills/create \
 | `description` | 600 chars | Yes |
 | `category` | 40 chars, defaults to `custom` | No |
 | `code` | 2000 chars | No |
+| `sourceUrl` | 300 chars | No |
+
+<Note>Providing a `sourceUrl` improves your skill's trust tier. Skills without a source URL are assigned the `review` tier by default.</Note>
 
 See the [Skills API reference](/api-reference/skills) for the full response shape and error codes.
 
