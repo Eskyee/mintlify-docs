@@ -688,6 +688,7 @@ Requires session authentication. Returns the current user profile.
   "plan": "solo",
   "credits": 0,
   "twoFactorEnabled": false,
+  "xHandle": "yourhandle",
   "openclaw": {
     "managed": true,
     "instanceId": "inst_abc123",
@@ -704,6 +705,7 @@ Requires session authentication. Returns the current user profile.
 | `plan` | string | Current subscription plan (`solo`, `team`, etc.) |
 | `credits` | number | Remaining referral credits balance |
 | `twoFactorEnabled` | boolean | Whether two-factor authentication is enabled |
+| `xHandle` | string \| null | X (Twitter) handle without the `@` prefix, or `null` if not set. Manage via the [X handle API](/api-reference/user-x-handle). |
 | `openclaw` | object | OpenClaw instance details |
 | `openclaw.managed` | boolean | Always `true` for platform-managed instances |
 | `openclaw.instanceId` | string \| null | OpenClaw instance identifier, or `null` if not provisioned |
