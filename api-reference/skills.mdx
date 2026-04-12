@@ -27,7 +27,8 @@ Returns all available skills in the marketplace. No authentication required for 
 |-----------|------|-------------|
 | `category` | string | Filter by category. Use `all` or omit for all skills. Options: `streaming`, `events`, `payments`, `finance`, `productivity`, `communication`, `development`, `channels`, `music`, `creative`, `marketing`, `ai` |
 | `featured` | string | Set to `true` to return only featured skills |
-| `agentId` | string | Agent identifier. When provided with an authenticated session, the response includes an `installedSkillIds` array indicating which skills are already installed on this agent. |
+| `search` | string | Case-insensitive search across skill names and descriptions |
+| `agentId` | string | Agent identifier or managed runtime `openclawInstanceId`. When provided with an authenticated session, the response includes an `installedSkillIds` array indicating which skills are already installed on this agent. |
 
 ### Response
 
@@ -88,7 +89,21 @@ Requires session authentication. Installs a skill on an agent.
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `skillId` | string | Yes | ID of the skill to install |
-| `agentId` | string | Yes | ID of the agent to install the skill on |
+| `agentId` | string | Yes | ID of the agent to install the skill on. This can be either a database agent ID or a managed runtime's `openclawInstanceId`. |
+
+### Managed runtime resolution
+
+When `agentId` does not match an existing agent row in the database, the endpoint checks whether it corresponds to the authenticated user's managed OpenClaw runtime (`openclawInstanceId`). If it does, a backing agent row is automatically created in the database before the skill is installed. This allows you to install skills on managed runtimes that have not yet been explicitly registered as agents.
+
+The auto-created agent uses the following defaults:
+
+| Field | Value |
+|-------|-------|
+| `name` | `Managed OpenClaw Runtime` |
+| `model` | `openclaw` |
+| `status` | `running` |
+
+<Note>The agent row is created via an upsert, so subsequent skill installations on the same managed runtime reuse the existing row. The same resolution logic applies to the [uninstall endpoint](#uninstall-skill).</Note>
 
 ### Response
 
@@ -222,7 +237,7 @@ Requires session authentication. Removes a skill from an agent.
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `skillId` | string | Yes | ID of the skill to uninstall |
-| `agentId` | string | Yes | ID of the agent to uninstall the skill from |
+| `agentId` | string | Yes | ID of the agent to uninstall the skill from. Accepts a managed runtime's `openclawInstanceId` — see [managed runtime resolution](#managed-runtime-resolution) above. |
 
 ### Response
 

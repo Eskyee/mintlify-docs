@@ -17,6 +17,21 @@ GET /api/agents
 
 Returns all agents owned by the authenticated user. When no session is present, returns an empty list instead of a `401` error.
 
+### Managed runtime inclusion
+
+When you have a managed OpenClaw runtime (identified by `openclawInstanceId` on your user record) but no corresponding agent row exists in the database, the endpoint automatically includes a synthetic agent entry in the response. This ensures that managed runtimes are always visible in the agents list, even before a skill installation or other action has materialized the database row.
+
+The synthetic entry uses the following defaults:
+
+| Field | Value |
+|-------|-------|
+| `name` | `Managed OpenClaw Runtime` |
+| `model` | `openclaw` |
+| `status` | `running` |
+| `createdAt` | `1970-01-01T00:00:00.000Z` (epoch) |
+
+<Note>The synthetic agent is generated in-memory and is not persisted to the database. It appears only in the listing response. When a database row is later created for the same `openclawInstanceId` (for example, during [skill installation](/api-reference/skills#install-skill)), the synthetic entry is no longer needed and the persisted row is returned instead.</Note>
+
 ### Response (backend)
 
 The backend returns a flat array of agent objects:
