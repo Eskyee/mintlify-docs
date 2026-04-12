@@ -330,6 +330,9 @@ curl -X POST https://agentbot.sh/api/ai/chat \
 | `/api/solana/verify` | GET | Verify Agentbot token balance and baseFM holder benefit tier |
 | `/api/solana/rpc-config` | GET | Get saved custom Solana RPC URL (requires session) |
 | `/api/solana/rpc-config` | POST | Save or update custom Solana RPC URL (requires session) |
+| `/api/gitlawb/agents` | GET | List agents connected to Gitlawb for the authenticated user |
+| `/api/gitlawb/agents` | POST | Connect an agent to the Gitlawb decentralized git network |
+| `/api/gitlawb/agents` | DELETE | Disconnect an agent from Gitlawb |
 | `/api/git-city` | GET | Get repository city visualization data or list user repos |
 | `/api/git-city` | POST | Analyze a GitHub repository URL for city visualization |
 | `/api/generate-video` | POST | Generate and upload a video (requires session) |
