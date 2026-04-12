@@ -7,6 +7,17 @@ description: "Mux-powered live video and audio streaming, session management, vi
 
 Endpoints for live video and audio streaming via Mux, DJ session management, video generation, and streaming webhook processing.
 
+### Session lifecycle
+
+A DJ session transitions through several statuses during its lifecycle. The `active` and `live` statuses are both treated as **current sessions** — meaning the session is considered in-progress and occupies a streaming slot for the wallet. Endpoints that check for an existing session, end sessions, or authorize session access treat both statuses uniformly.
+
+| Status | Meaning |
+|--------|---------|
+| `active` | Session created, waiting for or receiving an ingest connection |
+| `live` | Mux stream is active and playback is available to listeners |
+| `ended` | Session stopped by the DJ |
+| `auto-ended` | Session expired (exceeded the 2-hour maximum) or cleaned up automatically |
+
 ## List live streams
 
 ```http
@@ -211,10 +222,12 @@ Creates a new Mux live stream. Access is granted if the caller meets either of t
 | 400 | Wallet address required |
 | 403 | Insufficient RAVE tokens or community guest pass. The wallet must hold at least 1,250,000 RAVE, or the authenticated user must have a Builder or Whale tier community claim. |
 | 403 | Community guest pass only works with the claimed Agentbot wallet. Returned when the caller has a community pass but the `wallet` in the request does not match their claimed wallet address. The response includes the expected `wallet`. |
-| 409 | An active session already exists for this wallet. The response includes a `remaining` field (seconds left) and the `sessionId`. |
+| 409 | A non-expired current session already exists for this wallet. The response includes a `remaining` field (seconds left) and the `sessionId`. |
 | 500 | Mux is not configured or stream creation failed |
 
 <Note>When access is granted via a community guest pass (not RAVE tokens), the stream is created using the caller's claimed Agentbot wallet address regardless of the `wallet` value in the request. The `stream.wallet` and `session.wallet` fields in the response reflect the claimed wallet.</Note>
+
+<Note>Before checking for a blocking session, the endpoint automatically ends any expired current sessions for the wallet. This means that if a previous session exceeded the 2-hour maximum but was never explicitly stopped, it is cleaned up and the caller can start a new stream without manual intervention.</Note>
 
 ## Check session status
 
@@ -301,7 +314,7 @@ If the session has expired (exceeded the 2-hour maximum), it is automatically en
 DELETE /api/basefm/streams
 ```
 
-Ends the active DJ session for the authenticated caller. Uses the same [authentication](#authentication) as the check session endpoint (session token or user session).
+Ends all current DJ sessions for the authenticated caller's wallet. Both `active` and `live` sessions are ended and the corresponding Mux live streams are disabled. Uses the same [authentication](#authentication) as the check session endpoint (session token or user session).
 
 ### Query parameters
 
@@ -320,7 +333,7 @@ Ends the active DJ session for the authenticated caller. Uses the same [authenti
 ```json
 {
   "success": true,
-  "ended": 1,
+  "ended": 2,
   "muxStopped": true,
   "message": "Session ended and Mux stream disabled"
 }
@@ -331,9 +344,9 @@ If no active session exists, `ended` is `0` and `message` is `"No active session
 | Field | Type | Description |
 |-------|------|-------------|
 | `success` | boolean | Always `true` |
-| `ended` | number | Number of sessions ended (`0` or `1`) |
-| `muxStopped` | boolean | Whether the underlying Mux live stream was successfully disabled. Only present when `ended` is `1`. |
-| `message` | string | Human-readable status message. `"Session ended and Mux stream disabled"` on full success, or `"Session ended, but Mux stream disable needs attention"` when the session was ended but the Mux API call failed. |
+| `ended` | number | Number of sessions ended. Can be greater than `1` when the wallet has multiple current sessions (for example, a stale `active` session and a `live` session). `0` when no current sessions exist. |
+| `muxStopped` | boolean | Whether all underlying Mux live streams were successfully disabled. Only present when `ended` is greater than `0`. |
+| `message` | string | Human-readable status message. `"Session ended and Mux stream disabled"` on full success, or `"Session ended, but Mux stream disable needs attention"` when one or more Mux API calls failed. |
 
 ### Errors
 
@@ -343,6 +356,8 @@ If no active session exists, `ended` is `0` and `message` is `"No active session
 | 403 | Forbidden — the session token does not match the session owner |
 
 <Warning>The `wallet` query parameter is no longer used. Session lookup is now based on the authenticated caller (session token or user session). Requests using the old `?wallet=` parameter are ignored — you must provide authentication instead.</Warning>
+
+<Note>When a wallet has accumulated multiple current sessions (for example, due to a previous lifecycle inconsistency), this endpoint cleans up all of them in a single call and disables each corresponding Mux live stream.</Note>
 
 ## Stream status
 
