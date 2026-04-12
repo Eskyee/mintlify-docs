@@ -89,6 +89,10 @@ The baseFM DJ Streaming skill is automatically installed on agents provisioned t
 
 Each DJ session has a **2-hour maximum duration**. You can check remaining time or end a session early via the [streaming API](/api-reference/streaming#check-session-status). Sessions that exceed the time limit are automatically ended.
 
+### Replay archive
+
+By default, ending a session deletes all Mux replay assets to prevent unintended storage costs. To preserve a replay for later playback, pass `archive: true` when [ending the session](/api-reference/streaming#end-session). Archive retention is opt-in, requires the owning Agentbot account, and charges credits based on configured archive pricing. If archive pricing is not configured or the account has insufficient credits, the request is rejected and no assets are deleted.
+
 ## Pricing
 
 | Tier | Access |
