@@ -219,6 +219,8 @@ curl -X POST https://agentbot.sh/api/ai/chat \
 | `/api/wallet/cdp` | POST | Create a CDP wallet client |
 | `/api/wallet/top-up` | GET | Create a Stripe checkout session for wallet top-up |
 | `/api/wallet/top-up` | POST | Stripe webhook for wallet top-up payment completion |
+| `/api/user/basefm-wallet` | GET | Get the linked baseFM Base wallet address |
+| `/api/user/basefm-wallet` | PATCH | Save or clear the linked baseFM Base wallet address |
 | `/api/user/bankr-key` | GET | Check if a personal Bankr API key is configured |
 | `/api/user/bankr-key` | POST | Save or update a personal Bankr API key (encrypted at rest) |
 | `/api/user/bankr-key` | DELETE | Remove a personal Bankr API key |
@@ -321,6 +323,7 @@ curl -X POST https://agentbot.sh/api/ai/chat \
 | `/api/basefm/streams` | DELETE | End an active DJ session (disables Mux stream) |
 | `/api/basefm/streams/status` | GET | Get detailed stream health, Mux status, and distribution state |
 | `/api/basefm/streams/status` | POST | Sync DJ session status with Mux stream |
+| `/api/basefm/dj-stats` | GET | Get baseFM DJ profile and aggregated stats for the linked wallet |
 | `/api/basefm/distribution` | GET | Get baseFM station distribution state |
 | `/api/basefm/relays` | GET | List relay destinations |
 | `/api/basefm/relays` | POST | Create or update a relay destination (admin) |
