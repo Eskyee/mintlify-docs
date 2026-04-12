@@ -1830,7 +1830,7 @@ POST /api/railway/provision
 
 Provisions a new agent service on Railway via the Railway GraphQL API. This endpoint creates a Railway service, configures environment variables, mounts a persistent volume, generates a public domain, and triggers a deployment. Requires bearer token authentication.
 
-<Note>This endpoint exists because direct calls from Vercel serverless functions to the Railway GraphQL API return `403`. The backend runs on Railway, so its outbound requests to the Railway API succeed. The endpoint requires `RAILWAY_API_KEY`, `RAILWAY_PROJECT_ID`, and `RAILWAY_ENVIRONMENT_ID` environment variables to be configured.</Note>
+<Note>This endpoint exists because direct calls from Vercel serverless functions to the Railway GraphQL API return `403`. The backend runs on Railway, so its outbound requests to the Railway API succeed. The endpoint requires `RAILWAY_API_KEY`, `RAILWAY_PROJECT_ID`, and `RAILWAY_ENVIRONMENT_ID` environment variables to be configured. Set `RAILWAY_TOKEN_TYPE` to control how the platform authenticates with the Railway API — `project` sends the key via the `Project-Access-Token` header, while `account` (default), `workspace`, and `oauth` send it as a `Bearer` token in the `Authorization` header.</Note>
 
 ### Request body
 
@@ -1881,7 +1881,7 @@ Each plan tier maps to specific Railway service resource limits:
 | 400 | `Invalid agentId format` — the `agentId` does not match the expected 16-character hex format |
 | 401 | Unauthorized — missing or invalid bearer token |
 | 502 | Railway provisioning failed. The error message contains details from the Railway API response. |
-| 503 | `Railway not configured on this backend` — the `RAILWAY_API_KEY` environment variable is not set |
+| 503 | `Railway not configured on this backend` — the `RAILWAY_API_KEY` environment variable is not set. Also ensure `RAILWAY_TOKEN_TYPE` is set correctly if you are using a project-scoped token. |
 
 ### Idempotency
 

@@ -439,7 +439,7 @@ The platform resolves the Railway service using a two-tier strategy:
 1. **Persisted service ID** — when the agent's configuration includes a `runtimeServiceId` (set during provisioning), the platform uses it directly. No Railway API call is made and no project-level listing is needed. This is the default for recently provisioned agents.
 2. **Project-level discovery** — when no persisted service ID exists, the platform falls back to listing all services in the Railway project and matching by name candidates derived from the agent's URL and identifier. This fallback requires a Railway token with project-listing permissions.
 
-When the persisted service ID is available, the only possible resolution errors are missing environment configuration (`RAILWAY_API_KEY`, `RAILWAY_ENVIRONMENT_ID`, or `RAILWAY_PROJECT_ID`). The project-listing errors (`No managed service reference found` and `Managed Railway service not found`) only occur in the fallback path.
+When the persisted service ID is available, the only possible resolution errors are missing environment configuration (`RAILWAY_API_KEY`, `RAILWAY_ENVIRONMENT_ID`, or `RAILWAY_PROJECT_ID`). Ensure `RAILWAY_TOKEN_TYPE` is also set correctly — when using a project-scoped token, set it to `project` so the platform sends the key via the `Project-Access-Token` header instead of the default `Authorization: Bearer` header. The project-listing errors (`No managed service reference found` and `Managed Railway service not found`) only occur in the fallback path.
 
 ```json
 {
@@ -455,6 +455,7 @@ Possible error messages include:
 | `RAILWAY_API_KEY not configured` | The platform's Railway API key is missing |
 | `RAILWAY_ENVIRONMENT_ID not configured` | The Railway environment ID is not set |
 | `RAILWAY_PROJECT_ID not configured` | The Railway project ID is not set |
+| Authentication failures (403 from Railway) | `RAILWAY_TOKEN_TYPE` may be set incorrectly. Use `project` for project-scoped tokens or `account` (default) for personal tokens. |
 | `No managed service reference found` | The platform could not determine the service name to look up (fallback path only — occurs when no persisted service ID exists and no agent URL or identifier is available) |
 | `Managed Railway service not found for <candidates>` | No matching service was found in the Railway project for the expected service name(s) (fallback path only — occurs when no persisted service ID exists) |
 
