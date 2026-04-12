@@ -7,6 +7,11 @@ description: "Agent health monitoring, restart, instance state, and factory rese
 
 Check agent health, query runtime state, and trigger maintenance restarts. These endpoints operate on the authenticated user's deployed agent instance.
 
+All lifecycle endpoints (start, stop, restart, repair, reset-memory, update, and `POST /api/openclaw/maintenance`) resolve the target Railway service using a two-tier strategy:
+
+1. **Persisted service ID (preferred)** — when the agent's configuration includes a `runtimeServiceId`, the platform uses it directly without making any Railway API calls. This is the default for agents provisioned with the current platform version.
+2. **Project-level discovery (fallback)** — when no persisted service ID is available (for example, agents provisioned before this feature was introduced), the platform falls back to listing all services in the Railway project and matching by name.
+
 ## Get instance runtime state
 
 ```http
@@ -164,7 +169,7 @@ Requires session authentication and instance ownership. Returns runtime stats fo
 POST /api/instance/:userId/start
 ```
 
-Requires session authentication and instance ownership. Triggers a deploy of the user's agent service on Railway. When managed runtime controls are disabled, this endpoint returns `503`.
+Requires session authentication and instance ownership. Triggers a deploy of the user's agent service on Railway. The target service is resolved using the persisted `runtimeServiceId` when available. When managed runtime controls are disabled, this endpoint returns `503`.
 
 ### Path parameters
 
@@ -198,7 +203,7 @@ Requires session authentication and instance ownership. Triggers a deploy of the
 POST /api/instance/:userId/stop
 ```
 
-Requires session authentication and instance ownership. Stops (suspends) the user's agent service on Railway. When managed runtime controls are disabled, this endpoint returns `503`.
+Requires session authentication and instance ownership. Stops (suspends) the user's agent service on Railway. The target service is resolved using the persisted `runtimeServiceId` when available. When managed runtime controls are disabled, this endpoint returns `503`.
 
 ### Path parameters
 
@@ -232,7 +237,7 @@ Requires session authentication and instance ownership. Stops (suspends) the use
 POST /api/instance/:userId/restart
 ```
 
-Requires session authentication and instance ownership. Restarts the user's agent gateway on Railway. When managed runtime controls are disabled, this endpoint returns `503`.
+Requires session authentication and instance ownership. Restarts the user's agent gateway on Railway. The target service is resolved using the persisted `runtimeServiceId` when available. When managed runtime controls are disabled, this endpoint returns `503`.
 
 ### Path parameters
 
@@ -266,7 +271,7 @@ Requires session authentication and instance ownership. Restarts the user's agen
 POST /api/instance/:userId/repair
 ```
 
-Requires session authentication and instance ownership. Performs a full reconfigure of the agent service: rewrites all environment variables on Railway and restarts the container. Use this to fix broken gateway tokens, corrupted configuration, or stuck containers. When managed runtime controls are disabled, this endpoint returns `503`.
+Requires session authentication and instance ownership. Performs a full reconfigure of the agent service: rewrites all environment variables on Railway and restarts the container. Use this to fix broken gateway tokens, corrupted configuration, or stuck containers. The target service is resolved using the persisted `runtimeServiceId` when available. When managed runtime controls are disabled, this endpoint returns `503`.
 
 The repair uses the user's per-user gateway token from the database. If no token exists, a new one is generated automatically.
 
@@ -302,7 +307,7 @@ The repair uses the user's per-user gateway token from the database. If no token
 POST /api/instance/:userId/reset-memory
 ```
 
-Requires session authentication and instance ownership. Wipes all stored agent memories from the database and restarts the container. The agent starts fresh as if newly provisioned. When managed runtime controls are disabled, this endpoint returns `503`.
+Requires session authentication and instance ownership. Wipes all stored agent memories from the database and restarts the container. The agent starts fresh as if newly provisioned. The target service is resolved using the persisted `runtimeServiceId` when available. When managed runtime controls are disabled, this endpoint returns `503`.
 
 <Warning>This action permanently deletes all agent memory entries for the user. The workspace on Railway is ephemeral and resets on restart.</Warning>
 
@@ -338,7 +343,7 @@ Requires session authentication and instance ownership. Wipes all stored agent m
 POST /api/instance/:userId/update
 ```
 
-Requires session authentication and instance ownership. Updates the agent container to the platform's current default OpenClaw image and triggers a redeploy. When managed runtime controls are disabled, this endpoint returns `503`.
+Requires session authentication and instance ownership. Updates the agent container to the platform's current default OpenClaw image and triggers a redeploy. The target service is resolved using the persisted `runtimeServiceId` when available. When managed runtime controls are disabled, this endpoint returns `503`.
 
 ### Path parameters
 
@@ -429,6 +434,13 @@ When managed runtime controls are disabled via the `ENABLE_OPENCLAW_CONTROLS` or
 
 When the platform cannot resolve the Railway service for the agent, lifecycle endpoints return `503` with a descriptive error message. This happens before the lifecycle action is attempted and indicates a configuration problem on the platform side, not an issue with the agent itself.
 
+The platform resolves the Railway service using a two-tier strategy:
+
+1. **Persisted service ID** — when the agent's configuration includes a `runtimeServiceId` (set during provisioning), the platform uses it directly. No Railway API call is made and no project-level listing is needed. This is the default for recently provisioned agents.
+2. **Project-level discovery** — when no persisted service ID exists, the platform falls back to listing all services in the Railway project and matching by name candidates derived from the agent's URL and identifier. This fallback requires a Railway token with project-listing permissions.
+
+When the persisted service ID is available, the only possible resolution errors are missing environment configuration (`RAILWAY_API_KEY`, `RAILWAY_ENVIRONMENT_ID`, or `RAILWAY_PROJECT_ID`). The project-listing errors (`No managed service reference found` and `Managed Railway service not found`) only occur in the fallback path.
+
 ```json
 {
   "success": false,
@@ -443,10 +455,10 @@ Possible error messages include:
 | `RAILWAY_API_KEY not configured` | The platform's Railway API key is missing |
 | `RAILWAY_ENVIRONMENT_ID not configured` | The Railway environment ID is not set |
 | `RAILWAY_PROJECT_ID not configured` | The Railway project ID is not set |
-| `No managed service reference found` | The platform could not determine the service name to look up |
-| `Managed Railway service not found for <candidates>` | No matching service was found in the Railway project for the expected service name(s) |
+| `No managed service reference found` | The platform could not determine the service name to look up (fallback path only — occurs when no persisted service ID exists and no agent URL or identifier is available) |
+| `Managed Railway service not found for <candidates>` | No matching service was found in the Railway project for the expected service name(s) (fallback path only — occurs when no persisted service ID exists) |
 
-<Note>Service resolution errors are distinct from operation errors. A `503` means the platform could not locate the agent's service to act on. A `500` means the service was found but the requested action (deploy, suspend, restart, or env var update) failed.</Note>
+<Note>Service resolution errors are distinct from operation errors. A `503` means the platform could not locate the agent's service to act on. A `500` means the service was found but the requested action (deploy, suspend, restart, or env var update) failed. Agents provisioned with the current platform version include a persisted service ID that bypasses project-level discovery entirely, making the last two error messages unlikely for new deployments.</Note>
 
 ---
 
@@ -536,6 +548,8 @@ POST /api/openclaw/maintenance
 ```
 
 Requires session authentication. Triggers a restart or factory reset of the user's agent container. The `action` field in the request body determines the behavior.
+
+This endpoint resolves the target Railway service using the persisted `runtimeServiceId` from the agent's configuration when available, falling back to project-level service discovery for older agents. See [service resolution](#service-or-configuration-resolution-failure) for details.
 
 When managed runtime controls are disabled (via the `ENABLE_OPENCLAW_CONTROLS` or `NEXT_PUBLIC_ENABLE_OPENCLAW_CONTROLS` environment variables set to `false`), this endpoint returns `503` with the message: `Managed runtime controls are temporarily disabled until the Railway control path is fully verified.`
 
