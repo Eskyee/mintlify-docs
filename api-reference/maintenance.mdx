@@ -708,6 +708,8 @@ GET /api/openclaw/version
 
 Returns the current OpenClaw runtime version and container image. Requires bearer token authentication (the `/api/openclaw` router applies the `authenticate` middleware to all non-proxy routes).
 
+The backend normalizes the version before returning it. If the configured image uses a floating tag such as `latest`, the backend replaces it with the current managed baseline version (`2026.4.11`) so the response always contains a concrete release number.
+
 ### Response
 
 ```json
@@ -720,7 +722,7 @@ Returns the current OpenClaw runtime version and container image. Requires beare
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `openclawVersion` | string | Current OpenClaw runtime version, derived from the configured image tag (for example, `2026.4.11`). |
+| `openclawVersion` | string | Current OpenClaw runtime version, derived from the configured image tag and normalized so floating tags like `latest` resolve to the managed baseline (for example, `2026.4.11`). |
 | `image` | string | Docker image used for new agent containers. Defaults to the value of the `OPENCLAW_IMAGE` environment variable or `ghcr.io/openclaw/openclaw:2026.4.11`. |
 | `deployedAt` | string | ISO 8601 timestamp of when the version info was served (returns the current server time, not the actual deployment time) |
 
@@ -736,9 +738,9 @@ When the backend is unreachable or returns an error, the endpoint returns a fall
 
 ### Version normalization
 
-The web-facing version endpoints (`GET /api/openclaw-version` and `GET /api/openclaw/version` on the web layer) normalize the `openclawVersion` value before returning it. If the backend reports the version as `"latest"` (which can happen when the `OPENCLAW_IMAGE` environment variable uses a floating tag), the endpoint replaces it with the current managed baseline version (currently `2026.4.11`).
+All version endpoints — the backend `GET /api/openclaw/version`, the web proxy `GET /api/openclaw-version`, and the web-layer `GET /api/openclaw/version` — normalize the `openclawVersion` value before returning it. If the configured image uses a floating tag like `latest`, the version is replaced with the current managed baseline version (currently `2026.4.11`).
 
-This ensures the API always returns a concrete release number rather than an opaque tag, so you can reliably compare the running version against known releases.
+This ensures every layer of the API returns a concrete release number rather than an opaque tag, so you can reliably compare the running version against known releases.
 
 | Backend value | Returned value | Reason |
 |---------------|----------------|--------|
@@ -762,7 +764,7 @@ This ensures the API always returns a concrete release number rather than an opa
 | `image` | string | Docker image identifier. When the backend is unavailable or does not return an image, defaults to the configured image (for example, `ghcr.io/openclaw/openclaw:2026.4.11`). |
 | `deployedAt` | string \| undefined | ISO 8601 deployment timestamp. Only present when the backend responds successfully. |
 
-<Note>This endpoint uses an 8-second request timeout when calling the backend. If the backend does not respond within that window, the fallback version is returned. The version normalization applies to both `GET /api/openclaw-version` and the web-layer `GET /api/openclaw/version` route — the backend-only `GET /api/openclaw/version` endpoint returns the raw derived version without normalization.</Note>
+<Note>This endpoint uses an 8-second request timeout when calling the backend. If the backend does not respond within that window, the fallback version is returned. Version normalization now applies at every layer: the backend `GET /api/openclaw/version`, the web proxy `GET /api/openclaw-version`, and the web-layer `GET /api/openclaw/version` all normalize floating tags to the managed baseline.</Note>
 
 | Code | Description |
 |------|-------------|
