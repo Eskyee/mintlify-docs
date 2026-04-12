@@ -65,6 +65,7 @@ The web proxy wraps the response in an object:
   "agents": [
     {
       "id": "agent_123",
+      "userId": "user_456",
       "name": "My Agent",
       "model": "claude-opus-4-6",
       "status": "running",
@@ -82,10 +83,11 @@ The web proxy wraps the response in an object:
 |-------|------|-------------|
 | `agents` | array | List of agent objects owned by the authenticated user |
 | `agents[].id` | string | Agent identifier |
+| `agents[].userId` | string | Owner user identifier |
 | `agents[].name` | string | Agent name |
 | `agents[].model` | string | AI model assigned to the agent |
 | `agents[].status` | string | Current agent status |
-| `agents[].websocketUrl` | string | WebSocket URL for the agent gateway |
+| `agents[].websocketUrl` | string \| null | WebSocket URL for the agent gateway |
 | `agents[].createdAt` | string | ISO 8601 creation timestamp |
 | `agents[].updatedAt` | string | ISO 8601 last update timestamp |
 | `count` | number | Total number of agents returned |
@@ -186,7 +188,7 @@ The web proxy wraps the agent in an object:
 }
 ```
 
-<Note>The backend returns the agent object directly. The web proxy wraps it in an `agent` key and adds a top-level `status` field.</Note>
+<Note>The backend returns the agent object directly. The web proxy wraps it in an `agent` key and adds a top-level `status` field. Sensitive fields (`config.authToken` and top-level `authToken`) are stripped from the response before it is returned to the client.</Note>
 
 ### Errors
 
@@ -237,6 +239,44 @@ Updates an agent's metadata including plan, AI provider, and configuration. Requ
 
 <Note>To update agent configuration through the web proxy with session authentication, use [`PUT /api/agents/:id/config`](#update-agent-configuration) instead.</Note>
 
+### Rename agent (web proxy)
+
+```http
+PATCH /api/agents/:id
+```
+
+Renames an agent. Requires session authentication and ownership. The name change is persisted locally and forwarded to the backend on a best-effort basis (backend failures are non-fatal).
+
+#### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | string | Yes | New agent name (trimmed, max 64 characters) |
+
+#### Response
+
+```json
+{
+  "success": true,
+  "agent": {
+    "id": "agent_123",
+    "name": "New Name",
+    "status": "running",
+    "updatedAt": "2026-04-12T00:00:00Z"
+  }
+}
+```
+
+#### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | Name is required |
+| 400 | Name too long (max 64 chars) |
+| 401 | Unauthorized |
+| 404 | Agent not found |
+| 500 | Failed to rename agent |
+
 ## Delete agent
 
 ```http
@@ -245,12 +285,23 @@ DELETE /api/agents/:id
 
 Stops and removes the agent's local Docker container, deallocates its port, and removes its metadata file. Requires bearer token authentication (backend).
 
-### Response
+### Response (backend)
 
 ```json
 {
   "id": "agent_123",
   "deleted": true
+}
+```
+
+### Response (web proxy)
+
+The web proxy also accepts `DELETE /api/agents/:id` with session authentication. It performs best-effort cleanup of the associated managed runtime service, deletes the agent record from the database (cascading to memories, files, and related data), and clears the user's `openclawInstanceId` and `openclawUrl` fields. The agent is resolved by ownership check or by matching the user's `openclawInstanceId`.
+
+```json
+{
+  "success": true,
+  "deleted": "agent_123"
 }
 ```
 
@@ -1350,6 +1401,12 @@ Returns the gateway token for the agent. If no token exists, a new cryptographic
 
 Agents can be verified using multiple verification types: `eas` (Ethereum Attestation Service), `coinbase`, `ens`, or `webauthn`.
 
+### Managed runtime fallback
+
+All verification endpoints support a **managed runtime fallback**. When you have a managed OpenClaw runtime but no corresponding agent row exists in the database, the endpoint automatically resolves the agent by matching your `openclawInstanceId` and upserts a synthetic agent record. This ensures verification works for managed runtimes even before a full agent record has been provisioned.
+
+When the backend verification service returns `404` (for example, because the backend does not yet have metadata for the agent), the web proxy falls back to reading and writing verification state in the agent's local `config.verification` field in the database. This means verification state is persisted and readable locally for managed runtimes, even when the backend has no record of the agent.
+
 ### Get verification status
 
 ```http
@@ -1357,6 +1414,10 @@ GET /api/agents/:id/verification
 ```
 
 <Note>The backend GET endpoint uses `/api/agents/:id/verification` while POST and DELETE use `/api/agents/:id/verify`. The web API proxies all three methods through `/api/agents/:id/verify`.</Note>
+
+#### Response
+
+When the backend is available, the response is proxied as-is:
 
 ```json
 {
@@ -1368,6 +1429,28 @@ GET /api/agents/:id/verification
   "metadata": null
 }
 ```
+
+When the backend returns `404`, the endpoint falls back to the locally persisted verification state:
+
+```json
+{
+  "verified": false,
+  "verificationType": null,
+  "attestationUid": null,
+  "verifierAddress": null,
+  "verifiedAt": null
+}
+```
+
+<Note>The fallback response does not include the `metadata` field. All fields default to `null` (or `false` for `verified`) when no local verification state has been written.</Note>
+
+#### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | Unauthorized — no valid session |
+| 404 | Agent not found — the agent does not exist and no managed runtime matches the ID |
+| 500 | Failed to fetch verification status |
 
 ### Verify agent
 
@@ -1382,10 +1465,18 @@ POST /api/agents/:id/verify
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `verificationType` | string | Yes | One of: `eas`, `coinbase`, `ens`, `webauthn` |
-| `verified` | boolean | No | Whether the agent is verified (defaults to `true` via web API) |
-| `attestationUid` | string | No | Attestation UID from EAS |
-| `verifierAddress` | string | No | Address of the verifying wallet |
-| `metadata` | object | No | Additional verification metadata |
+| `attestationUid` | string | Conditional | Required for `eas` verification |
+| `walletAddress` | string | Conditional | Required for `ens` verification. Optional for `eas` and `coinbase`. |
+| `signature` | string | Conditional | Required for `coinbase`, `ens`, and `webauthn` verification |
+
+Each verification type has specific field requirements:
+
+| Type | Required fields |
+|------|-----------------|
+| `eas` | `attestationUid` |
+| `coinbase` | `signature` |
+| `ens` | `signature`, `walletAddress` |
+| `webauthn` | `signature` (used as the attestation) |
 
 <Note>The web API always sets `verified: true` on success. When calling the backend directly, you can pass `verified`, `verifierAddress`, and `metadata` explicitly.</Note>
 
@@ -1401,14 +1492,17 @@ POST /api/agents/:id/verify
 }
 ```
 
+When the backend returns `404`, the verification state is persisted locally and the same success response shape is returned.
+
 #### Errors
 
 | Code | Description |
 |------|-------------|
-| 401 | Unauthorized (handled by authentication middleware) |
-| 403 | Forbidden — you do not own this agent |
-| 404 | Agent not found |
-| 500 | Failed to update verification |
+| 400 | Invalid verification type — the `verificationType` value is not one of the supported types |
+| 400 | Missing required field for the specified verification type (for example, `Attestation UID required for EAS verification`, `Signature required for Coinbase verification`, `Signature and wallet address required for ENS verification`, `Attestation required for WebAuthn verification`) |
+| 401 | Unauthorized — no valid session |
+| 404 | Agent not found — the agent does not exist and no managed runtime matches the ID |
+| 500 | Failed to process verification |
 
 ### Remove verification
 
@@ -1422,12 +1516,14 @@ DELETE /api/agents/:id/verify
 }
 ```
 
+When the backend returns `404`, the endpoint clears the local verification state instead.
+
 #### Errors
 
 | Code | Description |
 |------|-------------|
-| 403 | Forbidden — you do not own this agent |
-| 404 | Agent not found |
+| 401 | Unauthorized — no valid session |
+| 404 | Agent not found — the agent does not exist and no managed runtime matches the ID |
 | 500 | Failed to remove verification |
 
 ## Provision with channel tokens
