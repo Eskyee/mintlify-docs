@@ -7,13 +7,15 @@ description: "Agent health monitoring, restart, instance state, and factory rese
 
 Check agent health, query runtime state, and trigger maintenance restarts. These endpoints operate on the authenticated user's deployed agent instance.
 
+<Note>Admin users (configured via `ADMIN_EMAILS`) can access any user's instance through all `/api/instance/:userId` endpoints. When an admin calls these endpoints, the ownership check is bypassed and the target user is resolved by looking up the provided `userId` as an `openclawInstanceId` in the database. Regular users can only access their own instance.</Note>
+
 ## Get instance runtime state
 
 ```http
 GET /api/instance/:userId
 ```
 
-Requires session authentication. Returns runtime state for a specific agent instance by probing the agent's `/healthz` and `/readyz` endpoints directly. This endpoint resolves status without a backend hop — it reads the persisted OpenClaw URL from the database and probes the agent in-process.
+Requires session authentication and instance ownership. Admin users bypass the ownership check and can query any user's instance. Returns runtime state for a specific agent instance by probing the agent's `/healthz` and `/readyz` endpoints directly. This endpoint resolves status without a backend hop — it reads the persisted OpenClaw URL from the database and probes the agent in-process.
 
 ### Path parameters
 
@@ -68,7 +70,7 @@ Requires session authentication. Returns runtime state for a specific agent inst
 | Code | Description |
 |------|-------------|
 | 403 | Forbidden — not authenticated (no valid session) |
-| 404 | No instance found — the authenticated user does not have a deployed agent, or does not own the requested instance. The response message is: `No instance found. Please deploy first.` |
+| 404 | No instance found — the user does not have a deployed agent, or the caller does not own the requested instance and is not an admin. The response message is: `No instance found. Please deploy first.` |
 
 ---
 
@@ -78,7 +80,7 @@ Requires session authentication. Returns runtime state for a specific agent inst
 GET /api/instance/:userId/stats
 ```
 
-Requires session authentication and instance ownership. Returns runtime stats for a specific agent instance by probing the agent's gateway. Resource-level metrics (CPU, memory) are not yet exposed by the gateway and return placeholder values.
+Requires session authentication and instance ownership. Admin users bypass the ownership check and can query any user's instance. Returns runtime stats for a specific agent instance by probing the agent's gateway. Resource-level metrics (CPU, memory) are not yet exposed by the gateway and return placeholder values.
 
 ### Path parameters
 
@@ -130,7 +132,7 @@ Requires session authentication and instance ownership. Returns runtime stats fo
 | Code | Description |
 |------|-------------|
 | 401 | Unauthorized — no valid session |
-| 403 | Forbidden — the authenticated user does not own the requested instance |
+| 403 | Forbidden — the caller does not own the requested instance and is not an admin |
 
 ---
 
@@ -140,7 +142,7 @@ Requires session authentication and instance ownership. Returns runtime stats fo
 POST /api/instance/:userId/start
 ```
 
-Requires session authentication and instance ownership. Triggers a deploy of the user's agent service on Railway. When managed runtime controls are disabled, this endpoint returns `503`.
+Requires session authentication and instance ownership. Admin users bypass the ownership check and can start any user's instance. Triggers a deploy of the user's agent service on Railway.
 
 ### Path parameters
 
@@ -162,9 +164,9 @@ Requires session authentication and instance ownership. Triggers a deploy of the
 | Code | Description |
 |------|-------------|
 | 401 | Unauthorized — no valid session |
-| 403 | Forbidden — the authenticated user does not own the requested instance |
+| 403 | Forbidden — the caller does not own the requested instance and is not an admin |
 | 500 | Failed to start the service (for example, the Railway deploy mutation failed) |
-| 503 | Managed runtime controls are disabled, or service/config resolution failed. See [503 error details](#503-error-details) for the full list of causes. |
+| 503 | Service/config resolution failed. See [503 error details](#503-error-details) for the full list of causes. |
 
 ---
 
@@ -174,7 +176,7 @@ Requires session authentication and instance ownership. Triggers a deploy of the
 POST /api/instance/:userId/stop
 ```
 
-Requires session authentication and instance ownership. Stops (suspends) the user's agent service on Railway. When managed runtime controls are disabled, this endpoint returns `503`.
+Requires session authentication and instance ownership. Admin users bypass the ownership check and can stop any user's instance. Stops (suspends) the user's agent service on Railway.
 
 ### Path parameters
 
@@ -196,9 +198,9 @@ Requires session authentication and instance ownership. Stops (suspends) the use
 | Code | Description |
 |------|-------------|
 | 401 | Unauthorized — no valid session |
-| 403 | Forbidden — the authenticated user does not own the requested instance |
+| 403 | Forbidden — the caller does not own the requested instance and is not an admin |
 | 500 | Failed to stop the service (for example, the Railway suspend mutation failed) |
-| 503 | Managed runtime controls are disabled, or service/config resolution failed. See [503 error details](#503-error-details) for the full list of causes. |
+| 503 | Service/config resolution failed. See [503 error details](#503-error-details) for the full list of causes. |
 
 ---
 
@@ -208,7 +210,7 @@ Requires session authentication and instance ownership. Stops (suspends) the use
 POST /api/instance/:userId/restart
 ```
 
-Requires session authentication and instance ownership. Restarts the user's agent gateway on Railway. When managed runtime controls are disabled, this endpoint returns `503`.
+Requires session authentication and instance ownership. Admin users bypass the ownership check and can restart any user's instance. Restarts the user's agent gateway on Railway.
 
 ### Path parameters
 
@@ -230,9 +232,9 @@ Requires session authentication and instance ownership. Restarts the user's agen
 | Code | Description |
 |------|-------------|
 | 401 | Unauthorized — no valid session |
-| 403 | Forbidden — the authenticated user does not own the requested instance |
+| 403 | Forbidden — the caller does not own the requested instance and is not an admin |
 | 500 | Failed to restart the service (for example, the Railway restart mutation failed) |
-| 503 | Managed runtime controls are disabled, or service/config resolution failed. See [503 error details](#503-error-details) for the full list of causes. |
+| 503 | Service/config resolution failed. See [503 error details](#503-error-details) for the full list of causes. |
 
 ---
 
@@ -242,7 +244,7 @@ Requires session authentication and instance ownership. Restarts the user's agen
 POST /api/instance/:userId/repair
 ```
 
-Requires session authentication and instance ownership. Performs a full reconfigure of the agent service: rewrites all environment variables on Railway and restarts the container. Use this to fix broken gateway tokens, corrupted configuration, or stuck containers. When managed runtime controls are disabled, this endpoint returns `503`.
+Requires session authentication and instance ownership. Admin users bypass the ownership check and can repair any user's instance. Performs a full reconfigure of the agent service: rewrites all environment variables on Railway and restarts the container. Use this to fix broken gateway tokens, corrupted configuration, or stuck containers.
 
 The repair uses the user's per-user gateway token from the database. If no token exists, a new one is generated automatically.
 
@@ -266,9 +268,9 @@ The repair uses the user's per-user gateway token from the database. If no token
 | Code | Description |
 |------|-------------|
 | 401 | Unauthorized — no valid session |
-| 403 | Forbidden — the authenticated user does not own the requested instance |
+| 403 | Forbidden — the caller does not own the requested instance and is not an admin |
 | 500 | Failed to repair the service (for example, the environment variable update or Railway restart mutation failed) |
-| 503 | Managed runtime controls are disabled, or service/config resolution failed. See [503 error details](#503-error-details) for the full list of causes. |
+| 503 | Service/config resolution failed. See [503 error details](#503-error-details) for the full list of causes. |
 
 ---
 
@@ -278,7 +280,7 @@ The repair uses the user's per-user gateway token from the database. If no token
 POST /api/instance/:userId/reset-memory
 ```
 
-Requires session authentication and instance ownership. Wipes all stored agent memories from the database and restarts the container. The agent starts fresh as if newly provisioned. When managed runtime controls are disabled, this endpoint returns `503`.
+Requires session authentication and instance ownership. Admin users bypass the ownership check and can reset any user's instance memory. Wipes all stored agent memories from the database and restarts the container. The agent starts fresh as if newly provisioned.
 
 <Warning>This action permanently deletes all agent memory entries for the user. The workspace on Railway is ephemeral and resets on restart.</Warning>
 
@@ -302,9 +304,9 @@ Requires session authentication and instance ownership. Wipes all stored agent m
 | Code | Description |
 |------|-------------|
 | 401 | Unauthorized — no valid session |
-| 403 | Forbidden — the authenticated user does not own the requested instance |
+| 403 | Forbidden — the caller does not own the requested instance and is not an admin |
 | 500 | Failed to reset agent memory or restart the service |
-| 503 | Managed runtime controls are disabled, or service/config resolution failed. See [503 error details](#503-error-details) for the full list of causes. |
+| 503 | Service/config resolution failed. See [503 error details](#503-error-details) for the full list of causes. |
 
 ---
 
@@ -314,7 +316,7 @@ Requires session authentication and instance ownership. Wipes all stored agent m
 POST /api/instance/:userId/update
 ```
 
-Requires session authentication and instance ownership. Updates the agent container to the platform's current default OpenClaw image and triggers a redeploy. When managed runtime controls are disabled, this endpoint returns `503`.
+Requires session authentication and instance ownership. Admin users bypass the ownership check and can update any user's instance image. Updates the agent container to the platform's current default OpenClaw image and triggers a redeploy.
 
 ### Path parameters
 
@@ -345,9 +347,9 @@ Requires session authentication and instance ownership. Updates the agent contai
 | Code | Description |
 |------|-------------|
 | 401 | Unauthorized — no valid session |
-| 403 | Forbidden — the authenticated user does not own the requested instance |
+| 403 | Forbidden — the caller does not own the requested instance and is not an admin |
 | 500 | Failed to update the service |
-| 503 | Managed runtime controls are disabled, or service/config resolution failed. See [503 error details](#503-error-details) for the full list of causes. |
+| 503 | Service/config resolution failed. See [503 error details](#503-error-details) for the full list of causes. |
 
 ---
 
@@ -357,7 +359,7 @@ Requires session authentication and instance ownership. Updates the agent contai
 GET /api/instance/:userId/token
 ```
 
-Requires session authentication and instance ownership. Returns the gateway token for the user's agent instance.
+Requires session authentication and instance ownership. Admin users bypass the ownership check and can retrieve the gateway token for any user's instance. Returns the gateway token for the specified agent instance.
 
 ### Path parameters
 
@@ -381,25 +383,16 @@ Requires session authentication and instance ownership. Returns the gateway toke
 
 | Code | Description |
 |------|-------------|
-| 403 | Unauthorized — no valid session or the authenticated user does not own the requested instance |
+| 403 | Unauthorized — no valid session or the caller does not own the requested instance and is not an admin |
 | 503 | No gateway token is configured on the platform |
 
 ---
 
 ## 503 error details
 
-All lifecycle endpoints (start, stop, restart, repair, reset-memory, and update) return `503` in two scenarios:
+All lifecycle endpoints (start, stop, restart, repair, reset-memory, and update) return `503` when the platform cannot resolve the agent's service configuration.
 
-### Controls disabled
-
-When managed runtime controls are disabled via the `ENABLE_OPENCLAW_CONTROLS` or `NEXT_PUBLIC_ENABLE_OPENCLAW_CONTROLS` environment variables, all lifecycle endpoints return:
-
-```json
-{
-  "success": false,
-  "error": "Managed runtime controls are temporarily disabled until the Railway control path is fully verified."
-}
-```
+<Note>Managed runtime controls are always enabled. The `ENABLE_OPENCLAW_CONTROLS` and `NEXT_PUBLIC_ENABLE_OPENCLAW_CONTROLS` environment variables are no longer used to gate lifecycle actions — the controls flag is hardcoded to `true`.</Note>
 
 ### Service or configuration resolution failure
 
@@ -495,7 +488,7 @@ POST /api/openclaw/maintenance
 
 Requires session authentication. Triggers a restart or factory reset of the user's agent container. The `action` field in the request body determines the behavior.
 
-When managed runtime controls are disabled (via the `ENABLE_OPENCLAW_CONTROLS` or `NEXT_PUBLIC_ENABLE_OPENCLAW_CONTROLS` environment variables set to `false`), this endpoint returns `503` with the message: `Managed runtime controls are temporarily disabled until the Railway control path is fully verified.`
+<Note>Managed runtime controls are always enabled. The controls flag is hardcoded to `true` and can no longer be disabled via environment variables.</Note>
 
 ### Request body
 
@@ -589,7 +582,7 @@ When a restart or factory reset fails:
 | 401 | Unauthorized — missing or invalid session |
 | 404 | No agent deployed for the authenticated user |
 | 500 | Internal error during the restart or factory reset |
-| 503 | Managed runtime controls are disabled, or the required Railway configuration (environment, project, or service) could not be resolved. When Railway configuration is the cause, the response body contains a descriptive error message. |
+| 503 | The required Railway configuration (environment, project, or service) could not be resolved. The response body contains a descriptive error message. |
 
 <Warning>Both `restart` and `factory-reset` cause a brief period of downtime while the container reinitializes. The `openclaw doctor --fix` process runs automatically during startup and may take additional time depending on the number of pending fixes or migrations.</Warning>
 
