@@ -69,9 +69,17 @@ OPENROUTER_API_KEY=sk-or-...
 # Telegram Bot
 TELEGRAM_BOT_TOKEN=your-bot-token
 
+# Railway provisioning (required for managed agent deployment)
+RAILWAY_API_KEY=your-railway-api-key
+RAILWAY_TOKEN_TYPE=account
+RAILWAY_PROJECT_ID=your-railway-project-id
+RAILWAY_ENVIRONMENT_ID=your-railway-environment-id
+
 # OpenClaw Gateway (optional — defaults to internal Railway DNS)
 OPENCLAW_GATEWAY_URL=http://your-gateway-host:10000
 ```
+
+<Note>`RAILWAY_TOKEN_TYPE` controls how the platform authenticates with the Railway GraphQL API. Set it to `project` to authenticate with a project-scoped token (sent via the `Project-Access-Token` header) or to `account` (default) to authenticate with a personal token (sent via the `Authorization: Bearer` header). Valid values are `project`, `workspace`, `account`, and `oauth`.</Note>
 
 ## Docker Production
 
