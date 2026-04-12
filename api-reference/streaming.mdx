@@ -48,7 +48,22 @@ When Mux is available, active streams are enriched with metadata from the corres
     "hlsUrl": "https://stream.mux.com/xYz789.m3u8",
     "embedUrl": "https://stream.mux.com/xYz789.html"
   },
-  "availability": "live"
+  "availability": "live",
+  "distribution": {
+    "origin": {
+      "status": "active",
+      "playbackId": "xYz789",
+      "hlsUrl": "https://stream.mux.com/xYz789.m3u8"
+    },
+    "firstParty": {
+      "status": "healthy",
+      "pageUrl": "https://basefm.space",
+      "note": null
+    },
+    "relays": [],
+    "requiredRelayStatus": "healthy",
+    "overallStatus": "healthy"
+  }
 }
 ```
 
@@ -67,6 +82,15 @@ When Mux is available, active streams are enriched with metadata from the corres
 | `count` | number | Number of live DJs |
 | `primaryDj` | object \| null | The first DJ in the list, or `null` when no DJs are live |
 | `availability` | string | Data source status: `live` (real-time from Mux) or `degraded` (served from session cache) |
+| `distribution` | object | Distribution state for the baseFM station. See [distribution](#get-distribution-state) for the full shape. |
+| `distribution.origin.status` | string | Origin stream status: `active`, `degraded`, or `idle` |
+| `distribution.origin.playbackId` | string \| null | Mux playback ID for the origin stream |
+| `distribution.origin.hlsUrl` | string \| null | HLS URL for the origin stream |
+| `distribution.firstParty` | object | Health status of the first-party baseFM page |
+| `distribution.firstParty.status` | string | One of `pending`, `healthy`, `degraded`, `failed`, or `stopped` |
+| `distribution.relays` | array | Configured relay destinations and their health |
+| `distribution.requiredRelayStatus` | string | Aggregated status of all required relays |
+| `distribution.overallStatus` | string | Overall distribution health across origin, first-party page, and relays |
 
 When the response has `"availability": "degraded"`, it may also include an `error` field with a human-readable description of why the Mux API could not be reached.
 
@@ -297,7 +321,8 @@ Ends the active DJ session for the authenticated caller. Uses the same [authenti
 {
   "success": true,
   "ended": 1,
-  "message": "Session ended"
+  "muxStopped": true,
+  "message": "Session ended and Mux stream disabled"
 }
 ```
 
@@ -307,7 +332,8 @@ If no active session exists, `ended` is `0` and `message` is `"No active session
 |-------|------|-------------|
 | `success` | boolean | Always `true` |
 | `ended` | number | Number of sessions ended (`0` or `1`) |
-| `message` | string | Human-readable status message |
+| `muxStopped` | boolean | Whether the underlying Mux live stream was successfully disabled. Only present when `ended` is `1`. |
+| `message` | string | Human-readable status message. `"Session ended and Mux stream disabled"` on full success, or `"Session ended, but Mux stream disable needs attention"` when the session was ended but the Mux API call failed. |
 
 ### Errors
 
@@ -317,6 +343,381 @@ If no active session exists, `ended` is `0` and `message` is `"No active session
 | 403 | Forbidden — the session token does not match the session owner |
 
 <Warning>The `wallet` query parameter is no longer used. Session lookup is now based on the authenticated caller (session token or user session). Requests using the old `?wallet=` parameter are ignored — you must provide authentication instead.</Warning>
+
+## Stream status
+
+```http
+GET /api/basefm/streams/status
+```
+
+Returns detailed stream health information for the authenticated caller's active session, including the real-time Mux stream status, distribution state, and a health assessment. Uses the same [authentication](#authentication) as the check session and end session endpoints.
+
+### Query parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `sessionToken` | string | No | Session access token from `POST /api/basefm/streams`. Alternative to the `x-basefm-session` header. |
+
+### Headers
+
+| Header | Required | Description |
+|--------|----------|-------------|
+| `x-basefm-session` | No | Session access token. Alternative to the `sessionToken` query parameter. |
+
+### Response — active session
+
+```json
+{
+  "active": true,
+  "session": {
+    "id": 42,
+    "djName": "DJ Rave",
+    "muxStreamId": "aB1cD2eF3g",
+    "playbackId": "xYz789",
+    "status": "live"
+  },
+  "mux": {
+    "id": "aB1cD2eF3g",
+    "status": "active",
+    "playbackId": "xYz789",
+    "recentAssetIds": []
+  },
+  "distribution": {
+    "origin": {
+      "status": "active",
+      "playbackId": "xYz789",
+      "hlsUrl": "https://stream.mux.com/xYz789.m3u8"
+    },
+    "firstParty": {
+      "status": "healthy",
+      "pageUrl": "https://basefm.space",
+      "note": null
+    },
+    "relays": [],
+    "requiredRelayStatus": "healthy",
+    "overallStatus": "healthy"
+  },
+  "streamHealth": "good",
+  "pickupRecommended": false,
+  "message": "Mux is active and the station should be ready for listeners."
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `active` | boolean | Whether the caller has an active session |
+| `session.id` | number | Session record ID |
+| `session.djName` | string \| null | DJ display name |
+| `session.muxStreamId` | string | Mux live stream ID |
+| `session.playbackId` | string \| null | Mux playback ID stored in the session |
+| `session.status` | string | Session status (`active` or `live`) |
+| `mux.id` | string | Mux live stream ID (from the Mux API) |
+| `mux.status` | string | Real-time Mux stream status (`active`, `idle`, or `disabled`) |
+| `mux.playbackId` | string \| null | Playback ID resolved from the Mux stream |
+| `mux.recentAssetIds` | array | IDs of recently created Mux assets for this stream |
+| `distribution` | object | Distribution state. See [distribution](#get-distribution-state) for the full shape. |
+| `streamHealth` | string | Overall health assessment: `good` (Mux active with playback), `waiting` (Mux idle or playback not yet available), or `bad` (Mux is not reporting a healthy stream) |
+| `pickupRecommended` | boolean | `true` when the Mux stream is active but the session has not yet transitioned to `live` status, indicating a sync may be needed |
+| `message` | string | Human-readable explanation of the current stream health |
+
+### Response — no active session
+
+```json
+{
+  "active": false,
+  "message": "No active stream session found"
+}
+```
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | Unauthorized — no valid session token or user session |
+| 403 | Forbidden — the session token does not match the session owner |
+| 500 | Failed to read Mux status |
+
+## Sync stream status
+
+```http
+POST /api/basefm/streams/status
+```
+
+Manually syncs the DJ session status with the Mux stream. If the Mux stream is active, the session is transitioned to `live` and the playback ID is updated. Uses the same [authentication](#authentication) as the other session endpoints.
+
+### Query parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `sessionToken` | string | No | Session access token from `POST /api/basefm/streams`. Alternative to the `x-basefm-session` header. |
+
+### Headers
+
+| Header | Required | Description |
+|--------|----------|-------------|
+| `x-basefm-session` | No | Session access token. Alternative to the `sessionToken` query parameter. |
+
+### Response — synced
+
+```json
+{
+  "success": true,
+  "synced": true,
+  "muxStatus": "active",
+  "playbackId": "xYz789",
+  "streamHealth": "good",
+  "message": "Mux stream is active. Session synced to live."
+}
+```
+
+### Response — not yet active
+
+```json
+{
+  "success": false,
+  "synced": false,
+  "muxStatus": "idle",
+  "playbackId": null,
+  "streamHealth": "waiting",
+  "message": "Mux stream is not active yet. OBS ingest still needs to connect."
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `success` | boolean | Whether the sync completed successfully |
+| `synced` | boolean | Whether the session was actually updated |
+| `muxStatus` | string | Real-time Mux stream status |
+| `playbackId` | string \| null | Mux playback ID |
+| `streamHealth` | string | Health assessment: `good` (active with playback), `waiting` (idle or no playback), or `bad` |
+| `message` | string | Human-readable status explanation |
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | Unauthorized — no valid session token or user session |
+| 403 | Forbidden — the session token does not match the session owner |
+| 404 | No active stream session found |
+| 500 | Failed to sync stream from Mux |
+
+## Get distribution state
+
+```http
+GET /api/basefm/distribution
+```
+
+Returns the current distribution state for the baseFM station, including the origin stream health, first-party page status, and relay destination statuses. No authentication required.
+
+When Mux credentials are unavailable or the Mux API returns an error, the endpoint falls back to cached session data and returns a degraded distribution state.
+
+### Response
+
+```json
+{
+  "distribution": {
+    "origin": {
+      "status": "active",
+      "playbackId": "xYz789",
+      "hlsUrl": "https://stream.mux.com/xYz789.m3u8"
+    },
+    "firstParty": {
+      "status": "healthy",
+      "pageUrl": "https://basefm.space",
+      "note": null
+    },
+    "relays": [
+      {
+        "key": "basefm-space",
+        "name": "basefm.space",
+        "type": "hls-consumer",
+        "required": true,
+        "enabled": true,
+        "status": "healthy",
+        "viewerUrl": "https://basefm.space",
+        "probeUrl": "https://basefm.space",
+        "note": null,
+        "lastHealthyAt": "2026-04-11T01:00:00.000Z",
+        "lastErrorAt": null,
+        "lastErrorMessage": null
+      }
+    ],
+    "requiredRelayStatus": "healthy",
+    "overallStatus": "healthy"
+  }
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `distribution.origin.status` | string | Origin stream status: `active`, `degraded`, or `idle` |
+| `distribution.origin.playbackId` | string \| null | Mux playback ID for the origin stream |
+| `distribution.origin.hlsUrl` | string \| null | HLS URL for the origin stream |
+| `distribution.firstParty.status` | string | First-party page health: `pending`, `healthy`, `degraded`, `failed`, or `stopped` |
+| `distribution.firstParty.pageUrl` | string | URL of the first-party baseFM page |
+| `distribution.firstParty.note` | string \| null | Contextual message about the first-party page status |
+| `distribution.relays` | array | List of configured relay destinations |
+| `distribution.relays[].key` | string | Unique relay identifier |
+| `distribution.relays[].name` | string | Display name |
+| `distribution.relays[].type` | string | Relay type: `hls-consumer`, `rtmp`, `youtube`, or `custom` |
+| `distribution.relays[].required` | boolean | Whether this relay is required for overall health |
+| `distribution.relays[].enabled` | boolean | Whether this relay is enabled |
+| `distribution.relays[].status` | string | Relay health: `pending`, `healthy`, `degraded`, `failed`, or `stopped` |
+| `distribution.relays[].viewerUrl` | string \| null | URL where viewers can access this relay |
+| `distribution.relays[].probeUrl` | string \| null | URL used for health probing |
+| `distribution.relays[].note` | string \| null | Contextual message about relay status |
+| `distribution.relays[].lastHealthyAt` | string \| null | ISO 8601 timestamp of the last successful health check |
+| `distribution.relays[].lastErrorAt` | string \| null | ISO 8601 timestamp of the last health check failure |
+| `distribution.relays[].lastErrorMessage` | string \| null | Error message from the last failed health check |
+| `distribution.requiredRelayStatus` | string | Aggregated status of all required relays |
+| `distribution.overallStatus` | string | Overall distribution health across origin, first-party page, and required relays |
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 500 | Internal error and no cached session data is available |
+
+<Note>When Mux credentials are missing or the Mux API is unreachable, the endpoint returns a degraded distribution state based on cached session data with HTTP status `200` (as long as cached data exists). A `500` is only returned when both the Mux API and the session cache are unavailable.</Note>
+
+## List relay destinations
+
+```http
+GET /api/basefm/relays
+```
+
+Returns all configured relay destinations for the baseFM station. No authentication required. Default relay destinations are created automatically if they do not exist.
+
+### Response
+
+```json
+{
+  "relays": [
+    {
+      "key": "basefm-space",
+      "name": "basefm.space",
+      "type": "hls-consumer",
+      "required": true,
+      "enabled": true,
+      "status": "healthy",
+      "viewerUrl": "https://basefm.space",
+      "probeUrl": "https://basefm.space",
+      "note": null,
+      "lastHealthyAt": "2026-04-11T01:00:00.000Z",
+      "lastErrorAt": null,
+      "lastErrorMessage": null
+    }
+  ]
+}
+```
+
+See the [distribution](#get-distribution-state) endpoint for full field descriptions of relay objects.
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 500 | Unable to load relay destinations |
+
+## Create or update relay destination
+
+```http
+POST /api/basefm/relays
+```
+
+Creates a new relay destination or updates an existing one. Requires admin session authentication.
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `key` | string | Yes | Unique relay identifier. Used as the upsert key. |
+| `name` | string | Yes | Display name for the relay |
+| `type` | string | No | Relay type: `hls-consumer`, `rtmp`, `youtube`, or `custom` (default: `custom`) |
+| `viewerUrl` | string | No | URL where viewers can access this relay |
+| `probeUrl` | string | No | URL used for health probing. Defaults to `viewerUrl` if not provided. |
+| `required` | boolean | No | Whether this relay is required for overall health (default: `false`) |
+| `enabled` | boolean | No | Whether this relay is enabled (default: `true`) |
+
+### Response
+
+```json
+{
+  "relay": {
+    "id": 1,
+    "key": "youtube-main",
+    "name": "YouTube Live",
+    "type": "youtube",
+    "required": false,
+    "enabled": true,
+    "status": "pending",
+    "viewer_url": "https://youtube.com/live/abc123",
+    "probe_url": "https://youtube.com/live/abc123"
+  }
+}
+```
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | `key` and `name` are required |
+| 403 | Forbidden — admin session required |
+| 500 | Unable to save relay destination |
+| 503 | Relay persistence requires the baseFM relay database migration to be applied |
+
+## Probe relay destination
+
+```http
+POST /api/basefm/relays/:relayKey/probe
+```
+
+Runs a health check against a relay destination's probe URL and updates the relay's health status in the database. Requires admin session authentication.
+
+### Path parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `relayKey` | string | The unique key of the relay destination to probe |
+
+### Response
+
+```json
+{
+  "ok": true,
+  "error": null,
+  "relay": {
+    "id": 1,
+    "key": "basefm-space",
+    "name": "basefm.space",
+    "type": "hls-consumer",
+    "required": true,
+    "enabled": true,
+    "status": "healthy",
+    "viewer_url": "https://basefm.space",
+    "probe_url": "https://basefm.space",
+    "last_healthy_at": "2026-04-11T01:00:00.000Z",
+    "last_error_at": null,
+    "last_error_message": null
+  }
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `ok` | boolean | Whether the probe succeeded |
+| `error` | string \| null | Error message if the probe failed |
+| `relay` | object | Updated relay record after the probe |
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | Relay has no probe target configured |
+| 403 | Forbidden — admin session required |
+| 404 | Relay not found |
+| 500 | Unable to probe relay destination |
+| 503 | Relay persistence requires the baseFM relay database migration to be applied |
 
 ## Generate video
 
