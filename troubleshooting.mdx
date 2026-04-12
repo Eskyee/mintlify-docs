@@ -108,14 +108,14 @@ Agentbot reads env vars at startup. After changing them:
 
 Each agent has a memory limit based on plan:
 
-| Plan | Memory |
-|------|--------|
-| Solo | 2GB |
-| Collective | 4GB |
-| Label | 8GB |
-| Custom deployment | 16GB+ (by arrangement) |
+| Plan | Memory | CPU | Description |
+|------|--------|-----|-------------|
+| Solo | 2 GB | 1 vCPU | Trial / light workloads only |
+| Collective | 4 GB | 2 vCPU | Recommended production floor |
+| Label | 8 GB | 4 vCPU | Heavy production + browser/tool work |
+| Network | 16 GB | 8 vCPU | High-throughput production |
 
-If you're hitting limits, check for memory leaks in custom skills or upgrade your plan.
+If you're hitting memory limits, check for memory leaks in custom skills or upgrade your plan. The Solo tier (1 vCPU / 2 GB) is the trial/light-use floor — for production workloads, we recommend at least Collective (2 vCPU / 4 GB).
 
 </Accordion>
 
