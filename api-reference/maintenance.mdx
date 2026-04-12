@@ -734,6 +734,18 @@ No authentication required. Proxies to the backend `GET /api/openclaw/version` e
 
 When the backend is unreachable or returns an error, the endpoint returns a fallback version derived from the configured image tag (for example, `2026.4.11`) and includes the default image.
 
+### Version normalization
+
+The web-facing version endpoints (`GET /api/openclaw-version` and `GET /api/openclaw/version` on the web layer) normalize the `openclawVersion` value before returning it. If the backend reports the version as `"latest"` (which can happen when the `OPENCLAW_IMAGE` environment variable uses a floating tag), the endpoint replaces it with the current managed baseline version (currently `2026.4.11`).
+
+This ensures the API always returns a concrete release number rather than an opaque tag, so you can reliably compare the running version against known releases.
+
+| Backend value | Returned value | Reason |
+|---------------|----------------|--------|
+| `"2026.4.11"` | `"2026.4.11"` | Concrete version returned as-is |
+| `"latest"` | `"2026.4.11"` | Normalized to the managed baseline |
+| `""` or missing | `"2026.4.11"` | Falls back to the managed baseline |
+
 ### Response
 
 ```json
@@ -746,15 +758,15 @@ When the backend is unreachable or returns an error, the endpoint returns a fall
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `openclawVersion` | string | OpenClaw runtime version from the backend. Falls back to the version derived from the configured image tag when the backend is unavailable or returns an error. |
+| `openclawVersion` | string | OpenClaw runtime version from the backend, normalized to a concrete release number. When the backend returns `"latest"`, this field contains the current managed baseline version instead. Falls back to the managed baseline version when the backend is unavailable or returns an error. |
 | `image` | string | Docker image identifier. When the backend is unavailable or does not return an image, defaults to the configured image (for example, `ghcr.io/openclaw/openclaw:2026.4.11`). |
 | `deployedAt` | string \| undefined | ISO 8601 deployment timestamp. Only present when the backend responds successfully. |
 
-<Note>This endpoint uses an 8-second request timeout when calling the backend. If the backend does not respond within that window, the fallback version is returned.</Note>
+<Note>This endpoint uses an 8-second request timeout when calling the backend. If the backend does not respond within that window, the fallback version is returned. The version normalization applies to both `GET /api/openclaw-version` and the web-layer `GET /api/openclaw/version` route — the backend-only `GET /api/openclaw/version` endpoint returns the raw derived version without normalization.</Note>
 
 | Code | Description |
 |------|-------------|
-| 200 | Version returned (check `openclawVersion` for actual value — may be a fallback) |
+| 200 | Version returned (check `openclawVersion` for actual value — may be a fallback or normalized from `"latest"`) |
 
 ## Heal gateway token
 
