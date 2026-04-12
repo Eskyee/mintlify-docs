@@ -45,7 +45,15 @@ Returns all available skills in the marketplace. No authentication required for 
       "rating": 5.0,
       "featured": true,
       "mcpEnabled": false,
-      "mcpConfig": null
+      "mcpConfig": null,
+      "scan": {
+        "trustTier": "trusted",
+        "riskLevel": "low",
+        "installAllowed": true,
+        "reasons": [],
+        "warnings": [],
+        "requiresManualReview": false
+      }
     }
   ],
   "categories": [
@@ -72,8 +80,9 @@ Returns all available skills in the marketplace. No authentication required for 
 | `skills` | array | List of skill objects matching the query filters |
 | `skills[].mcpEnabled` | boolean | Whether this skill has a bundled MCP server enabled. When `true`, the skill provides additional tools through the [MCP skills API](/api-reference/mcp-skills). |
 | `skills[].mcpConfig` | object \| null | MCP server configuration for the skill. Contains server name, version, and tool definitions when `mcpEnabled` is `true`. `null` when the skill has no MCP configuration. |
+| `skills[].scan` | object | Marketplace safety scan result for the skill. See [scan object](#scan-object) for field details. |
 | `categories` | string[] | All distinct skill categories in the marketplace |
-| `featured` | array | Subset of `skills` where `featured` is `true` |
+| `featured` | array | Subset of `skills` where `featured` is `true`. Each entry includes the same `scan` object. |
 | `installedSkillIds` | string[] | IDs of skills installed and enabled for the authenticated user and the specified `agentId`. Returns an empty array when no session is present or `agentId` is omitted. |
 
 ## Install skill
@@ -154,9 +163,26 @@ When the skill is saved but the agent is offline or the gateway is unreachable:
 | Code | Description |
 |------|-------------|
 | 400 | Missing `skillId` or `agentId` |
+| 400 | Skill blocked by marketplace safety checks. The response includes a `scan` object with the reasons for the block. See [scan object](#scan-object). |
 | 401 | Unauthorized |
 | 404 | Agent not found or skill not found |
 | 500 | Internal error |
+
+When a skill is blocked by safety checks, the response looks like this:
+
+```json
+{
+  "error": "Skill blocked by marketplace safety checks",
+  "scan": {
+    "trustTier": "blocked",
+    "riskLevel": "blocked",
+    "installAllowed": false,
+    "reasons": ["Dynamic code execution via eval detected"],
+    "warnings": [],
+    "requiresManualReview": true
+  }
+}
+```
 
 <Note>When a skill is installed, the agent's complete state (including the newly installed skill) is automatically synced to the OpenClaw gateway. If the gateway is unreachable, the response returns `"deployed": false` with a `deployWarning` message — the skill is still recorded in the database and will sync automatically when the agent comes back online. You can also retry the sync manually using the [agent sync endpoint](/api-reference/agents#sync-agent-to-gateway).</Note>
 
@@ -176,6 +202,7 @@ Requires session authentication. Creates a new custom skill in the marketplace. 
 | `description` | string | Yes | Summary of the skill's capabilities. Maximum 600 characters. |
 | `category` | string | No | Category for the skill. Maximum 40 characters. Defaults to `custom` when omitted. |
 | `code` | string | No | Skill handler code or configuration. Maximum 2000 characters. |
+| `sourceUrl` | string | No | URL to the skill's source code repository or homepage. Maximum 300 characters. Providing a source URL improves the skill's trust tier during safety scanning. |
 
 ### Response
 
@@ -196,6 +223,14 @@ Requires session authentication. Creates a new custom skill in the marketplace. 
     "mcpConfig": null,
     "createdAt": "2026-04-02T12:00:00.000Z",
     "updatedAt": "2026-04-02T12:00:00.000Z"
+  },
+  "scan": {
+    "trustTier": "review",
+    "riskLevel": "medium",
+    "installAllowed": true,
+    "reasons": [],
+    "warnings": ["Source URL missing"],
+    "requiresManualReview": true
   }
 }
 ```
@@ -215,12 +250,14 @@ Requires session authentication. Creates a new custom skill in the marketplace. 
 | `skill.mcpConfig` | object \| null | MCP server configuration. Always `null` for user-created skills. |
 | `skill.createdAt` | string | ISO 8601 creation timestamp |
 | `skill.updatedAt` | string | ISO 8601 last-updated timestamp |
+| `scan` | object | Marketplace safety scan result. See [scan object](#scan-object). Skills that fail the safety scan are rejected before creation. |
 
 ### Errors
 
 | Code | Description |
 |------|-------------|
 | 400 | Missing `name` or `description`, or a skill with the same name already exists |
+| 400 | Skill blocked by marketplace safety checks. The response includes a `scan` object with the reasons for the block. See [scan object](#scan-object). |
 | 401 | Unauthorized |
 | 500 | Internal error |
 
@@ -258,6 +295,85 @@ Requires session authentication. Removes a skill from an agent.
 <Note>The uninstall endpoint returns `{ "success": true }` even when no matching installation exists. It does not return a `404` error for missing installations.</Note>
 
 <Note>When a skill is uninstalled, the updated agent state is automatically synced to the OpenClaw gateway. If the sync fails, the skill is still removed from the database — you can retry the sync manually using the [agent sync endpoint](/api-reference/agents#sync-agent-to-gateway).</Note>
+
+## Verify skill
+
+```http
+POST /api/skills/verify
+```
+
+Runs a marketplace safety scan on a skill without creating or installing it. Use this endpoint to check whether a skill would pass safety checks before submitting it to the marketplace.
+
+No authentication required.
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | string | Yes | Display name of the skill |
+| `description` | string | No | Skill description |
+| `code` | string | No | Skill handler code or configuration |
+| `author` | string | No | Author name |
+| `featured` | boolean | No | Whether the skill is featured |
+| `sourceUrl` | string | No | URL to the skill's source repository |
+
+### Response
+
+```json
+{
+  "scan": {
+    "trustTier": "verified",
+    "riskLevel": "low",
+    "installAllowed": true,
+    "reasons": [],
+    "warnings": ["Network access present"],
+    "requiresManualReview": false
+  }
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `scan` | object | The safety scan result. See [scan object](#scan-object). |
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 500 | Internal error |
+
+## Scan object
+
+Every skill listed, created, or verified includes a `scan` object from the marketplace safety scanner. The scanner performs static analysis on skill code to detect potentially dangerous patterns.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `trustTier` | string | One of `trusted`, `verified`, `review`, or `blocked`. See [trust tiers](#trust-tiers). |
+| `riskLevel` | string | One of `low`, `medium`, `high`, or `blocked` |
+| `installAllowed` | boolean | Whether the skill can be installed. `false` when the skill is blocked. |
+| `reasons` | string[] | List of reasons the skill was blocked. Empty when `trustTier` is not `blocked`. |
+| `warnings` | string[] | Informational warnings about patterns found in the skill code (for example, network access or filesystem access). These do not prevent installation. |
+| `requiresManualReview` | boolean | Whether the skill should be reviewed by a human before being promoted or sold |
+
+### Trust tiers
+
+| Tier | Description |
+|------|-------------|
+| `trusted` | Reserved for platform-authored skills and manually approved partners. Auto-install allowed and eligible for featured placement. |
+| `verified` | User-created skills with a source URL that pass static checks with minimal warnings. Install allowed, visible trust badge, eligible for paid distribution. |
+| `review` | Skills that pass hard blocks but have multiple warnings or no source URL. Discoverable and installable, but not promoted or eligible for paid distribution until reviewed. |
+| `blocked` | Skills that match dangerous code patterns (shell injection, eval, process execution, environment variable scraping, destructive commands, or direct IP endpoints). Cannot be created or installed. |
+
+### Blocked patterns
+
+The following patterns in skill code cause a skill to be blocked:
+
+- Piped shell execution (`curl ... | bash`)
+- Dynamic code execution (`eval()`, `Function()`)
+- Process execution imports or calls (`child_process`, `exec`, `spawn`)
+- Destructive filesystem commands (`rm -rf`)
+- Direct environment variable access (`process.env`)
+- Direct IP-based remote endpoints
 
 ## Available skills
 
