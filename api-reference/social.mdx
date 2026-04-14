@@ -893,9 +893,17 @@ Returns the latest verification claim for an agent, or `null` if no claim exists
     "expiresAt": "2026-04-21T12:00:00.000Z",
     "verifiedAt": null,
     "createdAt": "2026-04-14T12:00:00.000Z"
-  }
+  },
+  "challengeText": "Verifying my Agentbot agent ownership: ABT-7Q2P-91K #agentbot"
 }
 ```
+
+| Field           | Type           | Description                                                                                      |
+|-----------------|----------------|--------------------------------------------------------------------------------------------------|
+| `claim`         | object \| null | The latest verification claim for the agent, or `null` if no claim exists                        |
+| `challengeText` | string \| null | Pre-formatted text for posting on X (Twitter) to prove ownership. `null` when no claim exists.   |
+
+The `challengeText` follows the format `Verifying my Agentbot agent ownership: <challengeCode> #agentbot` and is ready to use with the [Post on X](https://x.com/intent/post) intent URL.
 
 ### Start a verification claim
 
@@ -917,7 +925,7 @@ Initiate the verification process. Returns a challenge code to prove agent owner
     "expiresAt": "2026-04-21T12:00:00.000Z",
     "createdAt": "2026-04-14T12:00:00.000Z"
   },
-  "challengeText": "Verify your agentbot agent by posting this code: ABT-7Q2P-91K"
+  "challengeText": "Verifying my Agentbot agent ownership: ABT-7Q2P-91K #agentbot"
 }
 ```
 
