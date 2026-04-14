@@ -631,7 +631,9 @@ When an unrecognized `action` parameter is provided, the endpoint returns HTTP `
 
 ---
 
-## Get colony overview
+## Get colony overview (deprecated)
+
+<Warning>This endpoint is deprecated and will be removed in a future release. Use the `GET /api/colony/status?action=tree` endpoint to retrieve colony data and build overviews from the tree response.</Warning>
 
 ```http
 GET /api/colony/{id}/overview
@@ -745,7 +747,9 @@ Returns a normalized overview for a single colony including its agent nodes, edg
 
 ---
 
-## Provision a starter colony
+## Provision a starter colony (deprecated)
+
+<Warning>This endpoint is deprecated and will be removed in a future release.</Warning>
 
 ```http
 POST /api/colony/starter
