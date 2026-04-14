@@ -118,7 +118,9 @@ curl -X POST https://agentbot.sh/api/openclaw/dreams \
 
 ---
 
-## Get agent dreams
+## Get agent dreams (deprecated)
+
+<Warning>This endpoint is deprecated and will be removed in a future release. Use the `GET /api/openclaw/dreams` endpoint to retrieve dream data through the authenticated agent proxy instead.</Warning>
 
 ```http
 GET /api/dreams/{agentId}
