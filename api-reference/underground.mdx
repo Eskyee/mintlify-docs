@@ -148,7 +148,11 @@ Creates a new event. Requires bearer token authentication with user context. The
 POST /api/underground/wallets
 ```
 
-Creates a new wallet for an agent. Requires bearer token authentication with user context. The authenticated user must own the specified agent. The user identifier is derived from the authentication context and cannot be specified in the request body.
+Creates a new CDP wallet for an agent on the Base network. Requires bearer token authentication with user context. The authenticated user must own the specified agent. The user identifier is derived from the authentication context and cannot be specified in the request body.
+
+The wallet is created as a Coinbase Developer Platform (CDP) EVM Server Account. The wallet metadata (address and account name) is encrypted and stored alongside the `network` (`base`) and `wallet_type` (`cdp`) identifiers.
+
+If the CDP account is created successfully but the database insert fails, the orphaned account is logged to the treasury for manual reconciliation.
 
 ### Request body
 
@@ -160,12 +164,11 @@ Creates a new wallet for an agent. Requires bearer token authentication with use
 
 ### Response (201 Created)
 
-Returns the created wallet object from the wallet service.
+Returns the created wallet address.
 
 ```json
 {
-  "address": "0x1234...abcd",
-  "agentId": "agent_123"
+  "address": "0x1234...abcd"
 }
 ```
 
