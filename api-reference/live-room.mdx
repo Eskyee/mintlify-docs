@@ -15,7 +15,7 @@ Send signals to a live colony room to influence agent behavior in real time. The
 POST /api/live/{roomId}/signal
 ```
 
-Sends a signal to the specified live room. No authentication required.
+Sends a signal to the specified live room. Requires session authentication.
 
 ### Path parameters
 
@@ -34,6 +34,7 @@ Sends a signal to the specified live room. No authentication required.
 ```bash
 curl -X POST "https://agentbot.sh/api/live/room_abc123/signal" \
   -H "Content-Type: application/json" \
+  -H "Cookie: agentbot-session=YOUR_SESSION_COOKIE" \
   -d '{
     "signal": "boost-research"
   }'
@@ -60,3 +61,4 @@ curl -X POST "https://agentbot.sh/api/live/room_abc123/signal" \
 | Code | Description |
 |------|-------------|
 | 400 | Missing or empty `signal` field |
+| 401 | Unauthorized — no valid session |
