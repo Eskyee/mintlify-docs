@@ -1,11 +1,11 @@
 ---
 title: Colony API
-description: "Query colony status, soul cognitive state, and diagnostics"
+description: "Query colony status, soul cognitive state, diagnostics, colony overview, and starter provisioning"
 ---
 
 # Colony API
 
-Retrieve colony status, agent fitness rankings, and soul service diagnostics.
+Retrieve colony status, agent fitness rankings, soul service diagnostics, per-colony overviews, and provision new starter colonies.
 
 The colony endpoint proxies requests to the soul service, which provides cognitive architecture data for agents including plan-driven reasoning, fitness scoring, and colony coordination.
 
@@ -628,3 +628,189 @@ When an unrecognized `action` parameter is provided, the endpoint returns HTTP `
 | 200 | Colony data retrieved (also returned when the soul service is unavailable, with `degraded: true`) |
 | 400 | Unknown action parameter |
 | 401 | Unauthorized — no valid session |
+
+---
+
+## Get colony overview
+
+```http
+GET /api/colony/{id}/overview
+```
+
+Returns a normalized overview for a single colony including its agent nodes, edges, timeline events, and aggregate metrics. No authentication required.
+
+### Path parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `id` | string | Colony identifier |
+
+### Response
+
+```json
+{
+  "colonyId": "friday-alpha",
+  "name": "Friday Alpha Terminal",
+  "status": "healthy",
+  "nodes": [
+    {
+      "id": "agent-manager",
+      "name": "Manager",
+      "role": "manager",
+      "status": "healthy",
+      "currentTask": "Coordinating market summary",
+      "walletBalanceUsd": 24.2,
+      "mood": "curious"
+    }
+  ],
+  "edges": [
+    {
+      "from": "agent-manager",
+      "to": "agent-researcher",
+      "label": "dispatches"
+    }
+  ],
+  "events": [
+    {
+      "id": "evt_1",
+      "timestamp": "2026-04-14T12:00:00.000Z",
+      "type": "summary_ready",
+      "title": "Morning market summary generated",
+      "detail": "Researcher and Executor completed briefing cycle",
+      "agentId": "agent-manager"
+    }
+  ],
+  "metrics": {
+    "tasksToday": 18,
+    "successRate": 0.94,
+    "avgLatencyMs": 1820,
+    "tokenSpendUsd": 2.87,
+    "revenueUsd": 0
+  }
+}
+```
+
+**Top-level fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `colonyId` | string | Colony identifier |
+| `name` | string | Colony display name |
+| `status` | string | Colony health status. One of `healthy`, `degraded`, `stopped`, or `unknown`. |
+| `nodes` | array | Agent nodes in the colony |
+| `edges` | array | Relationships between agents |
+| `events` | array | Recent colony timeline events |
+| `metrics` | object | Aggregate performance metrics |
+
+**Node fields (`nodes[]`):**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Agent identifier |
+| `name` | string | Agent display name |
+| `role` | string | Agent role. One of `manager`, `researcher`, `executor`, `analyst`, or `broadcaster`. |
+| `status` | string | Agent health status. One of `healthy`, `degraded`, `stopped`, or `unknown`. |
+| `currentTask` | string \| null | Description of the agent's current task, or `null` if idle |
+| `walletBalanceUsd` | number \| null | Agent wallet balance in USD, or `null` if unavailable |
+| `mood` | string \| null | Inferred agent mood. One of `calm`, `curious`, `excited`, `anxious`, `sleeping`, or `unknown`. |
+
+**Edge fields (`edges[]`):**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `from` | string | Source agent identifier |
+| `to` | string | Target agent identifier |
+| `label` | string | Relationship label (for example, `dispatches`, `hands off`, `reports`, `spawned`) |
+
+**Event fields (`events[]`):**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Event identifier |
+| `timestamp` | string | ISO 8601 event timestamp |
+| `type` | string | Event type (for example, `summary_ready`, `task_assigned`, `plan_active`) |
+| `title` | string | Event title |
+| `detail` | string \| null | Additional event detail |
+| `agentId` | string \| null | Identifier of the agent associated with this event |
+
+**Metrics fields (`metrics`):**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `tasksToday` | number | Number of tasks completed today |
+| `successRate` | number | Task success rate (0–1) |
+| `avgLatencyMs` | number | Average task latency in milliseconds |
+| `tokenSpendUsd` | number | Token spend in USD. May be omitted when unavailable. |
+| `revenueUsd` | number | Revenue generated in USD. May be omitted when unavailable. |
+
+---
+
+## Provision a starter colony
+
+```http
+POST /api/colony/starter
+```
+
+Provisions a new colony from a predefined template. Requires session authentication.
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `template` | string | Yes | Colony template. One of `alpha-terminal`, `support-ops`, or `content-studio`. |
+| `name` | string | Yes | Display name for the new colony. Must not be empty. |
+
+### Example
+
+```bash
+curl -X POST "https://agentbot.sh/api/colony/starter" \
+  -H "Content-Type: application/json" \
+  -H "Cookie: session=YOUR_SESSION_TOKEN" \
+  -d '{
+    "template": "alpha-terminal",
+    "name": "My First Colony"
+  }'
+```
+
+### Response (201)
+
+```json
+{
+  "colonyId": "col_a1b2c3d4",
+  "status": "provisioning"
+}
+```
+
+When infrastructure provisioning is available, the response includes additional deployment details:
+
+```json
+{
+  "colonyId": "col_a1b2c3d4",
+  "serviceId": "srv_xyz789",
+  "url": "https://colony-a1b2c3d4.example.com",
+  "status": "deploying"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `colonyId` | string | Identifier for the new colony |
+| `serviceId` | string | Infrastructure service identifier. Present only when infrastructure provisioning is configured. |
+| `url` | string | Colony service URL. Present only when infrastructure provisioning is configured. |
+| `status` | string | Provisioning status (for example, `provisioning` or `deploying`) |
+
+### Template plans
+
+| Template | Plan |
+|----------|------|
+| `alpha-terminal` | `solo` |
+| `support-ops` | `collective` |
+| `content-studio` | `collective` |
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | Missing `template` or `name`, or invalid template value |
+| 401 | Unauthorized — no valid session |
+| 500 | Internal server error |

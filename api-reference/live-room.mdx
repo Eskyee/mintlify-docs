@@ -1,0 +1,60 @@
+---
+title: Live room API
+description: "Send signals to a live colony room for real-time agent influence"
+---
+
+# Live room API
+
+Send signals to a live colony room to influence agent behavior in real time. The live room polls colony status and allows preset or custom signal input.
+
+## Send a signal
+
+```http
+POST /api/live/{roomId}/signal
+```
+
+Sends a signal to the specified live room. No authentication required.
+
+### Path parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `roomId` | string | Live room identifier |
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `signal` | string | Yes | Signal content to send to the room. Must not be empty. |
+
+### Example
+
+```bash
+curl -X POST "https://agentbot.sh/api/live/room_abc123/signal" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "signal": "boost-research"
+  }'
+```
+
+### Response
+
+```json
+{
+  "ok": true,
+  "roomId": "room_abc123",
+  "signal": "boost-research"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `ok` | boolean | Whether the signal was accepted |
+| `roomId` | string | Live room identifier |
+| `signal` | string | The signal that was sent |
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | Missing or empty `signal` field |
