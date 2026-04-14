@@ -34,6 +34,10 @@ curl -X GET https://agentbot.sh/api/agents \
 
 API keys use the `sk_` prefix and are shown only once at creation time. See the [keys API](/api-reference/keys) for details.
 
+### Dual authentication (agent-ready endpoints)
+
+Some endpoints accept both a session cookie and a Bearer API key, so browser users and programmatic agents can call the same route. The server tries the cookie session first, then falls back to the Bearer API key. See the [auth API](/api-reference/auth#dual-authentication) for the full list of supported endpoints.
+
 ### API key authentication (backend)
 
 Backend endpoints such as `/api/deployments` and `/api/openclaw/instances` use a shared internal API key for authentication. Include the key as a bearer token:
