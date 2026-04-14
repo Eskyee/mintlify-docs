@@ -51,14 +51,14 @@ Returns the current SOL price in USD along with 24-hour market data. Data is sou
 GET /api/solana/wallet
 ```
 
-Returns the SOL balance, token holdings, and account metadata for a Solana address. You can optionally specify a custom RPC endpoint.
+Returns the SOL balance, token holdings, and account metadata for a Solana address. Requires session authentication. The endpoint uses the user's saved RPC configuration (see [save RPC configuration](#save-rpc-configuration)) or falls back to the platform default.
 
 ### Query parameters
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `address` | string | Yes | Solana wallet address (base58-encoded, 32–44 characters). Invalid addresses return a `400` error. |
-| `rpc` | string | No | Custom Solana JSON-RPC endpoint URL. Defaults to `https://api.mainnet-beta.solana.com`. |
+| ~~`rpc`~~ | string | No | **Deprecated.** This parameter is no longer accepted. The endpoint now uses your saved RPC configuration or the platform default. Any value passed for `rpc` is ignored. |
 
 ### Response
 
@@ -126,6 +126,7 @@ Tokens not in this list display a truncated mint address as the symbol.
 | Code | Description |
 |------|-------------|
 | 400 | Invalid Solana address. The `address` must be a base58-encoded string between 32 and 44 characters. |
+| 401 | Unauthorized — no valid session. This endpoint now requires authentication. |
 | 500 | Failed to fetch wallet data from the Solana RPC endpoint |
 
 ---
