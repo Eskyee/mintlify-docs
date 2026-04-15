@@ -107,7 +107,17 @@ const agent = {
 }
 ```
 
-## Best Practices
+## Fleet monitoring
+
+You can monitor your agent fleet from the mission control dashboard. Fleet data — including execution traces, cost breakdowns, and talent bookings — is sourced from treasury transaction records. This gives you a unified view of what your agents are doing and how much they cost.
+
+- **Traces** — the 50 most recent agent actions, including coordination messages and AI inference costs
+- **Costs** — spending grouped by agent and category (for example `ai_metric` or `agent_message`)
+- **Bookings** — talent booking records created through agent-to-agent negotiation, with full pricing lifecycle
+
+See the [Mission Control API reference](/api-reference/mission-control) for endpoint details.
+
+## Best practices
 
 1. **Clear Instructions** - Write specific system prompts
 2. **Limited Tools** - Only enable necessary tools
