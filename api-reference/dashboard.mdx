@@ -267,9 +267,9 @@ Requires session authentication. Returns cost breakdown for the current billing 
     "avgCostPerCall": 0.0042
   },
   "quota": {
-    "monthlyTokens": 500000,
+    "monthlyTokens": 2000000,
     "usedTokens": 45000,
-    "percent": 9,
+    "percent": 2,
     "overageWarning": false,
     "nextPlan": "collective"
   },
@@ -354,10 +354,12 @@ Requires session authentication. Returns cost breakdown for the current billing 
 
 | Plan | Monthly token quota |
 |------|-------------------|
-| `solo` / `underground` / `starter` | 500,000 |
-| `collective` / `pro` | 2,000,000 |
-| `label` / `scale` | 5,000,000 |
-| `network` / `enterprise` | 20,000,000 |
+| `solo` / `underground` / `starter` | 2,000,000 |
+| `collective` / `pro` | 6,000,000 |
+| `label` / `scale` | 20,000,000 |
+| `network` / `enterprise` | Unlimited |
+
+<Note>These quotas were updated in April 2026. When a user exceeds their monthly quota, chat completion requests return a `429` status with the `QUOTA_EXCEEDED` error code. See [Token quotas](/models#token-quotas) for details on enforcement behavior.</Note>
 
 ### Errors
 
