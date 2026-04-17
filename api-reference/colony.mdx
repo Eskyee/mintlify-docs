@@ -396,7 +396,7 @@ curl -X GET "https://agentbot.sh/api/colony/status?action=soul" \
 | `benchmark` | object \| null | IQ and ELO benchmark scores |
 | `capability_profile` | object \| null | Success rates and attempt counts per capability |
 | `role` | object \| null | Colony role, rank, psi value, and spawn eligibility |
-| `acceleration` | object \| null | Learning acceleration parameters (alpha and regime) |
+| `acceleration` | object \| null | Learning acceleration parameters (alpha and regime). Returns `null` when the soul has not yet computed acceleration data. Clients should guard against this field being absent or `null`. |
 | `cortex` | object \| null | World model state including experiences, curiosity, and emotion |
 | `genesis` | object \| null | Evolved plan templates |
 | `hivemind` | object \| null | Pheromone trail sharing data |
@@ -494,6 +494,8 @@ curl -X GET "https://agentbot.sh/api/colony/status?action=soul" \
 |-------|------|-------------|
 | `alpha` | string | Learning rate alpha as a decimal string |
 | `regime` | string | Acceleration regime (e.g., `EXPLOIT`, `LEARN`) |
+
+<Note>The `acceleration` field may be `null` or omitted entirely when the soul service has not yet computed acceleration data. Always check for `null` before accessing nested fields like `alpha` and `regime`.</Note>
 
 **Lifecycle fields (`lifecycle`):**
 
