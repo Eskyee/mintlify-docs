@@ -257,3 +257,161 @@ Creates and executes a royalty split. The split is recorded in the database and 
 | 401 | Unauthorized — missing or invalid bearer token, or missing user context |
 | 403 | Forbidden — the authenticated user does not own the specified agent |
 | 500 | Failed to create split |
+
+## Bitcoin wallet endpoints
+
+The Underground router also exposes Bitcoin wallet endpoints backed by NBXplorer. These are the backend-direct paths — the web proxy exposes equivalent endpoints at `/api/bitcoin/wallets/...` (see [Bitcoin wallets](/api-reference/bitcoin-wallets)). All Bitcoin wallet endpoints require bearer token authentication with user context.
+
+### Get Bitcoin backend info
+
+```http
+GET /api/underground/bitcoin/backend/info
+```
+
+Returns the status of the Bitcoin backend (NBXplorer). Use this to verify the Bitcoin infrastructure is online before performing wallet operations.
+
+#### Response
+
+The response is a passthrough from the NBXplorer status endpoint. See [Bitcoin wallets — get backend info](/api-reference/bitcoin-wallets#get-backend-info) for the full response shape.
+
+#### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | Unauthorized — missing or invalid bearer token |
+| 502 | Failed to fetch Bitcoin backend info |
+
+### List Bitcoin wallets
+
+```http
+GET /api/underground/bitcoin/wallets
+```
+
+Returns all Bitcoin wallets belonging to the authenticated user.
+
+#### Response
+
+Returns an array of wallet objects. See [Bitcoin wallets — list wallets](/api-reference/bitcoin-wallets#list-wallets) for the full response shape.
+
+#### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | Unauthorized — missing or invalid bearer token, or missing user context |
+| 500 | Failed to list Bitcoin wallets |
+
+### Register Bitcoin wallet
+
+```http
+POST /api/underground/bitcoin/wallets
+```
+
+Registers a new watch-only Bitcoin wallet for an agent. The derivation scheme (xpub) is validated against NBXplorer and then encrypted before storage.
+
+#### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `agentId` | string | Yes | The agent to associate this wallet with |
+| `derivationScheme` | string | Yes | The xpub or derivation scheme for the wallet. Whitespace is trimmed. |
+| `label` | string | No | A human-readable label for the wallet |
+
+#### Response (201 Created)
+
+See [Bitcoin wallets — register a watch-only wallet](/api-reference/bitcoin-wallets#register-a-watch-only-wallet) for the full response shape.
+
+#### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | `agentId` is required |
+| 400 | `derivationScheme` is required |
+| 401 | Unauthorized — missing or invalid bearer token, or missing user context |
+| 500 | Failed to register Bitcoin wallet |
+
+### Get unused Bitcoin address
+
+```http
+GET /api/underground/bitcoin/wallets/:walletId/address/unused
+```
+
+Returns an unused receive address for the specified wallet.
+
+#### Path parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `walletId` | number | The wallet's numeric identifier. Must be a positive integer. |
+
+#### Response
+
+```json
+{
+  "address": "bc1qexample..."
+}
+```
+
+The response is a passthrough from NBXplorer and may include additional fields.
+
+#### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | `walletId` must be a positive integer |
+| 401 | Unauthorized — missing or invalid bearer token, or missing user context |
+| 404 | Bitcoin wallet not found |
+| 502 | Failed to derive Bitcoin address |
+
+### Get Bitcoin wallet balance
+
+```http
+GET /api/underground/bitcoin/wallets/:walletId/balance
+```
+
+Returns the balance for the specified wallet.
+
+#### Path parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `walletId` | number | The wallet's numeric identifier. Must be a positive integer. |
+
+#### Response
+
+See [Bitcoin wallets — get wallet balance](/api-reference/bitcoin-wallets#get-wallet-balance) for the full response shape.
+
+#### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | `walletId` must be a positive integer |
+| 401 | Unauthorized — missing or invalid bearer token, or missing user context |
+| 404 | Bitcoin wallet not found |
+| 502 | Failed to fetch Bitcoin balance |
+
+### Get Bitcoin wallet transactions
+
+```http
+GET /api/underground/bitcoin/wallets/:walletId/transactions
+```
+
+Returns the transaction history for the specified wallet.
+
+#### Path parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `walletId` | number | The wallet's numeric identifier. Must be a positive integer. |
+
+#### Response
+
+See [Bitcoin wallets — get wallet transactions](/api-reference/bitcoin-wallets#get-wallet-transactions) for the full response shape.
+
+#### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | `walletId` must be a positive integer |
+| 401 | Unauthorized — missing or invalid bearer token, or missing user context |
+| 404 | Bitcoin wallet not found |
+| 502 | Failed to fetch Bitcoin transactions |
