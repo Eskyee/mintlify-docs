@@ -11,6 +11,8 @@ The Bitcoin wallets API lets you register watch-only Bitcoin wallets for your ag
 
 <Note>All Bitcoin wallet endpoints require an authenticated session. The frontend proxies requests to the backend with a 10-second timeout. If the Bitcoin backend (NBXplorer) is unreachable, affected endpoints return `502`.</Note>
 
+<Note>The web proxy endpoints documented on this page forward requests to the backend's Underground router. The backend-direct paths are mounted at `/api/underground/bitcoin/...` and use bearer token authentication instead of session authentication. See [Underground API — Bitcoin wallet endpoints](/api-reference/underground#bitcoin-wallet-endpoints) for the backend-direct paths.</Note>
+
 ## Authentication
 
 Bitcoin wallet endpoints use two layers of authorization:
@@ -158,6 +160,8 @@ GET /api/bitcoin/wallets/{walletId}/address
 ```
 
 Returns an unused receive address for the specified wallet. Use this to generate a fresh address for incoming payments.
+
+<Note>The web proxy path is `/api/bitcoin/wallets/{walletId}/address`. Internally, this forwards to the backend's `/api/underground/bitcoin/wallets/{walletId}/address/unused` endpoint.</Note>
 
 ### Path parameters
 
