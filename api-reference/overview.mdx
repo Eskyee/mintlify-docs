@@ -484,18 +484,37 @@ curl -X POST https://agentbot.sh/api/ai/chat \
 
 ## SDK
 
-Use the Agentbot SDK:
+Agentbot currently has two public SDK surfaces:
+
+- **Reference API client starter** in the open-source repo at [`sdk/agentbot`](https://github.com/Eskyee/agentbot-opensource/tree/main/sdk/agentbot)
+- **Standalone SDK repo** at [`Eskyee/agentbot-sdk`](https://github.com/Eskyee/agentbot-sdk)
+
+For the public reference API covered on this page, use the typed client starter:
 
 ```bash
-npm install @agentbot/sdk
+# copy from the opensource repo
+git clone https://github.com/Eskyee/agentbot-opensource.git
+cd agentbot-opensource
 ```
 
 ```typescript
-import { Agentbot } from '@agentbot/sdk';
+import { createAgentbotClient } from './sdk/agentbot/index';
 
-const client = new Agentbot({
-  apiKey: process.env.AGENTBOT_API_KEY
+const client = createAgentbotClient({
+  baseUrl: 'http://localhost:3001',
+  apiKey: process.env.AGENTBOT_API_KEY,
 });
 
-const agents = await client.agents.list();
+const agents = await client.listAgents();
+const health = await client.getHealth();
 ```
+
+The starter client wraps the public routes documented here:
+
+- `GET /health`
+- `GET /api/agents`
+- `GET /api/agents/:id`
+- `POST /api/agents`
+- `PUT /api/agents/:id`
+- `DELETE /api/agents/:id`
+- `POST /api/provision`
