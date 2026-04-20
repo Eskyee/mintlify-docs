@@ -7,7 +7,7 @@ description: "Create, manage, and interact with agents"
 
 Create, manage, and interact with agents.
 
-<Note>All agent endpoints that require authentication are scoped to the authenticated user's data through [row-level security](/security#row-level-security). You can only access agents that belong to your account.</Note>
+<Note>Agent endpoints accessed through the web proxy are scoped to the authenticated user's data. The backend agent list endpoint (`GET /api/agents`) does not apply user-scoping — it returns all containers on the host. Single-agent endpoints on the backend enforce ownership via an `ownerEmail` check when available.</Note>
 
 ## List agents
 
@@ -15,7 +15,7 @@ Create, manage, and interact with agents.
 GET /api/agents
 ```
 
-Returns all agents owned by the authenticated user. When no session is present, returns an empty list instead of a `401` error.
+Returns agents visible to the caller. The backend and web proxy have different scoping behavior — see the notes below.
 
 ### Managed runtime inclusion
 
@@ -34,7 +34,7 @@ The synthetic entry uses the following defaults:
 
 ### Response (backend)
 
-The backend returns a flat array of agent objects:
+The backend lists all agent containers on the host by querying Docker directly. No authentication or user-scoping is applied — the response includes every container whose name matches the `openclaw-` prefix. When no containers exist, an empty array is returned.
 
 ```json
 [
@@ -93,7 +93,7 @@ The web proxy wraps the response in an object:
 | `count` | number | Total number of agents returned |
 | `status` | string | Response status (`ok`) |
 
-<Note>The backend and web proxy return different response shapes. The backend returns a flat array with `created`, `subdomain`, and `url` fields. The web proxy wraps the data in an `agents` key and includes `name`, `model`, `websocketUrl`, `createdAt`, and `updatedAt` fields.</Note>
+<Note>The backend and web proxy return different response shapes and scoping. The backend returns a flat array of all containers on the host (not user-scoped) with `created`, `subdomain`, and `url` fields. The web proxy wraps the data in an `agents` key, scopes results to the authenticated user, and includes `name`, `model`, `websocketUrl`, `createdAt`, and `updatedAt` fields.</Note>
 
 ## Create agent
 
