@@ -263,7 +263,7 @@ If the `userId` parameter is missing, the server closes the connection with code
 }
 ```
 
-The `decision` field accepts `approve` or `reject`.
+The `decision` field accepts `approve`, `reject`, or `approve_always`. The `approve_always` option approves the current request and is intended to auto-approve similar commands in the future (see the [REST endpoint](#submit-permission-decision) for details).
 
 ### Connection lifecycle
 

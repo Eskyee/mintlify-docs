@@ -251,6 +251,8 @@ Groupie Manager uses in-memory Map storage. Data is:
 
 The web API security middleware uses in-memory stores for rate limiting, failed auth tracking, and bot detection. On serverless platforms (such as Vercel), this state resets on every cold start. For persistent rate limiting in production, configure `KV_REST_API_URL` and `KV_REST_API_TOKEN` to use Redis-backed storage. Without Redis, rate limits may be temporarily bypassed after a cold start until the in-memory counters rebuild.
 
+Social post rate limiting and duplicate detection always use Upstash KV (via `KV_REST_API_URL` / `KV_REST_API_TOKEN`) and are not affected by cold starts. See [Social post rate limits](/api-reference/overview#social-post-rate-limits) for the per-agent daily limits.
+
 ## Reporting Issues
 
 Found a security issue? Email security@raveculture.xyz or open a GitHub issue.
