@@ -7,7 +7,7 @@ description: "Create, manage, and interact with agents"
 
 Create, manage, and interact with agents.
 
-<Note>All agent endpoints that require authentication are scoped to the authenticated user's data through [row-level security](/security#row-level-security). You can only access agents that belong to your account.</Note>
+<Note>All agent endpoints that require authentication are scoped to the authenticated user's data through [row-level security](/security#row-level-security). You can only access agents that belong to your account. Admin users (configured via `ADMIN_EMAILS`) bypass ownership checks on instance and backend agent routes, allowing them to operate on any user's agent or instance for recovery and support purposes.</Note>
 
 ## List agents
 
@@ -195,7 +195,7 @@ The web proxy wraps the agent in an object:
 | Code | Description |
 |------|-------------|
 | 401 | Unauthorized |
-| 403 | Forbidden — you do not own this agent. Returned when the agent has an `ownerEmail` set and it does not match the authenticated user's email. Admins bypass this check. |
+| 403 | Forbidden — the caller does not own this agent and is not an admin. Returned when the agent has an `ownerEmail` set and it does not match the authenticated user's email. Admin users (configured via `ADMIN_EMAILS`) bypass this check. |
 | 404 | Agent not found — no container or metadata exists for this agent ID |
 | 500 | Failed to fetch agent |
 
@@ -955,8 +955,8 @@ Agent status is reported across multiple endpoints. The following table lists al
 
 Lifecycle operations are available at two endpoint patterns depending on which service you call:
 
-- **Web proxy:** `/api/instance/:userId/{action}` — requires session authentication and proxies to the backend.
-- **Backend direct:** `/api/agents/:id/{action}` — requires API key authentication.
+- **Web proxy:** `/api/instance/:userId/{action}` — requires session authentication and instance ownership. Admin users bypass the ownership check and can act on any user's instance.
+- **Backend direct:** `/api/agents/:id/{action}` — requires API key authentication and ownership. Admin users bypass the ownership check.
 
 Both patterns support the same actions. The examples below show both response shapes where they differ.
 
@@ -993,10 +993,10 @@ Starts a stopped agent container using `docker start`.
 | Code | Source | Description |
 |------|--------|-------------|
 | 401 | Both | Unauthorized — missing or invalid authentication |
-| 403 | Both | Forbidden — you do not own this agent |
+| 403 | Both | Forbidden — the caller does not own this agent and is not an admin |
 | 404 | Backend | Agent not found |
 | 500 | Both | Start failed |
-| 503 | Web proxy | Managed runtime controls are disabled, or service/config resolution failed |
+| 503 | Web proxy | Service/config resolution failed |
 
 ### Stop agent
 
@@ -1029,10 +1029,10 @@ Stops the agent container using `docker stop`. The container retains its data an
 | Code | Source | Description |
 |------|--------|-------------|
 | 401 | Both | Unauthorized — missing or invalid authentication |
-| 403 | Both | Forbidden — you do not own this agent |
+| 403 | Both | Forbidden — the caller does not own this agent and is not an admin |
 | 404 | Backend | Agent not found |
 | 500 | Both | Stop failed |
-| 503 | Web proxy | Managed runtime controls are disabled, or service/config resolution failed |
+| 503 | Web proxy | Service/config resolution failed |
 
 ### Restart agent
 
@@ -1072,10 +1072,10 @@ POST /api/agents/:id/restart
 | Code | Source | Description |
 |------|--------|-------------|
 | 401 | Both | Unauthorized — missing or invalid authentication |
-| 403 | Both | Forbidden — you do not own this agent |
+| 403 | Both | Forbidden — the caller does not own this agent and is not an admin |
 | 404 | Backend | Agent not found |
 | 500 | Both | Restart failed |
-| 503 | Web proxy | Managed runtime controls are disabled, or service/config resolution failed |
+| 503 | Web proxy | Service/config resolution failed |
 
 ### Update agent image
 
@@ -1134,10 +1134,10 @@ Triggers an image update on the backend. Before replacing the service, the endpo
 |------|--------|-------------|
 | 400 | Backend | Invalid docker image value |
 | 401 | Both | Unauthorized — missing or invalid authentication |
-| 403 | Both | Forbidden — you do not own this agent |
+| 403 | Both | Forbidden — the caller does not own this agent and is not an admin |
 | 404 | Backend | Agent not found |
 | 500 | Both | Update failed. When automatic rollback succeeds on the backend, the agent continues running on the previous image. |
-| 503 | Web proxy | Managed runtime controls are disabled, or service/config resolution failed |
+| 503 | Web proxy | Service/config resolution failed |
 
 ### Repair agent
 
@@ -1172,10 +1172,10 @@ Repairs an agent by reconfiguring its environment and restarting the service.
 | Code | Source | Description |
 |------|--------|-------------|
 | 401 | Both | Unauthorized — missing or invalid authentication |
-| 403 | Both | Forbidden — you do not own this agent |
+| 403 | Both | Forbidden — the caller does not own this agent and is not an admin |
 | 404 | Backend | Agent not found |
 | 500 | Both | Repair failed |
-| 503 | Web proxy | Managed runtime controls are disabled, or service/config resolution failed |
+| 503 | Web proxy | Service/config resolution failed |
 
 ### Reset agent memory
 
@@ -1206,10 +1206,10 @@ POST /api/agents/:id/reset-memory
 | Code | Source | Description |
 |------|--------|-------------|
 | 401 | Both | Unauthorized — missing or invalid authentication |
-| 403 | Both | Forbidden — you do not own this agent |
+| 403 | Both | Forbidden — the caller does not own this agent and is not an admin |
 | 404 | Backend | Agent not found |
 | 500 | Both | Reset failed |
-| 503 | Web proxy | Managed runtime controls are disabled, or service/config resolution failed |
+| 503 | Web proxy | Service/config resolution failed |
 
 ### Lifecycle error responses
 
@@ -1239,16 +1239,7 @@ The update endpoint is the exception and returns:
 }
 ```
 
-All web proxy lifecycle endpoints return `503` when managed runtime controls are disabled or when the platform cannot resolve the agent's service configuration:
-
-```json
-{
-  "success": false,
-  "error": "Managed runtime controls are temporarily disabled until the Railway control path is fully verified."
-}
-```
-
-When service or configuration resolution fails, the error message describes the specific issue:
+All web proxy lifecycle endpoints return `503` when the platform cannot resolve the agent's service configuration. The error message describes the specific issue:
 
 ```json
 {
@@ -1257,14 +1248,16 @@ When service or configuration resolution fails, the error message describes the 
 }
 ```
 
+<Note>Managed runtime controls are always enabled. The controls flag is hardcoded to `true` and can no longer be disabled via environment variables.</Note>
+
 | Code | Source | Description |
 |------|--------|-------------|
 | 401 | Both | Unauthorized — missing or invalid authentication |
-| 403 | Both | Forbidden — authenticated user does not own this agent. The backend returns `{ "error": "Forbidden — you do not own this agent" }`. The web proxy returns `{ "success": false, "error": "..." }`. |
+| 403 | Both | Forbidden — the caller does not own this agent and is not an admin. The backend returns `{ "error": "Forbidden — you do not own this agent" }`. The web proxy returns `{ "success": false, "error": "..." }`. Admin users bypass this check. |
 | 404 | Backend | Agent not found — no metadata exists for this agent ID |
 | 500 | Both | The lifecycle action failed. On the backend, this means the Docker command or Railway mutation failed. On the web proxy, this means the Railway API call succeeded in resolving the service but the mutation itself failed. |
 | 502 | Web proxy | Backend service unavailable |
-| 503 | Web proxy | Managed runtime controls are disabled, or the platform could not resolve the agent's managed service. This applies to all lifecycle actions: start, stop, restart, update, repair, and reset-memory. See [503 error details](/api-reference/maintenance#503-error-details) for the full list of possible error messages. |
+| 503 | Web proxy | The platform could not resolve the agent's managed service. This applies to all lifecycle actions: start, stop, restart, update, repair, and reset-memory. See [503 error details](/api-reference/maintenance#503-error-details) for the full list of possible error messages. |
 
 ## Get instance details
 
