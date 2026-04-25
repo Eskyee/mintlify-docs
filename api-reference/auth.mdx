@@ -73,6 +73,31 @@ You can retrieve the current session at any time using the [Get session](#get-se
 
 The [`POST /api/provision`](/api-reference/agents#provision-with-channel-tokens) endpoint supports an admin fallback when the session user ID is missing. The endpoint checks the session email against `ADMIN_EMAILS` — if it matches, a synthetic session is created and the request proceeds. The body `email` field is not used for admin detection. This fallback only applies to admin users on the provisioning endpoint — all other session-authenticated endpoints still require a valid session.
 
+### Dual authentication
+
+Some endpoints support both session cookies and Bearer API keys, allowing both browser users and programmatic agents to call the same route. The server resolves the caller's identity in order:
+
+1. **Cookie session / NextAuth JWT** — used by browser and dashboard users.
+2. **Bearer API key** — used by programmatic agent access. The key is hashed with SHA-256 and looked up in the database.
+
+If neither method produces a valid session, the endpoint returns `401 Unauthorized`.
+
+API keys are created via the [keys API](/api-reference/keys) and use the `ab_` prefix. Include the key in the `Authorization` header:
+
+```bash
+curl -X POST "https://agentbot.sh/api/jobs/job_abc123/claim" \
+  -H "Authorization: Bearer ab_your_api_key" \
+  -H "Content-Type: application/json" \
+  -d '{"claimerAgentId": "agent-worker"}'
+```
+
+Endpoints that support dual authentication are marked with a note in their documentation. Currently supported:
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/jobs/{jobId}/claim` | POST | Claim an M2M job |
+| `/api/social/posts` | POST | Create a social post |
+
 ## Sign up
 
 ```http
@@ -375,17 +400,35 @@ Ends the current session by deleting the session record from the database and cl
 
 <Note>This endpoint always returns `200` even if no active session exists.</Note>
 
+## Get CSRF token
+
+```http
+GET /api/auth/csrf
+```
+
+Returns a fresh CSRF token for use in requests that require CSRF protection, such as [`POST /api/auth/login`](#sign-in). No authentication required.
+
+### Response
+
+```json
+{
+  "token": "random-token-value",
+  "signed": "hmac-signature",
+  "header": "random-token-value:hmac-signature"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `token` | string | The CSRF token value |
+| `signed` | string | HMAC signature of the token |
+| `header` | string | Pre-formatted value to use in the `x-csrf-token` request header (`{token}:{signed}`) |
+
+<Note>Use the `header` value directly in the `x-csrf-token` or `x-xsrf-token` request header when calling endpoints that require CSRF protection.</Note>
+
 ## OAuth sign in
 
 OAuth providers support automatic account linking. If a user with the same email address already exists, the OAuth account is linked to the existing user on first sign-in. This lets users who originally signed up with email and password add an OAuth login without creating a duplicate account.
-
-### GitHub
-
-```http
-GET /api/auth/github
-```
-
-Redirects to GitHub OAuth flow. Requires `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` to be configured.
 
 ### Google
 
@@ -517,68 +560,43 @@ Returns the endpoint status and list of supported event types.
 
 <Note>For details on how RISC fits into the platform security model and how to configure it in Google Cloud Console, see [Security — Google RISC Protocol](/security#google-risc-protocol).</Note>
 
-## Google RISC webhook (legacy)
+## Google RISC webhook (deprecated)
 
 ```http
 POST /api/auth/google/risc
 ```
 
-Receives security event notifications from Google via the [RISC (Risk Incident Sharing and Collaboration)](https://developers.google.com/identity/protocols/risc) protocol. This is the legacy endpoint — new integrations should use [`POST /api/security/risc`](#cross-account-protection-receiver) instead, which adds token validation, event deduplication, and more granular event handling.
+<Warning>This endpoint is deprecated and returns `410 Gone`. Use [`POST /api/security/risc`](#cross-account-protection-receiver) instead.</Warning>
 
-<Warning>This endpoint is intended to be called by Google's RISC infrastructure, not by application clients. You do not need to call it directly.</Warning>
-
-### Request body
-
-The request body is a raw [SET (Security Event Token)](https://datatracker.ietf.org/doc/html/rfc8417) JWT string. The JWT payload contains:
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `iss` | string | Issuer (Google) |
-| `sub` | string | Subject identifier — the user's email address |
-| `events` | object | Map of event URIs to event data |
-
-### Supported event types
-
-| Event URI | Action taken |
-|-----------|-------------|
-| `https://schemas.openid.net/secevent/risc/event-type/account-compromised` | Revokes all sessions for the affected user |
-| `https://schemas.openid.net/secevent/risc/event-type/account-disabled` | Revokes all sessions for the affected user |
-| `https://schemas.openid.net/secevent/risc/event-type/account-enabled` | No action taken — sessions are recreated on next login |
-| `https://schemas.openid.net/secevent/risc/event-type/sessions-revoked` | Revokes all active sessions for the user |
-| `https://schemas.openid.net/secevent/risc/event-type/identifier-changed` | Revokes all sessions to force re-authentication |
-
-Users are matched by email address.
+This legacy endpoint previously received security event notifications from Google via the RISC protocol. It has been replaced by the [`POST /api/security/risc`](#cross-account-protection-receiver) endpoint, which adds JWT signature validation, event deduplication, and more granular event handling.
 
 ### Response
 
 ```json
 {
-  "received": true
+  "error": "Deprecated endpoint",
+  "detail": "Use /api/security/risc for verified Google RISC events."
 }
 ```
 
-### Errors
-
 | Code | Description |
 |------|-------------|
-| 400 | Invalid JWT format (token does not have three parts) |
-| 500 | Internal error processing the security event |
+| 410 | Endpoint is deprecated. Migrate to `/api/security/risc`. |
 
-<Note>For details on how RISC fits into the platform security model and how to configure it in Google Cloud Console, see [Security — Google RISC Protocol](/security#google-risc-protocol).</Note>
-
-## Wallet sign in (SIWE)
+## Wallet sign in
 
 ```http
 POST /api/wallet-auth
 ```
 
-Sign in using an Ethereum wallet via [Sign-In with Ethereum (SIWE)](https://eips.ethereum.org/EIPS/eip-4361). This flow is designed for Coinbase Smart Wallets on Base and supports ERC-6492 signature verification for pre-deployed wallets.
+Sign in using an Ethereum-compatible wallet. This endpoint supports two wallet types:
+
+- **Base (Coinbase Smart Wallet)** — uses [Sign-In with Ethereum (SIWE)](https://eips.ethereum.org/EIPS/eip-4361) on Base Mainnet (chain ID 8453). Supports ERC-6492 signature verification for pre-deployed smart wallets.
+- **Tempo** — uses `personal_sign` on the Tempo network (chain ID 4217). Users can connect via an injected provider or through [wallet.tempo.xyz](https://wallet.tempo.xyz).
 
 <Note>This endpoint replaced the previous NextAuth wallet callback (`/api/auth/callback/wallet`). If you are migrating from an older integration, update your wallet sign-in requests to use `/api/wallet-auth`.</Note>
 
-<Warning>The platform uses `coinbaseWallet({ preference: 'smartWalletOnly' })` as its only wallet connector. Injected wallets (such as MetaMask) are not supported. Users must connect through a Coinbase Smart Wallet on the Base network.</Warning>
-
-### How it works
+### How it works (Base)
 
 1. The client requests a nonce from [`GET /api/auth/nonce`](#get-nonce).
 2. The client opens the Base Account SDK popup and requests a SIWE signature on Base Mainnet.
@@ -587,13 +605,46 @@ Sign in using an Ethereum wallet via [Sign-In with Ethereum (SIWE)](https://eips
 5. If no account exists for the wallet address, a new user is created automatically.
 6. If an account with the same wallet-derived email already exists, the wallet is linked to the existing account.
 
+### How it works (Tempo)
+
+1. The client requests a nonce from [`GET /api/auth/nonce`](#get-nonce).
+2. The client connects to the Tempo network (chain ID `0x1079` / 4217) via an injected Ethereum provider or [wallet.tempo.xyz](https://wallet.tempo.xyz). If the chain is not present in the wallet, it is added automatically with RPC URL `https://rpc.tempo.xyz`.
+3. The client constructs a plaintext message containing the nonce, chain identifier, and timestamp, then signs it with `personal_sign`.
+4. The wallet address, signed message, signature, and `chain: "tempo"` are sent to `POST /api/wallet-auth`.
+5. The server verifies the signature and nonce, then creates or links the user account.
+
 ### Request body
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `address` | string | Yes | Ethereum wallet address (0x-prefixed) |
-| `message` | string | Yes | The full SIWE message string |
-| `signature` | string | Yes | The wallet signature of the SIWE message (0x-prefixed) |
+| `message` | string | Yes | The signed message string (SIWE format for Base, plaintext for Tempo) |
+| `signature` | string | Yes | The wallet signature (0x-prefixed) |
+| `chain` | string | No | Target chain for authentication. Accepted values: `"tempo"`. When omitted, defaults to Base (SIWE). |
+
+### Tempo message format
+
+When using Tempo wallet sign-in, the signed message follows this format:
+
+```
+Sign in to Agentbot
+
+Nonce: <server-issued-nonce>
+Chain: Tempo (4217)
+Timestamp: <unix-milliseconds>
+```
+
+### Tempo chain parameters
+
+If the user's wallet does not have the Tempo network configured, the client adds it using:
+
+| Parameter | Value |
+|-----------|-------|
+| Chain ID | `0x1079` (4217) |
+| Chain name | Tempo |
+| Native currency | pathUSD (18 decimals) |
+| RPC URL | `https://rpc.tempo.xyz` |
+| Block explorer | `https://explorer.tempo.xyz` |
 
 ### Response
 
@@ -611,13 +662,16 @@ A `Set-Cookie` header is included with the `agentbot-session` token. The cookie 
 
 ### Account linking
 
-When a wallet signs in, the system checks for an existing user by the wallet-derived email address (`<address>@wallet.agentbot`). If a matching user is found, the wallet is linked to that existing account. This prevents duplicate accounts and lets users access the same data regardless of which sign-in method they use.
+When a wallet signs in, the system checks for an existing user by the wallet-derived email address (`<address>@wallet.agentbot`). If a matching user is found, the wallet is linked to that existing account. This prevents duplicate accounts and lets users access the same data regardless of which sign-in method they use. This applies to both Base and Tempo wallet sign-ins.
 
 ### Errors
 
 | Code | Description |
 |------|-------------|
 | 400 | Missing address, message, or signature |
+| 400 | Missing nonce in signed message — the message must include a nonce obtained from [`GET /api/auth/nonce`](#get-nonce) |
+| 401 | Invalid nonce — the nonce in the signed message does not match the server-issued nonce |
+| 401 | Address mismatch — the wallet address in the signed message does not match the `address` field |
 | 401 | Invalid signature |
 | 500 | Auth failed |
 
@@ -631,7 +685,7 @@ GET /api/auth/nonce
 POST /api/auth/nonce
 ```
 
-Generates a random nonce for use in SIWE message construction. Both `GET` and `POST` methods return the same response.
+Generates a random nonce for use in wallet sign-in message construction (SIWE for Base, plaintext for Tempo). Both `GET` and `POST` methods return the same response.
 
 ### Response
 
@@ -659,6 +713,7 @@ Requires session authentication. Returns the current user profile.
   "plan": "solo",
   "credits": 0,
   "twoFactorEnabled": false,
+  "xHandle": "yourhandle",
   "openclaw": {
     "managed": true,
     "instanceId": "inst_abc123",
@@ -675,6 +730,7 @@ Requires session authentication. Returns the current user profile.
 | `plan` | string | Current subscription plan (`solo`, `team`, etc.) |
 | `credits` | number | Remaining referral credits balance |
 | `twoFactorEnabled` | boolean | Whether two-factor authentication is enabled |
+| `xHandle` | string \| null | X (Twitter) handle without the `@` prefix, or `null` if not set. Manage via the [X handle API](/api-reference/user-x-handle). |
 | `openclaw` | object | OpenClaw instance details |
 | `openclaw.managed` | boolean | Always `true` for platform-managed instances |
 | `openclaw.instanceId` | string \| null | OpenClaw instance identifier, or `null` if not provisioned |
@@ -887,9 +943,11 @@ The `sessionToken` is an HMAC-SHA256 signed token in the format `{base64url-data
 | `iat` | number | Issued-at timestamp (Unix seconds) |
 | `exp` | number | Expiry timestamp (24 hours after issuance) |
 
-The token is signed using the `FARCASTER_SESSION_SECRET` environment variable. If not set, the signing key falls back to `NEXTAUTH_SECRET`.
+The token is signed using the `FARCASTER_SESSION_SECRET` environment variable. If not set, the signing key falls back to `NEXTAUTH_SECRET`. In production, one of these environment variables must be configured — the endpoint returns a `500` error if neither is set. In non-production environments, a build-time placeholder is used when both are missing.
 
 <Warning>Session tokens are no longer plain base64-encoded JSON. Tokens issued before this change are not compatible with the new HMAC verification and must be refreshed.</Warning>
+
+<Warning>In production, the Farcaster verification endpoint now requires `FARCASTER_SESSION_SECRET` or `NEXTAUTH_SECRET` to be configured. Requests fail with a `500` error if neither secret is available. This is a breaking change from the previous behavior which used a hardcoded fallback secret in all environments.</Warning>
 
 #### Errors
 
@@ -1021,6 +1079,12 @@ GET /api/auth/token-gating/verify?address=0x...
 | `user.updated` | Profile updated |
 | `user.deleted` | Account deleted |
 
+### Automatic welcome email on signup
+
+When a new user signs up through an OAuth provider (Google, wallet, or Farcaster), a welcome email is automatically sent to their registered email address. This is triggered by the `signIn` event when `isNewUser` is `true`.
+
+The welcome email uses a branded template with example use cases. See [transactional email templates](/integrations/resend#transactional-email-templates) for details on the email content and configuration.
+
 ### Google RISC events (Cross-Account Protection)
 
 The following inbound events are processed by the [`POST /api/security/risc`](#cross-account-protection-receiver) endpoint when received from Google:
@@ -1034,14 +1098,6 @@ The following inbound events are processed by the [`POST /api/security/risc`](#c
 | `account-credential-change-required` | Google flagged the account for a credential change. Logged for monitoring. |
 | `verification` | Sent by Google during RISC setup to verify the endpoint is reachable. |
 
-### Google RISC events (legacy)
+### Google RISC events (legacy — deprecated)
 
-The following inbound events are processed by the [`POST /api/auth/google/risc`](#google-risc-webhook-legacy) endpoint when received from Google:
-
-| Event | Description |
-|-------|-------------|
-| `account-compromised` | Google detected the account may be compromised. All sessions are revoked. |
-| `account-disabled` | The Google account was disabled. All sessions are revoked. |
-| `account-enabled` | The Google account was re-enabled. No action taken — sessions are recreated on next login. |
-| `sessions-revoked` | Google revoked the user's sessions. All local sessions are revoked. |
-| `identifier-changed` | The user's email or identifier changed on Google. All sessions are revoked to force re-authentication. |
+The legacy [`POST /api/auth/google/risc`](#google-risc-webhook-deprecated) endpoint is deprecated and returns `410 Gone`. Migrate to [`POST /api/security/risc`](#cross-account-protection-receiver) for event handling.

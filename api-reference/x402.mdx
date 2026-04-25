@@ -19,7 +19,7 @@ No authentication required. Returns the current status of the x402 gateway.
 
 ```json
 {
-  "gateway": "https://x402-gateway-production.up.railway.app",
+  "gateway": "https://x402-gateway-production-a474.up.railway.app",
   "status": "healthy",
   "service": "x402-gateway",
   "agents": 5,
@@ -43,7 +43,7 @@ Returned when the upstream gateway is unreachable.
 
 ```json
 {
-  "gateway": "https://x402-gateway-production.up.railway.app",
+  "gateway": "https://x402-gateway-production-a474.up.railway.app",
   "status": "unreachable",
   "error": "Connection failed"
 }
@@ -362,7 +362,7 @@ curl -X POST https://agentbot.sh/api/x402 \
   -d '{"action": "endpoints"}'
 ```
 
-### Make a payment
+### Make a payment (EVM)
 
 ```bash
 curl -X POST https://agentbot.sh/api/x402 \
@@ -379,4 +379,19 @@ curl -X POST https://agentbot.sh/api/x402 \
   }'
 ```
 
-<Note>The `recipient` must be a full, valid address. Abbreviated addresses like `0x5678...efgh` are rejected. See [address validation](#pay) for accepted formats.</Note>
+### Make a payment (Solana)
+
+```bash
+curl -X POST https://agentbot.sh/api/x402 \
+  -H "Content-Type: application/json" \
+  -H "Cookie: next-auth.session-token=YOUR_SESSION" \
+  -d '{
+    "agentId": "inst_abc123",
+    "action": "pay",
+    "amount": 5.0,
+    "currency": "USDC",
+    "recipient": "DRpbCBMxVnDK7maPGv7USk2Lgt2GXEimhi82kUhP2GBn"
+  }'
+```
+
+<Note>The `recipient` must be a full, valid address. Abbreviated addresses like `0x5678...efgh` are rejected. See [address validation](#pay) for accepted formats. Solana addresses use Base58 encoding and must be between 32 and 44 characters.</Note>

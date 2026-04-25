@@ -9,7 +9,173 @@ The usage tracking system records per-event token consumption and tool execution
 
 <Note>The usage tracker records events to a PostgreSQL database whenever an AI completion or tool call is made. The endpoints below are read-only query APIs for retrieving aggregated usage data.</Note>
 
-<Info>The live, user-facing endpoints on this page are `GET /api/dashboard/bootstrap`, `GET /api/dashboard/cost`, and `GET /api/dashboard/stats`. The lower query endpoints are roadmap/spec documentation only and are not linked from the main navigation.</Info>
+<Info>The live, user-facing endpoints on this page are `GET /api/dashboard/data`, `GET /api/dashboard/analytics`, `GET /api/dashboard/bootstrap`, `GET /api/dashboard/cost`, and `GET /api/dashboard/stats`. The lower query endpoints are roadmap/spec documentation only and are not linked from the main navigation.</Info>
+
+## Dashboard data
+
+```http
+GET /api/dashboard/data
+```
+
+Requires session authentication. Returns all dashboard data in a single request using parallel database queries. This endpoint replaces multiple sequential calls with one optimized request, reducing dashboard load time from 2–4 seconds to 200–400 ms.
+
+Runs on the Vercel Edge Runtime with CDN-level caching (`s-maxage=5, stale-while-revalidate=30`).
+
+### Response
+
+```json
+{
+  "userId": "user_abc123",
+  "credits": 5,
+  "plan": "solo",
+  "openclawUrl": "https://agentbot-agent-abc123-production.up.railway.app",
+  "openclawInstanceId": "abc123",
+  "gatewayToken": "a1b2c3d4e5f6...",
+  "agent": {
+    "id": "agent_xyz",
+    "status": "active",
+    "name": "Atlas",
+    "tier": "pro"
+  },
+  "health": {
+    "status": "healthy",
+    "checks": [
+      { "name": "Database", "status": "ok" },
+      { "name": "Gateway", "status": "ok" }
+    ]
+  },
+  "meta": {
+    "responseTime": 180,
+    "cached": false,
+    "timestamp": "2026-04-04T05:00:00.000Z"
+  }
+}
+```
+
+### Response fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `userId` | string | Authenticated user's ID |
+| `credits` | number | Referral credits balance. Defaults to `0`. |
+| `plan` | string | Current subscription plan (for example `solo`, `collective`, `label`, `network`). Defaults to `free`. |
+| `openclawUrl` | string \| null | URL of the user's deployed OpenClaw instance, or `null` if not registered. |
+| `openclawInstanceId` | string \| null | OpenClaw instance ID, falling back to the agent ID if not set. |
+| `gatewayToken` | string \| null | Gateway authentication token resolved from the token manager or agent registration. |
+| `agent` | object \| null | Primary agent data, or `null` if no agent exists. |
+| `agent.id` | string | Agent identifier |
+| `agent.status` | string | Agent status (for example `active`, `running`, `stopped`) |
+| `agent.name` | string | Agent display name |
+| `agent.tier` | string | Agent tier |
+| `health` | object | System health summary |
+| `health.status` | string | Overall status: `healthy` or `degraded` |
+| `health.checks` | array | Individual service health checks |
+| `health.checks[].name` | string | Service name (for example `Database`, `Gateway`) |
+| `health.checks[].status` | string | `ok` or `down` |
+| `meta.responseTime` | number | Server-side response time in milliseconds |
+| `meta.cached` | boolean | Whether the response was served from cache |
+| `meta.timestamp` | string | ISO 8601 timestamp of the response |
+
+### Caching
+
+Responses include CDN caching headers:
+
+| Header | Value |
+|--------|-------|
+| `Cache-Control` | `public, s-maxage=5, stale-while-revalidate=30` |
+| `Vercel-CDN-Cache-Control` | `public, s-maxage=5, stale-while-revalidate=30` |
+| `CDN-Cache-Control` | `public, s-maxage=5` |
+
+<Note>Browser caching is prevented — only CDN-level caching is applied. Stale responses are served for up to 30 seconds while the CDN revalidates in the background.</Note>
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | Unauthorized — no valid session |
+| 500 | Failed to fetch dashboard data (includes `details` and `responseTime` in the response body) |
+
+---
+
+## Dashboard analytics
+
+```http
+GET /api/dashboard/analytics
+```
+
+Requires session authentication. Returns deployment, skill, and task trends over time, channel activity, and top skill usage. Use this endpoint to render analytics charts and channel status indicators on the dashboard.
+
+### Query parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `range` | integer | `180` | Number of days of history to include. Accepted values: `30`, `90`, `180`, `365`. Other values default to `180`. |
+
+### Response
+
+```json
+{
+  "overview": {
+    "deployedAgents": 3,
+    "liveAgents": 2,
+    "installedSkills": 5,
+    "scheduledTasks": 8,
+    "connectedChannels": 2,
+    "channelMessages": 142
+  },
+  "trend": [
+    { "label": "Jan", "deployments": 1, "skills": 2, "tasks": 3 },
+    { "label": "Feb", "deployments": 0, "skills": 1, "tasks": 2 }
+  ],
+  "topSkills": [
+    { "name": "web_search", "installs": 3 }
+  ],
+  "channels": [
+    { "name": "Webchat", "messages": 120, "lastActive": "2026-04-03T12:00:00Z", "status": "connected" },
+    { "name": "Telegram", "messages": 22, "lastActive": "2026-04-02T08:30:00Z", "status": "connected" },
+    { "name": "Discord", "messages": 0, "lastActive": null, "status": "not-configured" }
+  ],
+  "source": {
+    "gateway": "live",
+    "sessions": "live"
+  }
+}
+```
+
+### Response fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `overview.deployedAgents` | number | Total agents deployed by the user |
+| `overview.liveAgents` | number | Agents in `active` or `running` status |
+| `overview.installedSkills` | number | Total enabled skills across all agents |
+| `overview.scheduledTasks` | number | Total scheduled tasks |
+| `overview.connectedChannels` | number | Number of channels with a `connected` status |
+| `overview.channelMessages` | number | Total messages across all channels |
+| `trend` | array | Monthly buckets of deployment, skill, and task counts over the requested range |
+| `trend[].label` | string | Month label (for example `Jan`, `Feb`) |
+| `trend[].deployments` | number | Agents deployed in this month |
+| `trend[].skills` | number | Skills installed in this month |
+| `trend[].tasks` | number | Tasks created in this month |
+| `topSkills` | array | Top 6 most-installed skills, sorted by install count descending |
+| `topSkills[].name` | string | Skill name |
+| `topSkills[].installs` | number | Number of installs |
+| `channels` | array | Per-channel activity and connection status |
+| `channels[].name` | string | Channel display name (for example `Webchat`, `Telegram`, `Discord`) |
+| `channels[].messages` | number | Total messages on this channel |
+| `channels[].lastActive` | string \| null | ISO 8601 timestamp of last activity, or `null` |
+| `channels[].status` | string | Connection status: `connected`, `not-configured`, or `unreachable` |
+| `source.gateway` | string | Gateway data source status: `live` or `unreachable` |
+| `source.sessions` | string | Sessions data source status: `live` or `unavailable` |
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | Unauthorized — no valid session |
+| 500 | Failed to fetch analytics |
+
+---
 
 ## Dashboard bootstrap
 
@@ -19,7 +185,7 @@ GET /api/dashboard/bootstrap
 
 Requires session authentication. Returns lightweight user and runtime shell data in a single request. Use this endpoint to populate the dashboard shell immediately without waiting for slower runtime probes.
 
-This endpoint consolidates data that previously required multiple separate fetches (user profile, OpenClaw state, and gateway token) into one call. The dashboard renders skeleton cards for runtime-dependent data while the full runtime probe completes in the background.
+This endpoint consolidates data that previously required multiple separate fetches (user profile, OpenClaw state, and gateway token) into one call. The `gatewayToken` returned is the authenticated user's own token, enabling automatic pairing with their agent instance. The dashboard renders skeleton cards for runtime-dependent data while the full runtime probe completes in the background.
 
 ### Response
 
@@ -31,7 +197,7 @@ This endpoint consolidates data that previously required multiple separate fetch
   "plan": "solo",
   "openclawUrl": "https://agentbot-agent-abc123-production.up.railway.app",
   "openclawInstanceId": "abc123",
-  "gatewayToken": "shared-gateway-token"
+  "gatewayToken": "a1b2c3d4e5f6..."
 }
 ```
 
@@ -43,7 +209,7 @@ This endpoint consolidates data that previously required multiple separate fetch
 | `plan` | string \| null | Current subscription plan (for example, `solo`, `collective`, `label`, `network`), or `null` if no plan is active. |
 | `openclawUrl` | string \| null | URL of the user's deployed OpenClaw instance, or `null` if no instance is registered. |
 | `openclawInstanceId` | string \| null | Identifier of the user's OpenClaw instance, or `null` if no instance is registered. |
-| `gatewayToken` | string \| null | Shared gateway authentication token, or `null` if not configured. |
+| `gatewayToken` | string \| null | The authenticated user's gateway token for auto-pairing with their agent instance, or `null` if no token is registered. |
 
 ### Errors
 

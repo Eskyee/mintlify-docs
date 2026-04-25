@@ -119,21 +119,13 @@ If the session is missing, expired, or has insufficient balance, the gateway ret
 
 ## Response
 
-### Success (200)
+### Success
 
-```json
-{
-  "plugin": "agent",
-  "message": "Request processed by agent plugin",
-  "timestamp": "2026-03-20T03:33:15.000Z",
-  "payment": {
-    "method": "stripe",
-    "receipt": null
-  }
-}
-```
+The gateway forwards the request body to the matched plugin's upstream URL and returns the plugin's response directly. The HTTP status code and `Content-Type` header are preserved from the upstream response.
 
-When paid via MPP, the response includes a `Payment-Receipt` header and the `payment.receipt` field contains the transaction hash. When paid via a session, the `payment.receipt` field contains the voucher reference (formatted as `session:<sessionId>:<nonce>`).
+<Warning>The gateway no longer returns a synthetic response with `plugin`, `message`, `timestamp`, and `payment` fields. Responses are now proxied directly from the upstream plugin service. The response shape depends entirely on the plugin being called. Requests have a 30-second timeout.</Warning>
+
+When paid via MPP, the response includes a `Payment-Receipt` header with the transaction hash. When paid via a session, the `Payment-Receipt` header contains the voucher reference (formatted as `session:<sessionId>:<nonce>`).
 
 ### Response headers
 
@@ -157,40 +149,40 @@ When paid via MPP, the response includes a `Payment-Receipt` header and the `pay
 | 500 | `internal` | Internal server error |
 | 502 | `no_plugin` | No plugin registered for the given ID |
 
-## Gateway chat proxy (WebSocket fallback)
+## Gateway chat proxy
 
 ```http
 POST /api/gateway/chat
 ```
 
-Sends a chat message to the caller's deployed agent through the OpenClaw Gateway using WebSocket. The server connects to the agent's gateway via WebSocket, authenticates using the challenge-response handshake, delivers the message, and returns the agent's reply.
+Sends a chat message to the caller's deployed agent by enqueuing it as a job on the backend control plane. The server validates the user's agent, applies rate limiting and workload gating, and returns a job ID that you poll for the result.
 
-<Info>The primary chat endpoint [`POST /api/chat`](/api-reference/agents#send-message) now uses the OpenAI-compatible REST API (`POST /v1/chat/completions`) instead of WebSocket. This WebSocket-based endpoint is retained as a fallback for gateways that do not have `chatCompletions` enabled. For new integrations, prefer `POST /api/chat`.</Info>
+<Info>This endpoint no longer connects to the gateway via WebSocket. Chat messages are enqueued as asynchronous jobs on the backend. Use the returned `jobId` to poll for the result via [`GET /api/jobs/:jobId`](#get-job-status).</Info>
 
-This endpoint reads the gateway token from a shared token file on disk, falling back to the `OPENCLAW_GATEWAY_TOKEN` environment variable. The gateway URL is derived from the user's `openclawUrl` in the database when available, otherwise constructed from the user's `openclawInstanceId` (`wss://agentbot-agent-{openclawInstanceId}-production.up.railway.app`).
-
-Requires session authentication.
+Requires session authentication. Subject to rate limiting (per-IP) and workload gating (per-user). Messages longer than 800 characters consume 2 workload slots; shorter messages consume 1.
 
 ### Request body
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `message` | string | Yes | Message to send |
-| `sessionKey` | string | No | Session key for the conversation. Defaults to `main`. |
 
 ```json
 {
-  "message": "Summarize my tasks",
-  "sessionKey": "project-alpha"
+  "message": "Summarize my tasks"
 }
 ```
 
-### Response (200)
+<Warning>The `sessionKey` parameter has been removed. Chat sessions are now managed server-side by the backend job processor.</Warning>
+
+### Response (202 Accepted)
 
 ```json
 {
   "success": true,
-  "reply": "Here is a summary of your tasks...",
+  "queued": true,
+  "jobId": "job_abc123",
+  "status": "queued",
   "agentId": "inst_a1b2c3d4e5",
   "agentName": "my-agent"
 }
@@ -199,9 +191,11 @@ Requires session authentication.
 | Field | Type | Description |
 |-------|------|-------------|
 | `success` | boolean | Always `true` on success |
-| `reply` | string | The agent's response text |
-| `agentId` | string | The user's OpenClaw instance identifier (`openclawInstanceId`). This was previously the agent's database ID. |
-| `agentName` | string | Name of the agent. Falls back to the `openclawInstanceId` when no agent name is set. |
+| `queued` | boolean | Always `true` — the message was enqueued |
+| `jobId` | string | Job identifier. Poll [`GET /api/jobs/:jobId`](#get-job-status) to retrieve the result. |
+| `status` | string | `"queued"` — the job is waiting to be processed |
+| `agentId` | string | The user's OpenClaw instance identifier |
+| `agentName` | string | Name of the agent |
 
 ### Errors
 
@@ -212,10 +206,10 @@ Requires session authentication.
 | 404 | `User not found` — authenticated user does not exist |
 | 404 | `No OpenClaw instance found` — the user has no provisioned OpenClaw instance |
 | 404 | `No agent found` — the user has no deployed agent |
-| 500 | `Chat failed` — WebSocket connection or agent response error |
-| 503 | `No gateway token available` — no shared gateway token is configured on disk or in the environment |
-
-<Note>This endpoint opens a WebSocket connection per request and times out after 30 seconds. If the gateway rejects the authentication handshake, a `500` error is returned with details from the gateway. For lower-overhead chat that avoids WebSocket, use [`POST /api/chat`](/api-reference/agents#send-message) which uses the OpenAI-compatible REST API.</Note>
+| 429 | `Too many requests` — rate limit or workload gate exceeded. Response may include `retryAfterSeconds`. |
+| 500 | `Chat failed` — error enqueuing the job |
+| 502 | Backend job queue returned an error or non-JSON response |
+| 503 | `No gateway token available` — no per-user gateway token was found in the database and no shared `OPENCLAW_GATEWAY_TOKEN` environment variable is configured |
 
 ### Example
 
@@ -223,7 +217,7 @@ Requires session authentication.
 curl -X POST https://agentbot.sh/api/gateway/chat \
   -H "Content-Type: application/json" \
   -H "Cookie: next-auth.session-token=YOUR_SESSION" \
-  -d '{"message": "What is my agent status?", "sessionKey": "main"}'
+  -d '{"message": "What is my agent status?"}'
 ```
 
 ## Gateway status
@@ -232,7 +226,7 @@ curl -X POST https://agentbot.sh/api/gateway/chat \
 GET /api/gateway/status
 ```
 
-Requires session authentication. Returns a combined view of gateway health, active sessions, and cron jobs. Use this endpoint to get a real-time snapshot of the gateway's operational state.
+Requires session authentication. Returns a combined view of gateway health, active sessions, and cron jobs scoped to the authenticated user's gateway. The server resolves the user's per-user gateway URL and token from the database before invoking gateway tools. Use this endpoint to get a real-time snapshot of the gateway's operational state.
 
 ### Response
 
@@ -298,73 +292,734 @@ curl -X GET https://agentbot.sh/api/gateway/status \
 
 ## Production gateway service
 
-The production gateway is a standalone service deployed on Railway that exposes an OpenAI-compatible chat completions endpoint. It runs separately from the per-agent containers and uses its own configuration file.
+The production gateway is a modular Express application deployed on Railway that manages the OpenClaw gateway process. It provides a setup UI for initial configuration, an admin dashboard for monitoring, device pairing, and persistent storage on a Railway volume at `/data`. The wrapper proxies HTTP and WebSocket traffic to the internal OpenClaw gateway on `127.0.0.1:18789`.
+
+### Wrapper authentication
+
+Most wrapper management endpoints require admin authentication. When the `WRAPPER_ADMIN_PASSWORD` environment variable is set, requests must include one of:
+
+- **Cookie**: `ocw_admin` cookie set via the `/login` page (browser sessions)
+- **Bearer token**: `Authorization: Bearer <password>` header (API calls)
+- **Legacy header**: `x-admin-token: <password>` header
+
+When `WRAPPER_ADMIN_PASSWORD` is not set, all management endpoints are accessible without authentication.
+
+Browser requests without valid credentials are redirected to `/login`. API requests receive a `401` JSON response.
+
+### Wrapper endpoints
+
+The wrapper exposes the following management endpoints on its public port. All other requests are proxied to the internal OpenClaw gateway.
+
+#### Gateway status
+
+```http
+GET /api/status
+```
+
+No authentication required. Returns gateway state, uptime, and configuration status. Railway uses this endpoint as the container health check.
+
+##### Response
+
+```json
+{
+  "state": "running",
+  "running": true,
+  "configured": true,
+  "uptime": 3600.5,
+  "terminalSessions": 2,
+  "gatewayToken": "abc123...",
+  "aiProvider": "google/gemini-2.5-flash",
+  "runtime": {
+    "ffmpeg": {
+      "available": true,
+      "version": "6.1.1"
+    }
+  },
+  "ts": "2026-04-05T12:00:00.000Z"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `state` | string | Gateway process state: `running`, `starting`, `stopped`, or `crashed` |
+| `running` | boolean | `true` when the gateway process is running |
+| `configured` | boolean | Always `true` |
+| `uptime` | number | Wrapper process uptime in seconds |
+| `terminalSessions` | number | Number of active WebSocket terminal sessions. Returns `0` when the terminal feature is unavailable. See [WebSocket proxy](#websocket-proxy). |
+| `gatewayToken` | string \| null | The configured gateway authentication token, or `null` if not set |
+| `aiProvider` | string \| null | The primary model configured in the gateway, or `null` if not configured |
+| `runtime` | object | Runtime capabilities of the managed container |
+| `runtime.ffmpeg.available` | boolean | Whether `ffmpeg` is installed and accessible in the container. Required for autonomous baseFM DJ broadcasting. |
+| `runtime.ffmpeg.version` | string \| null | The ffmpeg version string, or `null` when ffmpeg is not available |
+| `ts` | string | ISO 8601 timestamp of the status check |
+
+<Warning>The previous `online` and `logsCount` fields have been replaced. Use `running` instead of `online` and `GET /api/logs` to retrieve log data.</Warning>
+
+#### Gateway logs
+
+```http
+GET /api/logs
+```
+
+Requires [admin authentication](#wrapper-authentication). Returns the last N lines of gateway process output.
+
+##### Query parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `lines` | number | `100` | Number of log lines to return. Maximum `500`. |
+
+##### Response
+
+```json
+{
+  "logs": [
+    {
+      "ts": "2026-04-05T12:00:00.000Z",
+      "stream": "stdout",
+      "line": "Gateway ready on port 18789"
+    }
+  ]
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `logs` | array | Array of log entry objects |
+| `logs[].ts` | string | ISO 8601 timestamp of the log entry |
+| `logs[].stream` | string | Output stream: `stdout` or `stderr` |
+| `logs[].line` | string | Log line content |
+
+#### Live log stream
+
+```http
+GET /api/logs/stream
+```
+
+Requires [admin authentication](#wrapper-authentication). Server-Sent Events (SSE) stream of gateway log output. On connection, the last 50 log entries are sent as history, followed by real-time log entries as they occur.
+
+##### Event format
+
+Each event is a JSON object with the same shape as entries in [`GET /api/logs`](#gateway-logs):
+
+```json
+{
+  "ts": "2026-04-05T12:00:00.000Z",
+  "stream": "stdout",
+  "line": "Gateway ready on port 18789"
+}
+```
+
+#### Gateway state events
+
+```http
+GET /api/events
+```
+
+Requires [admin authentication](#wrapper-authentication). Server-Sent Events (SSE) stream of gateway state changes. On connection, the current state is sent immediately, followed by real-time state change events.
+
+##### Event format
+
+```json
+{
+  "state": "running"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `state` | string | Gateway process state: `running`, `starting`, `stopped`, or `crashed` |
+
+#### Restart gateway
+
+```http
+POST /api/gateway/restart
+```
+
+Requires [admin authentication](#wrapper-authentication). Stops the gateway process and restarts it.
+
+<Warning>The endpoint path has changed from `POST /api/restart` to `POST /api/gateway/restart`.</Warning>
+
+##### Response (200)
+
+```json
+{
+  "ok": true,
+  "message": "Gateway restarting..."
+}
+```
+
+##### Error response (500)
+
+```json
+{
+  "ok": false,
+  "error": "Restart failed: gateway process not found"
+}
+```
+
+#### Stop gateway
+
+```http
+POST /api/gateway/stop
+```
+
+Requires [admin authentication](#wrapper-authentication). Stops the gateway process without restarting it.
+
+##### Response (200)
+
+```json
+{
+  "ok": true,
+  "message": "Gateway stopped."
+}
+```
+
+##### Error response (500)
+
+```json
+{
+  "ok": false,
+  "error": "Stop failed: ..."
+}
+```
+
+#### Read gateway configuration
+
+```http
+GET /api/config
+```
+
+Requires [admin authentication](#wrapper-authentication). Returns the current `openclaw.json` configuration with sensitive fields redacted.
+
+##### Response (200)
+
+```json
+{
+  "ok": true,
+  "config": {
+    "agents": {
+      "defaults": {
+        "model": { "primary": "google/gemini-2.5-flash" },
+        "workspace": "/data/.openclaw/workspace"
+      }
+    },
+    "gateway": {
+      "mode": "local",
+      "bind": "loopback",
+      "port": 18789
+    }
+  }
+}
+```
+
+Sensitive fields (`botToken`, `token`, `appToken`, `apiKey`, `password`, `serviceAccount`, `secret`, `key`, `auth`) are replaced with `[redacted]` in the response.
+
+##### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | Unauthorized |
+| 404 | No configuration file found |
+
+#### Update gateway configuration
+
+```http
+POST /api/config
+```
+
+Requires [admin authentication](#wrapper-authentication). Writes the provided JSON object as the new `openclaw.json` configuration. The gateway hot-reloads the configuration automatically.
+
+##### Request body
+
+The full configuration object to write. Must be a JSON object.
+
+##### Response (200)
+
+```json
+{
+  "ok": true,
+  "message": "Config written. Hot reload in progress..."
+}
+```
+
+##### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | Invalid config body (not an object) |
+| 401 | Unauthorized |
+| 500 | Failed to write configuration |
+
+### Device pairing
+
+The wrapper provides endpoints for managing device pairing requests. All pairing endpoints require [admin authentication](#wrapper-authentication).
+
+#### List pending pairing requests
+
+```http
+GET /api/pairing/pending
+```
+
+##### Response (200)
+
+```json
+{
+  "ok": true,
+  "pending": [
+    {
+      "id": "req_abc123",
+      "name": "Chrome on macOS",
+      "ip": "192.168.1.42",
+      "role": "viewer",
+      "createdAt": "2026-04-05T12:00:00.000Z",
+      "expiresAt": "2026-04-05T12:10:00.000Z"
+    }
+  ]
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `ok` | boolean | Always `true` on success |
+| `pending` | array | Array of pending pairing request objects |
+| `pending[].id` | string | Unique request identifier. Also accessible as `requestId`. |
+| `pending[].name` | string | Device display name. Also accessible as `deviceName`. |
+| `pending[].ip` | string | Remote IP address of the requesting device. Also accessible as `remoteIp`. |
+| `pending[].role` | string | Requested access role (for example `viewer`, `admin`) |
+| `pending[].createdAt` | string | ISO 8601 timestamp of when the request was created |
+| `pending[].expiresAt` | string \| undefined | ISO 8601 timestamp of when the request expires. When present, the admin dashboard displays a countdown timer. |
+
+#### Approve a pairing request
+
+```http
+POST /api/pairing/approve
+```
+
+##### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `requestId` | string | Yes | The pairing request ID to approve |
+
+##### Response (200)
+
+```json
+{
+  "ok": true,
+  "message": "Request abc123 approved"
+}
+```
+
+#### Reject a pairing request
+
+```http
+POST /api/pairing/reject
+```
+
+##### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `requestId` | string | Yes | The pairing request ID to reject |
+
+##### Response (200)
+
+```json
+{
+  "ok": true,
+  "message": "Request abc123 rejected"
+}
+```
+
+#### Revoke a paired device
+
+```http
+POST /api/pairing/revoke
+```
+
+##### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `deviceId` | string | Yes | The device ID to revoke |
+| `role` | string | Yes | The device role to revoke |
+
+##### Response (200)
+
+```json
+{
+  "ok": true,
+  "message": "Device abc123 revoked"
+}
+```
+
+#### List paired devices
+
+```http
+GET /api/pairing/paired
+```
+
+##### Response (200)
+
+```json
+{
+  "ok": true,
+  "paired": [
+    {
+      "id": "dev_abc123",
+      "name": "Chrome on macOS",
+      "role": "viewer",
+      "pairedAt": "2026-04-05T12:01:00.000Z"
+    }
+  ]
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `ok` | boolean | Always `true` on success |
+| `paired` | array | Array of paired device objects |
+| `paired[].id` | string | Unique device identifier. Also accessible as `deviceId`. |
+| `paired[].name` | string | Device display name. Also accessible as `deviceName`. |
+| `paired[].role` | string | Access role assigned to the device |
+| `paired[].pairedAt` | string | ISO 8601 timestamp of when the device was paired |
+
+#### Pairing event stream
+
+```http
+GET /api/pairing/stream
+```
+
+Requires [admin authentication](#wrapper-authentication). Server-Sent Events (SSE) stream of real-time pairing updates. On connection, the current list of pending requests is sent immediately, followed by change events as they occur.
+
+##### Event format
+
+**Pending list update** — sent on connection and whenever the pending list changes (for example when a new pairing request arrives):
+
+```json
+{
+  "type": "pending",
+  "pending": [
+    {
+      "id": "req_abc123",
+      "name": "Chrome on macOS",
+      "ip": "192.168.1.42",
+      "role": "viewer",
+      "createdAt": "2026-04-05T12:00:00.000Z",
+      "expiresAt": "2026-04-05T12:10:00.000Z"
+    }
+  ]
+}
+```
+
+**Pairing action update** — sent when a pairing request is approved, rejected, or a paired device is revoked:
+
+```json
+{
+  "type": "update",
+  "action": "approved",
+  "requestId": "req_abc123"
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `type` | string | Event type: `pending` or `update` |
+| `pending` | array | Full list of pending requests. Only present when `type` is `pending`. See [list pending pairing requests](#list-pending-pairing-requests) for the object shape. |
+| `action` | string | Action that occurred: `approved`, `rejected`, or `revoked`. Only present when `type` is `update`. |
+| `requestId` | string | The pairing request ID that was approved or rejected. Present when `action` is `approved` or `rejected`. |
+| `deviceId` | string | The device ID that was revoked. Present when `action` is `revoked`. |
+
+### Setup flow
+
+The wrapper provides a setup UI for initial gateway configuration. When the gateway is not yet configured, requests to `/` are redirected to `/setup`.
+
+#### Setup page
+
+```http
+GET /setup
+```
+
+No authentication required. Serves the setup UI HTML. Redirects to `/` if the gateway is already running.
+
+#### Save setup configuration
+
+```http
+POST /setup/save
+```
+
+No authentication required. Validates the setup form, writes the configuration and environment files, and launches the gateway.
+
+##### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `provider` | string | Yes | Model provider: `anthropic`, `openai`, `google`, `openrouter`, `groq`, `moonshot`, `zai`, `minimax`, or `ollama` |
+| `apiKey` | string | Conditional | API key for the selected provider. Required for all providers except `ollama`. |
+| `ollamaUrl` | string | Conditional | Ollama base URL (e.g., `http://localhost:11434`). Required when `provider` is `ollama`. |
+| `model` | string | Conditional | Model to use. Required for `ollama`. Optional for other providers (defaults to provider-specific model). |
+| `fallbackModel` | string | No | Fallback model ID |
+| `telegramBotToken` | string | No | Telegram bot token |
+| `telegramDmPolicy` | string | No | Telegram DM policy: `pairing`, `allowlist`, `open`, or `disabled`. Defaults to `pairing`. |
+| `telegramAllowFrom` | string | No | Comma-separated list of allowed Telegram users |
+| `telegramWebhookUrl` | string | No | Telegram webhook URL |
+| `discordBotToken` | string | No | Discord bot token |
+| `discordDmPolicy` | string | No | Discord DM policy: `pairing`, `allowlist`, `open`, or `disabled`. Defaults to `pairing`. |
+| `discordAllowFrom` | string | No | Comma-separated list of allowed Discord users |
+| `slackBotToken` | string | No | Slack bot token (requires `slackAppToken`) |
+| `slackAppToken` | string | No | Slack app token (requires `slackBotToken`) |
+| `slackDmPolicy` | string | No | Slack DM policy: `pairing`, `allowlist`, `open`, or `disabled`. Defaults to `pairing`. |
+| `mattermostUrl` | string | No | Mattermost server URL (requires `mattermostToken`) |
+| `mattermostToken` | string | No | Mattermost token (requires `mattermostUrl`) |
+| `mattermostTeam` | string | No | Mattermost team name |
+| `sessionScope` | string | No | Session scope: `main`, `per-peer`, `per-channel-peer`, or `per-account-channel-peer`. Defaults to `per-channel-peer`. |
+| `sessionResetMode` | string | No | Session reset mode: `off`, `daily`, or `idle` |
+| `sessionResetHour` | string | No | Hour (UTC) for daily session reset |
+
+##### Response (200)
+
+```json
+{
+  "ok": true,
+  "message": "Config saved. Gateway launching..."
+}
+```
+
+##### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | Validation errors. Response includes an `errors` array with descriptive messages. |
+| 409 | Gateway is already running or starting. Use `POST /api/config` to update configuration instead. |
+| 500 | Failed to write configuration or launch gateway |
+
+#### Get Ollama configuration
+
+```http
+GET /setup/api/ollama-config
+```
+
+No authentication required. Returns the pre-configured Ollama base URL from environment variables.
+
+##### Response
+
+```json
+{
+  "ollamaBaseUrl": "http://ollama.railway.internal:11434"
+}
+```
+
+#### List Ollama models
+
+```http
+GET /setup/api/ollama-models
+```
+
+No authentication required. Proxies to an Ollama instance to fetch available models.
+
+##### Query parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `url` | string | No | Ollama base URL. Falls back to the `OLLAMA_BASE_URL` environment variable if not provided. |
+
+##### Response (200)
+
+```json
+{
+  "models": ["llama3.3", "deepseek-r1:1.5b"]
+}
+```
+
+##### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | No Ollama URL provided or invalid URL format |
+| 502 | Could not reach Ollama instance or request timed out |
+
+#### Approve channel pairing via setup
+
+```http
+POST /setup/pairing/approve
+```
+
+No authentication required. Approves a channel pairing code during initial setup.
+
+##### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `channel` | string | Yes | Channel name |
+| `code` | string | Yes | Pairing code |
+
+##### Response (200)
+
+```json
+{
+  "ok": true,
+  "output": "Pairing approved"
+}
+```
+
+#### Reset gateway
+
+```http
+POST /setup/reset
+```
+
+No authentication required. Stops the gateway and resets configuration.
+
+##### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `mode` | string | No | Reset mode: omit for config-only reset, or `full` for factory reset (wipes all data) |
+
+##### Response (200)
+
+Config-only reset:
+
+```json
+{
+  "ok": true,
+  "message": "Config reset complete. Redirecting to setup..."
+}
+```
+
+Full factory reset:
+
+```json
+{
+  "ok": true,
+  "message": "Full reset complete. All data wiped. Redirecting to setup..."
+}
+```
+
+#### Export gateway data
+
+```http
+GET /setup/export
+```
+
+No authentication required. Downloads a zip archive of all gateway data. When `WRAPPER_ADMIN_PASSWORD` is set, the zip is password-protected with the admin password.
+
+##### Response
+
+Returns a `application/zip` file as a download attachment. The `Content-Disposition` header includes a filename in the format `openclaw-export-<timestamp>.zip`.
+
+##### Errors
+
+| Code | Description |
+|------|-------------|
+| 404 | No data directory found to export |
+| 500 | Failed to create export archive |
+
+### Proxy error response (503)
+
+When a request is proxied to the gateway but the gateway is not running, the wrapper returns a `502` error:
+
+```json
+{
+  "error": "Gateway not reachable",
+  "detail": "connect ECONNREFUSED 127.0.0.1:18789"
+}
+```
+
+### WebSocket proxy
+
+The wrapper handles WebSocket upgrade requests with path-based routing:
+
+- **`/ws/terminal`** — Routed to the built-in terminal WebSocket service, which provides an interactive terminal session to the container. This feature is **optional** — it requires `node-pty` to be installed in the container. When `node-pty` is not available, the terminal service is disabled and connections to `/ws/terminal` receive an error message indicating the feature is unavailable. The `terminalSessions` field in [`GET /api/status`](#gateway-status) returns `0` when the terminal is disabled.
+- **All other paths** — Proxied to the internal OpenClaw gateway. The wrapper injects the `Authorization: Bearer <token>` header automatically.
+
+<Note>The `node-pty` native module is dynamically loaded at startup. If it cannot be compiled or is not present in the container image, the gateway logs a warning (`node-pty not available — terminal feature disabled`) and continues operating normally. All other gateway features remain functional. To enable the terminal, ensure `node-pty` is installed and its native bindings can compile for the target platform.</Note>
+
+When the gateway is not running, non-terminal WebSocket upgrade requests are proxied to the gateway address, which returns a connection error.
+
+#### Terminal WebSocket messages
+
+Messages on the `/ws/terminal` WebSocket are JSON objects with a `type` field.
+
+##### Client-to-server messages
+
+| Type | Fields | Description |
+|------|--------|-------------|
+| `input` | `data` (string) | Send keystrokes or pasted text to the terminal |
+| `resize` | `cols` (number), `rows` (number) | Notify the server that the terminal dimensions have changed |
+
+##### Server-to-client messages
+
+| Type | Fields | Description |
+|------|--------|-------------|
+| `output` | `data` (string) | Terminal output to render |
+| `exit` | `code` (number) | The terminal process exited with the given exit code |
 
 ### Environment variables
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `OPENCLAW_GATEWAY_TOKEN` | Auto-generated | Bearer token for authenticating requests. If not set, a 64-character hex token is generated at startup. |
-| `PORT` | `8080` | Port the gateway listens on |
-| `AGENTBOT_API_URL` | `https://agentbot-prod-production.up.railway.app` | Backend API URL the gateway proxies to |
-| `CONTROL_UI_ORIGIN` | `https://agentbot.sh` | Allowed origin for the gateway control UI. Used to populate `gateway.controlUi.allowedOrigins`. |
-| `SKIP_SERVICE_READINESS` | `false` | When set to `true`, the gateway starts immediately without waiting for the backend API health check. |
-| `SERVICE_HEALTH_URL` | `{AGENTBOT_API_URL}/health` | URL the gateway polls at startup to confirm the backend API is available. Derived from `AGENTBOT_API_URL` by default. |
+| `OPENCLAW_GATEWAY_TOKEN` | _(empty)_ | Bearer token for authenticating proxied requests to the internal gateway. When not set, a random 64-character hex token is generated at startup. |
+| `PORT` | `3000` | Port the wrapper listens on |
+| `OPENCLAW_DATA_DIR` | `/data` | Root directory for persistent storage. The OpenClaw configuration and workspace are stored under `{OPENCLAW_DATA_DIR}/.openclaw/`. This should be a Railway volume mount. |
+| `WRAPPER_ADMIN_PASSWORD` | _(empty)_ | Password for accessing the admin dashboard and protected API endpoints. When not set, all management endpoints are accessible without authentication. See [wrapper authentication](#wrapper-authentication). |
+| `OLLAMA_BASE_URL` | _(empty)_ | Ollama base URL (e.g., `http://ollama.railway.internal:11434`). Pre-fills the Ollama URL field in the setup UI and is used as the default for the [Ollama models endpoint](#list-ollama-models). |
+| `GEMINI_API_KEY` | _(empty)_ | Google Gemini API key. Written into the gateway `.env` file at startup for model authentication. |
+| `OPENROUTER_API_KEY` | _(empty)_ | OpenRouter API key for LLM provider authentication. Written into the gateway `.env` file at startup. |
 
-### OpenClaw configuration `env` section
+### OpenClaw configuration and secrets
 
-The production gateway configuration includes a top-level `env` section in `openclaw.json` that passes secrets directly to the OpenClaw runtime. This is separate from container-level environment variables — the `env` section is read by OpenClaw at startup to authenticate with external services.
+The wrapper writes an `openclaw.json` configuration file to `{OPENCLAW_DATA_DIR}/.openclaw/openclaw.json` at startup. API keys are stored separately in `{OPENCLAW_DATA_DIR}/.openclaw/.env` to keep secrets out of the JSON configuration file. The gateway reads both files at startup.
 
-| Parameter | Description |
-|-----------|-------------|
-| `env.OPENROUTER_API_KEY` | OpenRouter API key for LLM provider authentication. Populated from the `OPENROUTER_API_KEY` container environment variable at startup. Required for the gateway to route model requests to OpenRouter. |
+| `.env` variable | Description |
+|-----------------|-------------|
+| `GEMINI_API_KEY` | Google Gemini API key for model authentication. Populated from the `GEMINI_API_KEY` container environment variable at startup. |
+| `OPENROUTER_API_KEY` | OpenRouter API key for LLM provider authentication. Populated from the `OPENROUTER_API_KEY` container environment variable at startup. |
 
 ### Default model configuration
 
-The production gateway uses the following model defaults:
+The production gateway configures the following model default:
 
 | Parameter | Value | Description |
 |-----------|-------|-------------|
-| `agents.defaults.model.primary` | `openrouter/xiaomi/mimo-v2-pro` | Primary model for agent requests |
-| `agents.defaults.model.fallbacks` | `["openrouter/anthropic/claude-sonnet-4", "openrouter/google/gemini-2.5-flash"]` | Fallback models tried in order if the primary is unavailable |
-| `agents.defaults.imageModel.primary` | `openrouter/google/gemini-2.5-flash` | Model used for image-related tasks |
+| `agents.defaults.model.primary` | `google/gemini-2.5-flash` | Primary model for agent requests |
 
-Model aliases are configured for convenience:
+When you use the setup UI to configure the gateway, the primary model is set based on your chosen provider. If you do not specify a model, the following defaults are used:
 
-| Alias | Model |
-|-------|-------|
-| `mimo` | `openrouter/xiaomi/mimo-v2-pro` |
-| `sonnet` | `openrouter/anthropic/claude-sonnet-4` |
-| `gemini` | `openrouter/google/gemini-2.5-flash` |
+| Provider | Default model |
+|----------|--------------|
+| `anthropic` | `anthropic/claude-opus-4-6` |
+| `openai` | `openai/gpt-5.4` |
+| `google` | `google/gemini-2.5-pro` |
+| `openrouter` | `openrouter/auto` |
+| `groq` | `groq/llama-3.3-70b-versatile` |
+| `moonshot` | `moonshot/kimi-k2.5` |
+| `zai` | `zai/glm-4.5` |
+| `minimax` | `minimax/MiniMax-M2.7` |
+| `ollama` | _(must be specified)_ |
 
 ### Agent defaults
 
 | Parameter | Value | Description |
 |-----------|-------|-------------|
-| `agents.defaults.workspace` | `/home/node/.openclaw/workspace` | Default workspace directory |
+| `agents.defaults.workspace` | `{OPENCLAW_DATA_DIR}/.openclaw/workspace` | Default workspace directory inside the persistent volume |
 | `agents.defaults.userTimezone` | `Europe/London` | Default timezone |
 | `agents.defaults.thinkingDefault` | `low` | Default thinking verbosity level |
 | `agents.defaults.verboseDefault` | `off` | Default verbose output mode |
 | `agents.defaults.timeoutSeconds` | `600` | Maximum time in seconds for a single request |
-| `agents.defaults.mediaMaxMb` | `5` | Maximum media file size in megabytes |
 | `agents.defaults.maxConcurrent` | `3` | Maximum concurrent agent tasks |
 | `agents.defaults.heartbeat.every` | `30m` | Self-monitoring heartbeat interval |
 | `agents.defaults.heartbeat.lightContext` | `true` | Use minimal context for heartbeat checks |
 | `agents.defaults.heartbeat.isolatedSession` | `true` | Run heartbeat in an isolated session to avoid polluting active conversations |
-| `agents.defaults.heartbeat.target` | `none` | Heartbeat notification target (disabled by default) |
 
 ### Tool configuration
 
 | Parameter | Value | Description |
 |-----------|-------|-------------|
 | `tools.profile` | `coding` | Tool profile loaded by default |
-| `tools.deny` | `["browser", "canvas"]` | Tools disabled in the gateway environment |
 | `tools.exec.backgroundMs` | `10000` | Maximum time in milliseconds a background process can run |
 | `tools.exec.timeoutSec` | `1800` | Maximum execution time in seconds for foreground commands (30 minutes) |
-| `tools.loopDetection.enabled` | `true` | Whether loop detection is active |
-| `tools.loopDetection.historySize` | `30` | Number of recent tool calls tracked for loop detection |
-| `tools.loopDetection.warningThreshold` | `10` | Number of repeated calls before a warning is issued |
-| `tools.loopDetection.criticalThreshold` | `20` | Number of repeated calls before the agent is interrupted |
 | `tools.web.search.enabled` | `true` | Web search tool is available |
 | `tools.web.fetch.enabled` | `true` | Web fetch tool is available |
 | `tools.web.fetch.maxChars` | `50000` | Maximum characters returned from web fetch requests |
@@ -395,28 +1050,66 @@ Model aliases are configured for convenience:
 | `logging.level` | `info` | Minimum log level written to persistent storage |
 | `logging.consoleLevel` | `info` | Minimum log level written to stdout |
 | `logging.consoleStyle` | `compact` | Log output format (`compact` omits timestamps and metadata for cleaner output) |
-| `logging.redactSensitive` | `tools` | Redacts sensitive data in tool call logs (API keys, tokens, credentials) |
 
 ### Gateway settings
 
 | Parameter | Value | Description |
 |-----------|-------|-------------|
 | `gateway.mode` | `local` | Gateway operating mode |
-| `gateway.bind` | `lan` | Bind address |
-| `gateway.auth.mode` | `token` | Authentication mode |
-| `gateway.auth.rateLimit.maxAttempts` | `10` | Maximum authentication attempts before lockout |
-| `gateway.auth.rateLimit.windowMs` | `60000` | Rate limit window (1 minute) |
-| `gateway.auth.rateLimit.lockoutMs` | `300000` | Lockout duration (5 minutes) |
-| `gateway.http.endpoints.chatCompletions.enabled` | `true` | OpenAI-compatible chat completions endpoint is enabled |
-| `gateway.controlUi.allowedOrigins` | `["https://agentbot.sh"]` | Permitted WebSocket origins. Populated from the `CONTROL_UI_ORIGIN` environment variable. |
-| `gateway.controlUi.dangerouslyDisableDeviceAuth` | `false` | Device auth is enabled on the production gateway. |
-| `gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback` | `false` | Host header fallback is disabled on the production gateway. |
+| `gateway.bind` | `loopback` | Bind address. The internal gateway binds to loopback only; the wrapper handles external traffic and proxies it to `127.0.0.1:18789`. |
+| `gateway.port` | `18789` | Internal gateway port |
+| `gateway.auth.token` | Auto-generated or `OPENCLAW_GATEWAY_TOKEN` | Gateway authentication token. Written directly into the configuration when `OPENCLAW_GATEWAY_TOKEN` is set. |
+| `gateway.trustedProxies` | `["127.0.0.1", "::1"]` | IP addresses trusted as reverse proxies. Includes IPv4 and IPv6 loopback only, since all external traffic passes through the local Express wrapper. |
+| `gateway.controlUi.allowedOrigins` | `["*"]` | Permitted WebSocket origins. Set to `["*"]` to allow connections from any origin. |
+| `gateway.controlUi.allowInsecureAuth` | `true` | Allows the gateway to accept token-based auth from the wrapper proxy without requiring device pairing for browser sessions. |
 | `gateway.reload.mode` | `hybrid` | Configuration reload strategy |
-| `gateway.reload.debounceMs` | `300` | Debounce interval for configuration reloads in milliseconds |
 
 ### Health check
 
-The production gateway exposes a `/healthz` endpoint for Railway health monitoring. Railway is configured to check this path with a 90-second timeout and will restart the service on failure (up to 10 retries).
+The container image is configured with a Docker `HEALTHCHECK` that probes `GET /api/status` every 15 seconds (5-second timeout, 60-second start period, 5 retries). Railway uses the same path (`/api/status`) for health monitoring and will restart the container on failure.
+
+### Persistent storage
+
+The wrapper stores all OpenClaw state under `{OPENCLAW_DATA_DIR}/.openclaw/` (default: `/data/.openclaw/`). This directory should be backed by a Railway volume mount so that configuration, conversations, and workspace files survive container restarts.
+
+### Process management
+
+The wrapper manages the OpenClaw gateway process with automatic restart on crash. When the gateway exits unexpectedly, the wrapper schedules a restart with exponential backoff starting at 2 seconds, doubling each attempt, up to a maximum of 30 seconds. The gateway is considered ready when it accepts TCP connections on port `18789`. If the gateway does not become ready within 60 seconds, the wrapper marks it as crashed and schedules another restart attempt.
+
+## Control UI URL resolution
+
+The dashboard constructs control UI links (for the chat, skills, and config views) using the user's own gateway URL as the base origin. When a user has a deployed gateway instance, the `openclawUrl` stored in their account is used to derive the control UI base URL. The platform default gateway URL is only used as a fallback when no user-specific URL is available.
+
+### URL construction
+
+The control UI URL is built from the following components:
+
+| Component | Source | Description |
+|-----------|--------|-------------|
+| Base origin | User's `openclawUrl` | The origin (scheme + host) of the user's deployed gateway. Falls back to the platform default `OPENCLAW_GATEWAY_URL` when not set. |
+| View path | `/chat`, `/skills`, or `/config` | The control UI view to open |
+| Query parameters | View-specific | For the chat view, includes `session` (defaults to `main`) |
+| Hash fragment | Gateway credentials | Contains `token` (gateway auth token) and `gatewayUrl` (WebSocket URL). Passed in the URL fragment so they are never sent to the server. |
+
+### Example
+
+For a user with `openclawUrl` set to `https://my-agent.up.railway.app`:
+
+```
+https://my-agent.up.railway.app/chat?session=main#token=abc123&gatewayUrl=wss%3A%2F%2Fmy-agent.up.railway.app
+```
+
+When `openclawUrl` is not set, the platform default gateway URL is used instead:
+
+```
+https://gateway.agentbot.sh/chat?session=main#token=abc123&gatewayUrl=wss%3A%2F%2Fgateway.agentbot.sh
+```
+
+<Info>The gateway token and WebSocket URL are passed in the URL hash fragment, which is never sent to the server in HTTP requests. This ensures credentials remain client-side only.</Info>
+
+### WebSocket URL derivation
+
+The WebSocket gateway URL is derived from the user's gateway URL by replacing the scheme with `wss://` and using the same host. For example, `https://my-agent.up.railway.app` becomes `wss://my-agent.up.railway.app`.
 
 ## Per-agent gateway authentication
 
@@ -425,10 +1118,19 @@ Each agent container receives a unique gateway auth token at provisioning time. 
 | Field | Description |
 |-------|-------------|
 | `gateway.auth.mode` | `token` |
-| `gateway.auth.token` | Unique hex token auto-generated per container. Provisioning generates a 48-character token (24 bytes of entropy). The container entrypoint generates a 32-character token (16 bytes) if no token is passed via the `OPENCLAW_GATEWAY_TOKEN` environment variable. |
+| `gateway.auth.token` | Unique hex token auto-generated per container. The container manager and Railway provisioning paths generate a 64-character token (32 bytes of entropy). The backend provisioning path generates a 48-character token (24 bytes of entropy). A 64-character token (32 bytes) is generated at startup if no token is passed via the `OPENCLAW_GATEWAY_TOKEN` environment variable. |
 | `gateway.port` | `18789` |
 
-<Note>The container entrypoint writes its own minimal configuration to `$HOME/.openclaw/openclaw.json` using a slightly different schema (`auth.method` at the top level instead of `gateway.auth.mode`). The provisioning config written by the backend uses the `gateway.auth.mode` path. When the entrypoint runs, it overwrites the provisioning config with its own minimal skeleton. All provisioning paths include a top-level `env` section containing `OPENROUTER_API_KEY` so the OpenClaw runtime can authenticate with the LLM provider. To preserve the full provisioning config, pass the gateway token via the `OPENCLAW_GATEWAY_TOKEN` environment variable so the entrypoint uses the same token.</Note>
+### Token resolution order
+
+When the platform sends requests to a user's gateway (for example, the [gateway chat proxy](#gateway-chat-proxy) or [gateway status](#gateway-status) endpoints), the server resolves the authentication token in the following order:
+
+1. **Per-user gateway token** — the server looks up the authenticated user's gateway URL from the database. If a per-user URL is found, the token associated with that user's gateway is used.
+2. **Shared gateway token** — if no per-user gateway is found, the server falls back to the `OPENCLAW_GATEWAY_TOKEN` environment variable.
+
+If neither source provides a token, the request fails with a `503` error. This resolution order ensures that each user's gateway traffic is authenticated with their own token rather than a single shared credential.
+
+<Note>The container startup process writes its own minimal configuration to `$HOME/.openclaw/openclaw.json` using a slightly different schema (`auth.method` at the top level instead of `gateway.auth.mode`). The provisioning config written by the backend uses the `gateway.auth.mode` path. When the container starts, it overwrites the provisioning config with its own minimal skeleton. All provisioning paths include a top-level `env` section containing `OPENROUTER_API_KEY` so the OpenClaw runtime can authenticate with the LLM provider. To preserve the full provisioning config, pass the gateway token via the `OPENCLAW_GATEWAY_TOKEN` environment variable so the startup process uses the same token.</Note>
 
 ## Agent container configuration
 
@@ -436,7 +1138,7 @@ When an agent is provisioned, the backend generates an OpenClaw configuration wi
 
 ### OpenClaw configuration `env` section
 
-Each agent container's `openclaw.json` includes a top-level `env` section that passes secrets to the OpenClaw runtime. All three provisioning paths (production gateway entrypoint, Railway direct provisioning, and backend container manager) write this section into the configuration file at launch.
+Each agent container's `openclaw.json` includes a top-level `env` section that passes secrets to the OpenClaw runtime. All three provisioning paths (production gateway startup, Railway direct provisioning, and backend container manager) write this section into the configuration file at launch.
 
 | Parameter | Description |
 |-----------|-------------|
@@ -446,30 +1148,32 @@ Each agent container's `openclaw.json` includes a top-level `env` section that p
 
 ### Container environment variables
 
-The following environment variables are set on every agent container at launch. Variables are grouped by source — some are set by the container image entrypoint (local Docker path) and others are injected by the provisioning service (Railway path). When both paths set the same variable, the provisioning service value takes precedence.
+The following environment variables are set on every agent container at launch. Variables are grouped by source — some are set by the container startup process (local Docker path) and others are injected by the provisioning service (Railway path). When both paths set the same variable, the provisioning service value takes precedence.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `NODE_ENV` | `production` | Node.js environment. Set by the provisioning service. |
 | `PORT` | Railway-assigned | Port the agent process listens on inside the container. This value is injected by Railway automatically and is no longer set by the provisioning service. A TCP proxy inside the container forwards traffic from the Railway-assigned port to the OpenClaw gateway on `127.0.0.1:18789`. |
-| `HOME` | `/home/node` | Home directory for the `node` user that the official OpenClaw image runs as |
+| `HOME` | `/root` | Home directory for the container user. Managed runtime containers run as `root` with the OpenClaw data directory at `/root/.openclaw`. |
 | `TERM` | `xterm-256color` | Terminal type |
 | `NODE_COMPILE_CACHE` | `/var/tmp/openclaw-compile-cache` | Directory for the Node.js compile cache. Speeds up cold starts by caching compiled bytecode across process restarts. |
 | `OPENCLAW_NO_RESPAWN` | `1` | When set to `1`, prevents the OpenClaw process from automatically respawning after exit. Container-level restart policies (Docker `--restart` or orchestrator health checks) handle process recovery instead. |
-| `OPENCLAW_GATEWAY_TOKEN` | Auto-generated | Gateway authentication token. When not set, the entrypoint generates a 32-character hex token. See [per-agent gateway authentication](#per-agent-gateway-authentication). |
-| `OPENCLAW_GATEWAY_URL` | Platform URL | Gateway URL for the agent to communicate with the platform gateway. Set by the provisioning service. |
+| `OPENCLAW_GATEWAY_TOKEN` | Auto-generated | Gateway authentication token. When not set, a 64-character hex token (32 bytes of entropy) is generated at startup. See [per-agent gateway authentication](#per-agent-gateway-authentication). |
+| `OPENCLAW_GATEWAY_URL` | `http://openclaw-gateway-lqma:10000` | Gateway URL for the agent to communicate with the platform gateway. Set by the provisioning service. When this variable is not configured, the provisioning endpoint falls back to the default internal Railway DNS address shown here. You can override this value to point to a custom gateway deployment. |
 | `OPENCLAW_GATEWAY_PORT` | `18789` | Port the gateway listens on inside the container |
 | `OPENCLAW_GATEWAY_BIND` | — | **Deprecated.** Previously set to `0.0.0.0` to allow Railway's reverse proxy to route traffic into the container. This variable is no longer injected by the provisioning service because it has no effect on OpenClaw. Traffic now reaches the gateway through a TCP proxy that forwards the Railway-assigned `PORT` to `127.0.0.1:18789`. |
 | `OPENCLAW_BIND` | — | **Deprecated.** Previously used as a fallback bind address when `OPENCLAW_GATEWAY_BIND` was not set. This variable is no longer injected by the provisioning service. |
 | `AGENTBOT_USER_ID` | Per-user | Owner user ID passed at provisioning time |
 | `AGENTBOT_PLAN` | `solo` | Subscription plan tier (`solo`, `collective`, `label`, or `network`) |
-| `AGENTBOT_API_URL` | `https://agentbot-api.onrender.com` | Backend API URL for the agent to call platform services. Set by the provisioning service. |
+| `AGENTBOT_API_URL` | `https://agentbot-backend-production.up.railway.app` | Backend API URL for the agent to call platform services. Set by the provisioning service. |
 | `AGENTBOT_MODE` | `home` | Installation mode (`home` for self-hosted, `link` for existing OpenClaw) |
 | `AGENTBOT_API_KEY` | Per-user | API key for authenticating with the Agentbot platform |
 | `DATABASE_URL` | Platform-provided | PostgreSQL connection string for agent data persistence. Set by the provisioning service. |
 | `OPENROUTER_API_KEY` | Platform-provided | OpenRouter API key for AI model access. Set by the provisioning service. |
 | `INTERNAL_API_KEY` | Platform-provided | Internal API key for authenticating agent-to-platform requests. Set by the provisioning service. |
 | `WALLET_ENCRYPTION_KEY` | Platform-provided | Encryption key for securing agent wallet data at rest. Set by the provisioning service. |
+| `CONTROL_UI_ORIGIN` | _(empty)_ | Primary origin allowed to connect to the Control UI via WebSocket. When not set, falls back to `NEXT_PUBLIC_APP_URL`, then `https://agentbot.sh`. |
+| `CONTROL_UI_COMPAT_ORIGIN` | _(empty)_ | Optional secondary origin for Control UI WebSocket connections. When set, this origin is added alongside the primary origin in the `controlUi.allowedOrigins` list. |
 
 ### Gateway settings
 
@@ -487,9 +1191,11 @@ The following environment variables are set on every agent container at launch. 
 | `gateway.trustedProxies` | `["127.0.0.1", "10.0.0.0/8", "100.64.0.0/10", "172.16.0.0/12", "192.168.0.0/16"]` | IP addresses trusted as reverse proxies. Requests from these addresses have their `X-Forwarded-For` headers honored for origin detection. Includes loopback, RFC 1918 private ranges, and the `100.64.0.0/10` CGNAT range used by Railway's internal network. |
 | `gateway.http.endpoints.chatCompletions.enabled` | `true` | Enables the OpenAI-compatible `POST /v1/chat/completions` endpoint on the gateway. Required for the REST-based [`POST /api/chat`](/api-reference/agents#send-message) endpoint. Set during provisioning. |
 | `gateway.controlUi.enabled` | `true` | Gateway control UI is enabled in containers. |
-| `gateway.controlUi.allowedOrigins` | `["*"]` | Origins permitted to connect to the Control UI via WebSocket. Set to `["*"]` to allow connections from any origin. When not configured, the gateway may reject WebSocket connections with an "origin not allowed" error if the request origin does not match the gateway's hostname. |
-| `gateway.controlUi.dangerouslyDisableDeviceAuth` | `true` | Disables the interactive device authentication flow for the Control UI. Required for headless deployments (such as Railway) where no browser is available to complete the device auth handshake. |
-| `gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback` | `true` | Allows the gateway to fall back to the `Host` header when the `Origin` header is missing from a WebSocket upgrade request. Required for reverse-proxy environments (such as Railway) where the proxy does not forward the `Origin` header. |
+| `gateway.controlUi.allowedOrigins` | Derived from environment | Origins permitted to connect to the Control UI via WebSocket. Defaults to the value of `CONTROL_UI_ORIGIN` (or `NEXT_PUBLIC_APP_URL`, falling back to `https://agentbot.sh`). An optional second origin can be added via `CONTROL_UI_COMPAT_ORIGIN`. When not configured, the gateway may reject WebSocket connections with an "origin not allowed" error if the request origin does not match. |
+| `gateway.controlUi.dangerouslyDisableDeviceAuth` | `false` | When `true`, disables the interactive device authentication flow for the Control UI. Defaults to `false` — device auth is now required. For headless deployments where no browser is available, you may need to use token-based authentication instead of the device auth handshake. |
+| `gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback` | `false` | When `true`, allows the gateway to fall back to the `Host` header when the `Origin` header is missing from a WebSocket upgrade request. Defaults to `false` — the `Origin` header is now required. |
+
+<Warning>The `controlUi.allowedOrigins`, `controlUi.dangerouslyDisableDeviceAuth`, and `controlUi.dangerouslyAllowHostHeaderOriginFallback` defaults have changed. Previously, `allowedOrigins` was set to `["*"]`, and both `dangerouslyDisableDeviceAuth` and `dangerouslyAllowHostHeaderOriginFallback` were `true`. The new defaults restrict origins to the platform URL and require device authentication and the `Origin` header for WebSocket connections.</Warning>
 
 ### Tool settings
 
@@ -498,7 +1204,7 @@ The following environment variables are set on every agent container at launch. 
 | `tools.profile` | `messaging` or `coding` | `messaging` for solo plan, `coding` for all other plans |
 | `tools.deny` | `["browser", "canvas"]` | Tools disabled in container environments |
 | `tools.exec.allowedCommands` | Array of whitelisted commands | Commands the agent is permitted to execute (includes `git`, `node`, `npm`, `python3`, `curl`, `ls`, `cat`, `grep`, `find`, `wget`, `mkdir`, `cp`, `mv`, `rm`, `echo`, `date`, `whoami`, `chmod`, `chown`, `touch`, `head`, `tail`, `wc`, `sort`, `uniq`, `awk`, `sed`, `tar`, `zip`, `unzip`, `docker`, `ps`, `df`, `du`) |
-| `tools.exec.allowedPaths` | `["~/.openclaw/workspace", "/tmp", "/home/node"]` | Filesystem paths the agent can access. The official OpenClaw image runs as the `node` user (`/home/node`). Configuration is stored at `/home/node/.openclaw/openclaw.json`. |
+| `tools.exec.allowedPaths` | `["/root/.openclaw/workspace", "/tmp", "/root"]` | Filesystem paths the agent can access. Managed runtime containers run as `root` with configuration stored at `/root/.openclaw/openclaw.json`. |
 | `tools.exec.denyPaths` | `["/etc/shadow", "/etc/passwd", "/proc", "/sys"]` | Filesystem paths the agent is blocked from accessing |
 | `tools.web.maxChars` | `50000` | Maximum characters returned from web tool requests |
 | `tools.loopDetection.maxIterations` | `20` | Maximum loop iterations before the agent is interrupted |
@@ -516,7 +1222,7 @@ The following environment variables are set on every agent container at launch. 
 
 | Parameter | Value | Description |
 |-----------|-------|-------------|
-| `agents.defaults.workspace` | `~/.openclaw/workspace` | Default workspace directory |
+| `agents.defaults.workspace` | `/root/.openclaw/workspace` | Default workspace directory. Managed runtime containers mount a persistent volume at `/root/.openclaw`. |
 | `agents.defaults.imageMaxDimensionPx` | `1200` | Maximum image dimension in pixels (optimizes vision token usage) |
 | `agents.defaults.userTimezone` | `Europe/London` | Default timezone (overridden by signup timezone when available) |
 | `agents.defaults.timeFormat` | `24h` | Time format |

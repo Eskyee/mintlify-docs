@@ -88,6 +88,12 @@ Agents can use tools to extend their capabilities:
 - **Weather** - Get weather data
 - **Custom APIs** - Your own API endpoints
 
+## Feedback and corrections
+
+You can submit corrections to teach an agent what it did wrong and what it should do instead. The agent stores these corrections in memory and uses them to improve future responses. Feedback entries are categorized by type — `tone`, `accuracy`, `format`, `behavior`, or `general` — so the agent knows which aspect of its behavior to adjust.
+
+See the [Feedback API](/api-reference/feedback) for endpoint details and examples.
+
 ## Persistence
 
 Agents maintain memory across conversations:
@@ -101,7 +107,17 @@ const agent = {
 }
 ```
 
-## Best Practices
+## Fleet monitoring
+
+You can monitor your agent fleet from the mission control dashboard. Fleet data — including execution traces, cost breakdowns, and talent bookings — is sourced from treasury transaction records. This gives you a unified view of what your agents are doing and how much they cost.
+
+- **Traces** — the 50 most recent agent actions, including coordination messages and AI inference costs
+- **Costs** — spending grouped by agent and category (for example `ai_metric` or `agent_message`)
+- **Bookings** — talent booking records created through agent-to-agent negotiation, with full pricing lifecycle
+
+See the [Mission Control API reference](/api-reference/mission-control) for endpoint details. To track token consumption and spending trends over time, use the [dashboard cost API](/api-reference/dashboard#dashboard-cost).
+
+## Best practices
 
 1. **Clear Instructions** - Write specific system prompts
 2. **Limited Tools** - Only enable necessary tools
