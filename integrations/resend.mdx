@@ -144,6 +144,46 @@ The endpoint always returns `200` to prevent Resend from retrying delivery.
 }
 ```
 
+## Transactional email templates
+
+Agentbot sends transactional emails at key lifecycle moments using Resend. Each template uses monospace branding with a dark theme.
+
+### Email types
+
+| Email | Trigger | Subject |
+|-------|---------|---------|
+| Welcome | New user signup (OAuth) | "Your agent is live — here's what to do first" |
+| Agent deployed | Agent container provisioned | "Your {plan} agent is live" |
+| Plan upgraded | Stripe subscription upgrade | "Upgraded to {newPlan} — more power unlocked" |
+| Weekly digest | Weekly cron job | "Your agent this week — {n} tasks completed" |
+| Payment receipt | Stripe payment received | "Payment received for {plan} plan" |
+
+### Welcome email
+
+Sent automatically when a new user signs up through Google, wallet, or Farcaster authentication. The email includes example use cases showing how other users interact with their agents.
+
+### Agent deployed email
+
+Sent when a new agent container finishes provisioning. Includes the agent's plan tier, public URL, and suggested next steps.
+
+### Plan upgraded email
+
+Sent when a user upgrades their subscription through Stripe. Shows a before-and-after comparison of plan capabilities.
+
+### Weekly digest email
+
+Sent on a weekly schedule. Includes aggregated stats for the period:
+
+- Messages processed
+- Tasks completed
+- Uptime percentage
+
+### Configuration
+
+Transactional emails require the `RESEND_API_KEY` environment variable. The sender address is `noreply@agentbot.raveculture.xyz`.
+
+<Note>The welcome email is sent via the authentication event handler when `isNewUser` is `true` during OAuth sign-in. See [webhook events](/api-reference/auth#webhook-events) for related auth events.</Note>
+
 ## Security
 
 ### Sender allowlist

@@ -41,6 +41,26 @@ cp .env.example .env
 npm run dev
 ```
 
+## SDK Options
+
+If you want to integrate with Agentbot programmatically, use one of these public options:
+
+- [`sdk/agentbot` in `agentbot-opensource`](https://github.com/Eskyee/agentbot-opensource/tree/main/sdk/agentbot) for the typed reference API client
+- [`Eskyee/agentbot-sdk`](https://github.com/Eskyee/agentbot-sdk) for the standalone SDK repo
+
+For the reference client:
+
+```typescript
+import { createAgentbotClient } from './sdk/agentbot/index'
+
+const client = createAgentbotClient({
+  baseUrl: 'http://localhost:3001',
+  apiKey: process.env.AGENTBOT_API_KEY,
+})
+
+const agents = await client.listAgents()
+```
+
 ## Environment Variables
 
 ```bash
@@ -68,7 +88,18 @@ OPENROUTER_API_KEY=sk-or-...
 
 # Telegram Bot
 TELEGRAM_BOT_TOKEN=your-bot-token
+
+# Railway provisioning (required for managed agent deployment)
+RAILWAY_API_KEY=your-railway-api-key
+RAILWAY_TOKEN_TYPE=account
+RAILWAY_PROJECT_ID=your-railway-project-id
+RAILWAY_ENVIRONMENT_ID=your-railway-environment-id
+
+# OpenClaw Gateway (optional — defaults to internal Railway DNS)
+OPENCLAW_GATEWAY_URL=http://your-gateway-host:10000
 ```
+
+<Note>`RAILWAY_TOKEN_TYPE` controls how the platform authenticates with the Railway GraphQL API. Set it to `project` to authenticate with a project-scoped token (sent via the `Project-Access-Token` header) or to `account` (default) to authenticate with a personal token (sent via the `Authorization: Bearer` header). Valid values are `project`, `workspace`, `account`, and `oauth`.</Note>
 
 ## Docker Production
 
@@ -140,7 +171,7 @@ Use the **One-Click App** for Node.js and connect a managed PostgreSQL database.
 After deployment, visit:
 
 - Main app: `https://your-domain.com`
-- Health check: `https://your-domain.com/api/health`
+- Health check: `https://your-domain.com/health`
 
 ## Troubleshooting
 

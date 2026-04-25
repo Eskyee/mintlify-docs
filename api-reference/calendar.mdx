@@ -19,6 +19,28 @@ All calendar endpoints require a valid NextAuth session. The user identity is de
 https://agentbot.sh/api/calendar
 ```
 
+## Default response
+
+```http
+GET /api/calendar
+```
+
+When no `action` query parameter is provided, the endpoint returns a summary of available actions.
+
+### Response
+
+```json
+{
+  "message": "Calendar API",
+  "actions": ["auth", "list", "availability"]
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `message` | string | Endpoint identifier |
+| `actions` | string[] | List of supported `action` values for GET requests |
+
 ## Check connection status
 
 ```http
