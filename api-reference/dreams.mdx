@@ -1,11 +1,11 @@
 ---
 title: Dreams API
-description: "Dream diary timeline, dream triggers, configuration, and memory consolidation"
+description: "Dream diary timeline, dream triggers, configuration, memory consolidation, and per-agent dream feeds"
 ---
 
 # Dreams API
 
-Access your agent's dream diary, trigger dream cycles, and configure dreaming behavior. These endpoints proxy requests to the agent's OpenClaw runtime.
+Access your agent's dream diary, trigger dream cycles, configure dreaming behavior, and retrieve per-agent dream feeds. The diary endpoints proxy requests to the agent's OpenClaw runtime, while the per-agent feed maps soul cognitive data to dream records.
 
 <Note>All dreams endpoints require an authenticated session. The proxy resolves your agent's URL from the database and forwards requests to the running instance. If no agent is deployed, the endpoint returns a `404` with `status: "no_agent"`.</Note>
 
@@ -115,3 +115,66 @@ curl -X POST https://agentbot.sh/api/openclaw/dreams \
 | 401 | `Unauthorized` — no authenticated session |
 | 404 | `No agent deployed` — the user has no running agent instance |
 | 502 | `Agent unreachable` — the agent instance did not respond within 15 seconds |
+
+---
+
+## Get agent dreams (deprecated)
+
+<Warning>This endpoint is deprecated and will be removed in a future release. Use the `GET /api/openclaw/dreams` endpoint to retrieve dream data through the authenticated agent proxy instead.</Warning>
+
+```http
+GET /api/dreams/{agentId}
+```
+
+Returns dream records for a specific agent. Dreams are derived from the agent's recent soul thoughts, with mood inferred from thought type and content. No authentication required.
+
+### Path parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `agentId` | string | Agent identifier |
+
+### Response
+
+```json
+{
+  "dreams": [
+    {
+      "id": "thought_agent-manager_0",
+      "agentId": "agent-manager",
+      "title": "goal planning",
+      "summary": "Evaluating next colony coordination cycle for resource allocation",
+      "mood": "curious",
+      "createdAt": "2026-04-14T12:00:00.000Z",
+      "imageUrl": null
+    }
+  ]
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `dreams` | array | List of dream records. Returns an empty array when the soul service is unavailable or the agent has no recent thoughts. |
+| `dreams[].id` | string | Dream record identifier, formatted as `thought_{agentId}_{index}` |
+| `dreams[].agentId` | string | Agent identifier |
+| `dreams[].title` | string | Dream title derived from the thought type (underscores replaced with spaces) |
+| `dreams[].summary` | string | Dream summary from the thought content |
+| `dreams[].mood` | string | Inferred mood. One of `calm`, `curious`, `excited`, `anxious`, or `sleeping`. |
+| `dreams[].createdAt` | string | ISO 8601 timestamp of the original thought |
+| `dreams[].imageUrl` | string \| null | Optional image URL associated with the dream. Currently always `null`. |
+
+### Mood inference
+
+The mood is inferred from the thought type and content:
+
+| Condition | Mood |
+|-----------|------|
+| Thought type contains `error` or `fail` | `anxious` |
+| Thought type contains `goal` or `plan` | `curious` |
+| Thought type contains `success` or `complete` | `excited` |
+| Content is shorter than 30 characters | `sleeping` |
+| Default | `calm` |
+
+### Errors
+
+The endpoint returns an empty `dreams` array instead of an error status when the soul service is unavailable or an error occurs during processing.

@@ -44,8 +44,7 @@ Returns all available skills in the marketplace. No authentication required for 
       "downloads": 150,
       "rating": 5.0,
       "featured": true,
-      "mcpEnabled": false,
-      "mcpConfig": null,
+      "code": "",
       "scan": {
         "trustTier": "trusted",
         "riskLevel": "low",
@@ -78,8 +77,7 @@ Returns all available skills in the marketplace. No authentication required for 
 | Field | Type | Description |
 |-------|------|-------------|
 | `skills` | array | List of skill objects matching the query filters |
-| `skills[].mcpEnabled` | boolean | Whether this skill has a bundled MCP server enabled. When `true`, the skill provides additional tools through the [MCP skills API](/api-reference/mcp-skills). |
-| `skills[].mcpConfig` | object \| null | MCP server configuration for the skill. Contains server name, version, and tool definitions when `mcpEnabled` is `true`. `null` when the skill has no MCP configuration. |
+| `skills[].code` | string | Skill handler code or configuration. Empty string for platform-authored skills without custom code. |
 | `skills[].scan` | object | Marketplace safety scan result for the skill. See [scan object](#scan-object) for field details. |
 | `categories` | string[] | All distinct skill categories in the marketplace |
 | `featured` | array | Subset of `skills` where `featured` is `true`. Each entry includes the same `scan` object. |
@@ -127,7 +125,9 @@ When the skill is installed and deployed to the gateway successfully:
     "agentId": "agent_456",
     "installedAt": "2026-03-20T00:00:00Z"
   },
-  "deployed": true
+  "runtimeHydrated": false,
+  "deployed": true,
+  "message": "Skill installed successfully."
 }
 ```
 
@@ -142,8 +142,10 @@ When the skill is saved but the agent is offline or the gateway is unreachable:
     "agentId": "agent_456",
     "installedAt": "2026-03-20T00:00:00Z"
   },
+  "runtimeHydrated": false,
   "deployed": false,
-  "deployWarning": "Gateway unreachable - skill saved to database and will sync automatically"
+  "deployWarning": "Gateway unreachable - skill saved to database and will sync automatically",
+  "message": "Skill saved to the database and will sync to the runtime automatically."
 }
 ```
 
@@ -155,8 +157,10 @@ When the skill is saved but the agent is offline or the gateway is unreachable:
 | `installed.skillId` | string | ID of the installed skill |
 | `installed.agentId` | string | ID of the agent the skill was installed on |
 | `installed.installedAt` | string | ISO 8601 timestamp of the installation |
+| `runtimeHydrated` | boolean | `true` when the `agentId` resolved to a managed OpenClaw runtime and a backing agent row was auto-created. `false` when the agent already existed in the database. See [managed runtime resolution](#managed-runtime-resolution). |
 | `deployed` | boolean | Whether the skill was successfully deployed to the gateway. `false` when the agent is offline or the gateway is unreachable. |
 | `deployWarning` | string \| undefined | Present only when `deployed` is `false`. Describes why the deployment did not complete. The skill is still saved and will sync automatically when the agent comes back online. |
+| `message` | string | Human-readable summary of the install outcome. Varies based on whether the runtime was hydrated and whether the gateway deploy succeeded. |
 
 ### Errors
 
@@ -280,9 +284,17 @@ Requires session authentication. Removes a skill from an agent.
 
 ```json
 {
-  "success": true
+  "success": true,
+  "runtimeHydrated": false,
+  "message": "Skill removed successfully."
 }
 ```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `success` | boolean | Always `true` when the skill is removed from the database |
+| `runtimeHydrated` | boolean | `true` when the `agentId` resolved to a managed OpenClaw runtime. See [managed runtime resolution](#managed-runtime-resolution). |
+| `message` | string | Human-readable summary of the uninstall outcome. Varies based on whether the runtime was hydrated. |
 
 ### Errors
 
@@ -290,9 +302,10 @@ Requires session authentication. Removes a skill from an agent.
 |------|-------------|
 | 400 | Missing `skillId` or `agentId` |
 | 401 | Unauthorized |
+| 404 | Agent not found |
 | 500 | Internal error |
 
-<Note>The uninstall endpoint returns `{ "success": true }` even when no matching installation exists. It does not return a `404` error for missing installations.</Note>
+<Note>The uninstall endpoint returns `{ "success": true }` even when no matching installation exists. It does not return a `404` error for missing skill installations, though it does return `404` if the agent itself cannot be found.</Note>
 
 <Note>When a skill is uninstalled, the updated agent state is automatically synced to the OpenClaw gateway. If the sync fails, the skill is still removed from the database — you can retry the sync manually using the [agent sync endpoint](/api-reference/agents#sync-agent-to-gateway).</Note>
 

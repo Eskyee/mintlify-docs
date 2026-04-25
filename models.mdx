@@ -71,7 +71,35 @@ Agentbot supports 300+ models via OpenRouter. BYOK (Bring Your Own Key) — you 
 
 ---
 
-## Plan Model Access
+## Token quotas
+
+Each plan includes a monthly token allowance. Agentbot tracks your cumulative token usage for the current calendar month and rejects requests that would exceed your plan limit. The quota resets automatically at the start of each month.
+
+| Plan | Monthly token limit |
+|------|---------------------|
+| Solo | 2,000,000 |
+| Collective | 6,000,000 |
+| Label | 20,000,000 |
+| Network | Unlimited |
+
+When you exceed your quota, chat completion requests return a `429` status with the `QUOTA_EXCEEDED` error code:
+
+```json
+{
+  "error": "Monthly token quota exceeded for plan \"solo\". Used 2,000,000 of 2,000,000 tokens. Quota resets at the start of next month.",
+  "code": "QUOTA_EXCEEDED"
+}
+```
+
+To continue using AI features before the month resets, upgrade to a higher plan from the billing page.
+
+You can check your current quota usage from the [dashboard cost API](/api-reference/dashboard#dashboard-cost). The response includes a `quota` object with `usedTokens`, `percent`, and an `overageWarning` flag that turns `true` at 80% usage.
+
+<Note>If Agentbot cannot reach the usage database, quota enforcement fails open — your request proceeds without a usage check. This ensures temporary infrastructure issues do not block your agents.</Note>
+
+---
+
+## Plan model access
 
 The public plans unlock different model sets:
 
