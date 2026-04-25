@@ -17,6 +17,21 @@ GET /api/agents
 
 Returns all agents owned by the authenticated user. When no session is present, returns an empty list instead of a `401` error.
 
+### Managed runtime inclusion
+
+When you have a managed OpenClaw runtime (identified by `openclawInstanceId` on your user record) but no corresponding agent row exists in the database, the endpoint automatically includes a synthetic agent entry in the response. This ensures that managed runtimes are always visible in the agents list, even before a skill installation or other action has materialized the database row.
+
+The synthetic entry uses the following defaults:
+
+| Field | Value |
+|-------|-------|
+| `name` | `Managed OpenClaw Runtime` |
+| `model` | `openclaw` |
+| `status` | `running` |
+| `createdAt` | `1970-01-01T00:00:00.000Z` (epoch) |
+
+<Note>The synthetic agent is generated in-memory and is not persisted to the database. It appears only in the listing response. When a database row is later created for the same `openclawInstanceId` (for example, during [skill installation](/api-reference/skills#install-skill)), the synthetic entry is no longer needed and the persisted row is returned instead.</Note>
+
 ### Response (backend)
 
 The backend returns a flat array of agent objects:
@@ -50,6 +65,7 @@ The web proxy wraps the response in an object:
   "agents": [
     {
       "id": "agent_123",
+      "userId": "user_456",
       "name": "My Agent",
       "model": "claude-opus-4-6",
       "status": "running",
@@ -67,10 +83,11 @@ The web proxy wraps the response in an object:
 |-------|------|-------------|
 | `agents` | array | List of agent objects owned by the authenticated user |
 | `agents[].id` | string | Agent identifier |
+| `agents[].userId` | string | Owner user identifier |
 | `agents[].name` | string | Agent name |
 | `agents[].model` | string | AI model assigned to the agent |
 | `agents[].status` | string | Current agent status |
-| `agents[].websocketUrl` | string | WebSocket URL for the agent gateway |
+| `agents[].websocketUrl` | string \| null | WebSocket URL for the agent gateway |
 | `agents[].createdAt` | string | ISO 8601 creation timestamp |
 | `agents[].updatedAt` | string | ISO 8601 last update timestamp |
 | `count` | number | Total number of agents returned |
@@ -141,7 +158,7 @@ The backend returns the agent object directly without a wrapper:
   "plan": "solo",
   "subdomain": "agent_123.agents.localhost",
   "url": "https://agent_123.agents.localhost",
-  "openclawVersion": "2026.4.7",
+  "openclawVersion": "2026.4.11",
   "verified": false,
   "verificationType": null,
   "attestationUid": null,
@@ -162,7 +179,7 @@ The web proxy wraps the agent in an object:
     "plan": "solo",
     "subdomain": "agent_123.agents.localhost",
     "url": "https://agent_123.agents.localhost",
-    "openclawVersion": "2026.4.7",
+    "openclawVersion": "2026.4.11",
     "verified": false,
     "verificationType": null,
     "attestationUid": null,
@@ -171,7 +188,7 @@ The web proxy wraps the agent in an object:
 }
 ```
 
-<Note>The backend returns the agent object directly. The web proxy wraps it in an `agent` key and adds a top-level `status` field.</Note>
+<Note>The backend returns the agent object directly. The web proxy wraps it in an `agent` key and adds a top-level `status` field. Sensitive fields (`config.authToken` and top-level `authToken`) are stripped from the response before it is returned to the client.</Note>
 
 ### Errors
 
@@ -222,6 +239,44 @@ Updates an agent's metadata including plan, AI provider, and configuration. Requ
 
 <Note>To update agent configuration through the web proxy with session authentication, use [`PUT /api/agents/:id/config`](#update-agent-configuration) instead.</Note>
 
+### Rename agent (web proxy)
+
+```http
+PATCH /api/agents/:id
+```
+
+Renames an agent. Requires session authentication and ownership. The name change is persisted locally and forwarded to the backend on a best-effort basis (backend failures are non-fatal).
+
+#### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | string | Yes | New agent name (trimmed, max 64 characters) |
+
+#### Response
+
+```json
+{
+  "success": true,
+  "agent": {
+    "id": "agent_123",
+    "name": "New Name",
+    "status": "running",
+    "updatedAt": "2026-04-12T00:00:00Z"
+  }
+}
+```
+
+#### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | Name is required |
+| 400 | Name too long (max 64 chars) |
+| 401 | Unauthorized |
+| 404 | Agent not found |
+| 500 | Failed to rename agent |
+
 ## Delete agent
 
 ```http
@@ -230,12 +285,23 @@ DELETE /api/agents/:id
 
 Stops and removes the agent's local Docker container, deallocates its port, and removes its metadata file. Requires bearer token authentication (backend).
 
-### Response
+### Response (backend)
 
 ```json
 {
   "id": "agent_123",
   "deleted": true
+}
+```
+
+### Response (web proxy)
+
+The web proxy also accepts `DELETE /api/agents/:id` with session authentication. It performs best-effort cleanup of the associated managed runtime service, deletes the agent record from the database (cascading to memories, files, and related data), and clears the user's `openclawInstanceId` and `openclawUrl` fields. The agent is resolved by ownership check or by matching the user's `openclawInstanceId`.
+
+```json
+{
+  "success": true,
+  "deleted": "agent_123"
 }
 ```
 
@@ -982,7 +1048,7 @@ POST /api/agents/:id/restart
   "status": "active",
   "healedLegacyModel": false,
   "healMessage": "skip",
-  "openclawVersion": "2026.4.7"
+  "openclawVersion": "2026.4.11"
 }
 ```
 
@@ -1033,16 +1099,16 @@ Triggers an image update on the backend. Before replacing the service, the endpo
 {
   "success": true,
   "status": "active",
-  "image": "ghcr.io/openclaw/openclaw:2026.4.7",
+  "image": "ghcr.io/openclaw/openclaw:2026.4.11",
   "previousImage": "ghcr.io/openclaw/openclaw:2026.3.24",
   "backupPath": "/opt/agentbot/data/backups/openclaw-updates/agent_123/20260320-000000.tar.gz",
-  "openclawVersion": "2026.4.7"
+  "openclawVersion": "2026.4.11"
 }
 ```
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `image` | string | New service image. The platform default is `ghcr.io/openclaw/openclaw:2026.4.7`. |
+| `image` | string | New service image. The platform default is `ghcr.io/openclaw/openclaw:2026.4.11`. |
 | `previousImage` | string | Previous service image before the update |
 | `backupPath` | string \| null | Path to the pre-update backup archive |
 | `openclawVersion` | string | Current OpenClaw runtime version |
@@ -1055,8 +1121,8 @@ Triggers an image update on the backend. Before replacing the service, the endpo
 {
   "success": true,
   "status": "updating",
-  "image": "ghcr.io/openclaw/openclaw:2026.4.7",
-  "openclawVersion": "2026.4.7"
+  "image": "ghcr.io/openclaw/openclaw:2026.4.11",
+  "openclawVersion": "2026.4.11"
 }
 ```
 
@@ -1211,7 +1277,7 @@ Returns the current status and metadata for an agent instance.
   "subdomain": "user_123.agents.localhost",
   "url": "https://user_123.agents.localhost",
   "plan": "solo",
-  "openclawVersion": "2026.4.7",
+  "openclawVersion": "2026.4.11",
   "ffmpegAvailable": true,
   "ffmpegVersion": "6.1.1"
 }
@@ -1242,7 +1308,7 @@ Returns resource usage statistics for an agent instance.
   "uptime": "active",
   "messages": null,
   "errors": null,
-  "openclawVersion": "2026.4.7"
+  "openclawVersion": "2026.4.11"
 }
 ```
 
@@ -1328,6 +1394,12 @@ Returns the gateway token for the agent. If no token exists, a new cryptographic
 
 Agents can be verified using multiple verification types: `eas` (Ethereum Attestation Service), `coinbase`, `ens`, or `webauthn`.
 
+### Managed runtime fallback
+
+All verification endpoints support a **managed runtime fallback**. When you have a managed OpenClaw runtime but no corresponding agent row exists in the database, the endpoint automatically resolves the agent by matching your `openclawInstanceId` and upserts a synthetic agent record. This ensures verification works for managed runtimes even before a full agent record has been provisioned.
+
+When the backend verification service returns `404` (for example, because the backend does not yet have metadata for the agent), the web proxy falls back to reading and writing verification state in the agent's local `config.verification` field in the database. This means verification state is persisted and readable locally for managed runtimes, even when the backend has no record of the agent.
+
 ### Get verification status
 
 ```http
@@ -1335,6 +1407,10 @@ GET /api/agents/:id/verification
 ```
 
 <Note>The backend GET endpoint uses `/api/agents/:id/verification` while POST and DELETE use `/api/agents/:id/verify`. The web API proxies all three methods through `/api/agents/:id/verify`.</Note>
+
+#### Response
+
+When the backend is available, the response is proxied as-is:
 
 ```json
 {
@@ -1346,6 +1422,28 @@ GET /api/agents/:id/verification
   "metadata": null
 }
 ```
+
+When the backend returns `404`, the endpoint falls back to the locally persisted verification state:
+
+```json
+{
+  "verified": false,
+  "verificationType": null,
+  "attestationUid": null,
+  "verifierAddress": null,
+  "verifiedAt": null
+}
+```
+
+<Note>The fallback response does not include the `metadata` field. All fields default to `null` (or `false` for `verified`) when no local verification state has been written.</Note>
+
+#### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | Unauthorized — no valid session |
+| 404 | Agent not found — the agent does not exist and no managed runtime matches the ID |
+| 500 | Failed to fetch verification status |
 
 ### Verify agent
 
@@ -1360,10 +1458,18 @@ POST /api/agents/:id/verify
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `verificationType` | string | Yes | One of: `eas`, `coinbase`, `ens`, `webauthn` |
-| `verified` | boolean | No | Whether the agent is verified (defaults to `true` via web API) |
-| `attestationUid` | string | No | Attestation UID from EAS |
-| `verifierAddress` | string | No | Address of the verifying wallet |
-| `metadata` | object | No | Additional verification metadata |
+| `attestationUid` | string | Conditional | Required for `eas` verification |
+| `walletAddress` | string | Conditional | Required for `ens` verification. Optional for `eas` and `coinbase`. |
+| `signature` | string | Conditional | Required for `coinbase`, `ens`, and `webauthn` verification |
+
+Each verification type has specific field requirements:
+
+| Type | Required fields |
+|------|-----------------|
+| `eas` | `attestationUid` |
+| `coinbase` | `signature` |
+| `ens` | `signature`, `walletAddress` |
+| `webauthn` | `signature` (used as the attestation) |
 
 <Note>The web API always sets `verified: true` on success. When calling the backend directly, you can pass `verified`, `verifierAddress`, and `metadata` explicitly.</Note>
 
@@ -1379,14 +1485,17 @@ POST /api/agents/:id/verify
 }
 ```
 
+When the backend returns `404`, the verification state is persisted locally and the same success response shape is returned.
+
 #### Errors
 
 | Code | Description |
 |------|-------------|
-| 401 | Unauthorized (handled by authentication middleware) |
-| 403 | Forbidden — you do not own this agent |
-| 404 | Agent not found |
-| 500 | Failed to update verification |
+| 400 | Invalid verification type — the `verificationType` value is not one of the supported types |
+| 400 | Missing required field for the specified verification type (for example, `Attestation UID required for EAS verification`, `Signature required for Coinbase verification`, `Signature and wallet address required for ENS verification`, `Attestation required for WebAuthn verification`) |
+| 401 | Unauthorized — no valid session |
+| 404 | Agent not found — the agent does not exist and no managed runtime matches the ID |
+| 500 | Failed to process verification |
 
 ### Remove verification
 
@@ -1400,12 +1509,14 @@ DELETE /api/agents/:id/verify
 }
 ```
 
+When the backend returns `404`, the endpoint clears the local verification state instead.
+
 #### Errors
 
 | Code | Description |
 |------|-------------|
-| 403 | Forbidden — you do not own this agent |
-| 404 | Agent not found |
+| 401 | Unauthorized — no valid session |
+| 404 | Agent not found — the agent does not exist and no managed runtime matches the ID |
 | 500 | Failed to remove verification |
 
 ## Provision with channel tokens
@@ -1688,7 +1799,7 @@ POST /api/deployments
   "subdomain": "agent_123.agents.localhost",
   "url": "https://agent_123.agents.localhost",
   "status": "active",
-  "openclawVersion": "2026.4.7"
+  "openclawVersion": "2026.4.11"
 }
 ```
 
@@ -1712,7 +1823,7 @@ POST /api/railway/provision
 
 Provisions a new agent service on Railway via the Railway GraphQL API. This endpoint creates a Railway service, configures environment variables, mounts a persistent volume, generates a public domain, and triggers a deployment. Requires bearer token authentication.
 
-<Note>This endpoint exists because direct calls from Vercel serverless functions to the Railway GraphQL API return `403`. The backend runs on Railway, so its outbound requests to the Railway API succeed. The endpoint requires `RAILWAY_API_KEY`, `RAILWAY_PROJECT_ID`, and `RAILWAY_ENVIRONMENT_ID` environment variables to be configured.</Note>
+<Note>This endpoint exists because direct calls from Vercel serverless functions to the Railway GraphQL API return `403`. The backend runs on Railway, so its outbound requests to the Railway API succeed. The endpoint requires `RAILWAY_API_KEY`, `RAILWAY_PROJECT_ID`, and `RAILWAY_ENVIRONMENT_ID` environment variables to be configured. Set `RAILWAY_TOKEN_TYPE` to control how the platform authenticates with the Railway API — `project` sends the key via the `Project-Access-Token` header, while `account` (default), `workspace`, and `oauth` send it as a `Bearer` token in the `Authorization` header.</Note>
 
 ### Request body
 
@@ -1763,7 +1874,7 @@ Each plan tier maps to specific Railway service resource limits:
 | 400 | `Invalid agentId format` — the `agentId` does not match the expected 16-character hex format |
 | 401 | Unauthorized — missing or invalid bearer token |
 | 502 | Railway provisioning failed. The error message contains details from the Railway API response. |
-| 503 | `Railway not configured on this backend` — the `RAILWAY_API_KEY` environment variable is not set |
+| 503 | `Railway not configured on this backend` — the `RAILWAY_API_KEY` environment variable is not set. Also ensure `RAILWAY_TOKEN_TYPE` is set correctly if you are using a project-scoped token. |
 
 ### Idempotency
 
@@ -1781,8 +1892,8 @@ Returns the current OpenClaw runtime version. Requires bearer token authenticati
 
 ```json
 {
-  "openclawVersion": "2026.4.7",
-  "image": "ghcr.io/openclaw/openclaw:2026.4.7",
+  "openclawVersion": "2026.4.11",
+  "image": "ghcr.io/openclaw/openclaw:2026.4.11",
   "deployedAt": "2026-03-20T00:00:00Z"
 }
 ```
@@ -1805,10 +1916,10 @@ Returns all running agent services. Requires bearer token authentication.
     {
       "agentId": "agent_123",
       "name": "openclaw-agent_123",
-      "image": "ghcr.io/openclaw/openclaw:2026.4.7",
+      "image": "ghcr.io/openclaw/openclaw:2026.4.11",
       "status": "Up 2 hours",
       "createdAt": "2026-03-20 00:00:00 +0000 UTC",
-      "version": "2026.4.7",
+      "version": "2026.4.11",
       "metadata": {
         "agentId": "agent_123",
         "createdAt": "2026-03-20T00:00:00Z",

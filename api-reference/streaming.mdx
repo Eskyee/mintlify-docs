@@ -15,7 +15,8 @@ A DJ session transitions through several statuses during its lifecycle. The `act
 |--------|---------|
 | `active` | Session created, waiting for or receiving an ingest connection |
 | `live` | Mux stream is active and playback is available to listeners |
-| `ended` | Session stopped by the DJ |
+| `ended` | Session stopped by the DJ (replay assets deleted) |
+| `archived` | Session stopped by the DJ with replay retention (assets preserved, credits charged) |
 | `auto-ended` | Session expired (exceeded the 2-hour maximum) or cleaned up automatically |
 
 ## List live streams
@@ -121,16 +122,16 @@ POST /api/basefm/streams
 
 Creates a new Mux live stream. Access is granted if the caller meets either of the following conditions:
 
-- The wallet holds at least **1,250,000 RAVE** tokens on the Base network, or
+- The wallet holds at least **1,250,000 BASEFM** tokens on the Base network, or
 - The caller has an active **community guest pass** (available to Builder and Whale tier claimed holders via the community program)
 
-<Note>The `wallet` address used for RAVE token verification must be a Coinbase Smart Wallet on Base. The platform enforces `smartWalletOnly` as its connector policy — injected wallets (such as MetaMask) are not supported for DJ streaming.</Note>
+<Note>The `wallet` address used for BASEFM token verification must be a Coinbase Smart Wallet on Base. The platform enforces `smartWalletOnly` as its connector policy — injected wallets (such as MetaMask) are not supported for DJ streaming.</Note>
 
 ### Request body
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `wallet` | string | Yes | Wallet address of the DJ. Used for RAVE token balance verification. |
+| `wallet` | string | Yes | Wallet address of the DJ. Used for BASEFM token balance verification. |
 | `name` | string | No | DJ display name (default: `Anonymous DJ`) |
 
 ### Response (200)
@@ -147,7 +148,7 @@ Creates a new Mux live stream. Access is granted if the caller meets either of t
     "fullRtmpUrl": "rtmp://global-live.mux.com:5222/app/sk-ab12-cd34-ef56",
     "playbackId": "xYz789",
     "status": "created",
-    "accessGrantedBy": "rave"
+    "accessGrantedBy": "basefm"
   },
   "session": {
     "id": "sess_abc123",
@@ -195,7 +196,7 @@ Creates a new Mux live stream. Access is granted if the caller meets either of t
 | `stream.rtmpUrl` | string | RTMP ingest server URL |
 | `stream.fullRtmpUrl` | string | Full RTMP URL including stream key (for OBS) |
 | `stream.playbackId` | string \| null | Mux playback ID for viewers |
-| `stream.accessGrantedBy` | string | How access was granted. Either `rave` (token balance) or `community-pass` (Builder/Whale community program perk). |
+| `stream.accessGrantedBy` | string | How access was granted. Either `basefm` (token balance) or `community-pass` (Builder/Whale community program perk). |
 | `session.id` | string | DJ session record ID |
 | `session.wallet` | string | The wallet address used for the session. When access is granted via a community guest pass, this is the claimed Agentbot wallet (not the wallet sent in the request). |
 | `session.maxDuration` | number | Maximum session duration in seconds (7200 = 2 hours) |
@@ -220,12 +221,12 @@ Creates a new Mux live stream. Access is granted if the caller meets either of t
 | Code | Description |
 |------|-------------|
 | 400 | Wallet address required |
-| 403 | Insufficient RAVE tokens or community guest pass. The wallet must hold at least 1,250,000 RAVE, or the authenticated user must have a Builder or Whale tier community claim. |
+| 403 | Insufficient BASEFM tokens or community guest pass. The wallet must hold at least 1,250,000 BASEFM, or the authenticated user must have a Builder or Whale tier community claim. |
 | 403 | Community guest pass only works with the claimed Agentbot wallet. Returned when the caller has a community pass but the `wallet` in the request does not match their claimed wallet address. The response includes the expected `wallet`. |
 | 409 | A non-expired current session already exists for this wallet. The response includes a `remaining` field (seconds left) and the `sessionId`. |
 | 500 | Mux is not configured or stream creation failed |
 
-<Note>When access is granted via a community guest pass (not RAVE tokens), the stream is created using the caller's claimed Agentbot wallet address regardless of the `wallet` value in the request. The `stream.wallet` and `session.wallet` fields in the response reflect the claimed wallet.</Note>
+<Note>When access is granted via a community guest pass (not BASEFM tokens), the stream is created using the caller's claimed Agentbot wallet address regardless of the `wallet` value in the request. The `stream.wallet` and `session.wallet` fields in the response reflect the claimed wallet.</Note>
 
 <Note>Before checking for a blocking session, the endpoint automatically ends any expired current sessions for the wallet. This means that if a previous session exceeded the 2-hour maximum but was never explicitly stopped, it is cleaned up and the caller can start a new stream without manual intervention.</Note>
 
@@ -314,7 +315,9 @@ If the session has expired (exceeded the 2-hour maximum), it is automatically en
 DELETE /api/basefm/streams
 ```
 
-Ends all current DJ sessions for the authenticated caller's wallet. Both `active` and `live` sessions are ended and the corresponding Mux live streams are disabled. Uses the same [authentication](#authentication) as the check session endpoint (session token or user session).
+Ends all current DJ sessions for the authenticated caller's wallet. Both `active` and `live` sessions are ended and the corresponding Mux live streams are retired. By default, replay assets are deleted to avoid ongoing storage costs. Pass `archive: true` in the request body to preserve replay assets for paid archive storage.
+
+Uses the same [authentication](#authentication) as the check session endpoint (session token or user session).
 
 ### Query parameters
 
@@ -328,14 +331,41 @@ Ends all current DJ sessions for the authenticated caller's wallet. Both `active
 |--------|----------|-------------|
 | `x-basefm-session` | No | Session access token. Alternative to the `sessionToken` query parameter. |
 
-### Response
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `archive` | boolean | No | When `true`, preserves Mux replay assets for paid archive storage. Requires the owning logged-in Agentbot account, configured archive pricing, and sufficient credits. Defaults to `false`. |
+
+<Note>The request body is optional. When omitted or when `archive` is `false`, the session ends normally and all replay assets are deleted.</Note>
+
+### Response (default — no archive)
 
 ```json
 {
   "success": true,
   "ended": 2,
   "muxStopped": true,
-  "message": "Session ended and Mux stream disabled"
+  "archived": false,
+  "archiveCreditCost": null,
+  "deletedAssetIds": ["asset_abc123"],
+  "retainedAssetIds": [],
+  "message": "Session ended. Live stream and recent Mux assets deleted to avoid archive cost."
+}
+```
+
+### Response (archive)
+
+```json
+{
+  "success": true,
+  "ended": 1,
+  "muxStopped": true,
+  "archived": true,
+  "archiveCreditCost": 10,
+  "deletedAssetIds": [],
+  "retainedAssetIds": ["asset_abc123"],
+  "message": "Session archived. Live stream retired and Mux assets kept for paid archive storage."
 }
 ```
 
@@ -345,19 +375,29 @@ If no active session exists, `ended` is `0` and `message` is `"No active session
 |-------|------|-------------|
 | `success` | boolean | Always `true` |
 | `ended` | number | Number of sessions ended. Can be greater than `1` when the wallet has multiple current sessions (for example, a stale `active` session and a `live` session). `0` when no current sessions exist. |
-| `muxStopped` | boolean | Whether all underlying Mux live streams were successfully disabled. Only present when `ended` is greater than `0`. |
-| `message` | string | Human-readable status message. `"Session ended and Mux stream disabled"` on full success, or `"Session ended, but Mux stream disable needs attention"` when one or more Mux API calls failed. |
+| `muxStopped` | boolean | Whether all underlying Mux live streams were successfully retired. |
+| `archived` | boolean | Whether replay assets were preserved for archive storage. |
+| `archiveCreditCost` | number \| null | The number of credits charged for archive retention. `null` when `archived` is `false`. |
+| `deletedAssetIds` | array | IDs of Mux assets that were deleted during stream retirement. Empty when archiving. |
+| `retainedAssetIds` | array | IDs of Mux assets that were preserved. Empty when not archiving. |
+| `message` | string | Human-readable status message describing the outcome. |
+
+<Note>When archive is requested but Mux cleanup fails, any credits that were debited are automatically refunded.</Note>
 
 ### Errors
 
 | Code | Description |
 |------|-------------|
 | 401 | Unauthorized — no valid session token or user session |
-| 403 | Forbidden — the session token does not match the session owner |
+| 402 | Insufficient credits to save a DJ archive. The response includes the required `archiveCreditCost`. |
+| 403 | Forbidden — the session token does not match the session owner, or archive was requested by a user who does not own the session |
+| 503 | Archive is temporarily unavailable because archive pricing has not been configured on the platform |
 
 <Warning>The `wallet` query parameter is no longer used. Session lookup is now based on the authenticated caller (session token or user session). Requests using the old `?wallet=` parameter are ignored — you must provide authentication instead.</Warning>
 
-<Note>When a wallet has accumulated multiple current sessions (for example, due to a previous lifecycle inconsistency), this endpoint cleans up all of them in a single call and disables each corresponding Mux live stream.</Note>
+<Note>When a wallet has accumulated multiple current sessions (for example, due to a previous lifecycle inconsistency), this endpoint cleans up all of them in a single call and retires each corresponding Mux live stream.</Note>
+
+<Warning>Replay retention is opt-in and requires payment. By default, ending a session deletes all Mux replay assets to prevent unintended storage costs. To preserve replays, you must explicitly pass `archive: true` and have sufficient credits.</Warning>
 
 ## Stream status
 
@@ -594,6 +634,15 @@ When Mux credentials are unavailable or the Mux API returns an error, the endpoi
 | 500 | Internal error and no cached session data is available |
 
 <Note>When Mux credentials are missing or the Mux API is unreachable, the endpoint returns a degraded distribution state based on cached session data with HTTP status `200` (as long as cached data exists). A `500` is only returned when both the Mux API and the session cache are unavailable.</Note>
+
+### Relay playback verification
+
+When building the distribution state, the platform verifies that each relay destination is serving the current Agentbot playback ID. For relays with a configured probe URL, the platform fetches the relay's live API and checks whether any of the returned streams include the current Mux playback ID.
+
+- If the relay's live API returns a stale or mismatched playback ID, the relay is marked `status: "degraded"` with `note: "Relay live API is not serving the current Agentbot playback id."`
+- If the relay's live API includes the current playback ID, the relay stays `status: "healthy"` with `note: null`.
+
+This verification ensures that downstream consumers (such as basefm.space) are actually serving the same stream that Agentbot is broadcasting, and prevents the distribution state from reporting a relay as healthy when its content is stale.
 
 ## List relay destinations
 

@@ -18,7 +18,8 @@ Every agent needs data. Agentbot provides a layered data architecture — from l
 | Source | Purpose | Access |
 |--------|---------|--------|
 | **PostgreSQL (Neon)** | User data, agent config, workflows, billing | `DATABASE_URL` env var |
-| ~~**Redis**~~ | ~~Caching, rate limiting, session state~~ | ~~`REDIS_URL` env var~~ **Deprecated** — Redis is no longer required. Rate limiting uses in-process middleware. |
+| ~~**Redis**~~ | ~~Caching, session state~~ | ~~`REDIS_URL` env var~~ **Deprecated** — a standalone Redis instance is no longer required. General API rate limiting uses in-process middleware. |
+| **Upstash KV** | Social post rate limiting, duplicate detection | `KV_REST_API_URL` and `KV_REST_API_TOKEN` env vars |
 | **BlockDB** | Music metadata, audio components, rights | [BlockDB docs](/services/blockdb) |
 
 ### Blockchain

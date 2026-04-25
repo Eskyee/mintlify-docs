@@ -87,7 +87,7 @@ Stores:
 
 All user-scoped tables are protected by PostgreSQL row-level security (RLS) policies. Each authenticated request sets a database-level user context so queries automatically return only the calling user's data. Admin users bypass RLS and can access all rows. See [Security](/security#row-level-security) for the full list of protected tables.
 
-<Warning>**Deprecated:** The Redis cache layer has been removed. Rate limiting is now handled by in-process middleware (`express-rate-limit`). Session management and other functionality previously backed by Redis now use PostgreSQL or in-memory state. If you were running a Redis instance for Agentbot, it is no longer required.</Warning>
+<Warning>**Deprecated:** The standalone Redis cache layer has been removed. General API rate limiting is handled by in-process middleware (`express-rate-limit`). Session management and other functionality previously backed by Redis now use PostgreSQL or in-memory state. If you were running a self-hosted Redis instance for Agentbot, it is no longer required. Social post rate limiting and duplicate detection use Upstash KV (`KV_REST_API_URL` / `KV_REST_API_TOKEN`) — see [Rate limits](/api-reference/overview#rate-limits) for details.</Warning>
 
 ### AI Layer (Ollama + BYOK)
 

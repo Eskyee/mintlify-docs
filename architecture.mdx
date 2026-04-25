@@ -42,12 +42,14 @@ description: "Platform architecture, security model, and deployment topology"
 
 ## Plan Resources
 
-| Plan | CPU | Memory | Max Agents |
-|------|-----|--------|------------|
-| Solo | 1 vCPU (1000m) | 2 GB | 1 |
-| Collective | 2 vCPU (2000m) | 4 GB | 3 |
-| Label | 4 vCPU (4000m) | 8 GB | 10 |
-| Network | 4 vCPU (4000m) | 16 GB | Unlimited |
+| Plan | CPU | Memory | Max Agents | Description |
+|------|-----|--------|------------|-------------|
+| Solo | 1 vCPU (1000m) | 2 GB | 1 | Trial / light workloads only |
+| Collective | 2 vCPU (2000m) | 4 GB | 3 | Recommended production floor |
+| Label | 4 vCPU (4000m) | 8 GB | 10 | Heavy production + browser/tool work |
+| Network | 8 vCPU (8000m) | 16 GB | Unlimited | High-throughput production |
+
+<Note>The Solo tier (1 vCPU / 2 GB) is sufficient to boot and run light workloads but is not recommended for production. For serious production use, start with Collective (2 vCPU / 4 GB) or higher.</Note>
 
 ## Security Model
 

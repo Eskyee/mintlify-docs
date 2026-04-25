@@ -360,20 +360,80 @@ Requires session authentication. Resets heartbeat configuration for a specific a
 | 401 | Unauthorized |
 | 500 | Heartbeat reset failed |
 
+## Runtime status classification
+
+All health-related endpoints that report agent status use a shared runtime probe. The probe checks three endpoints on each agent service in parallel:
+
+| Probe | Timeout | Purpose |
+|-------|---------|---------|
+| `GET /healthz` | 5 seconds | Legacy liveness check |
+| `GET /readyz` | 4 seconds | Legacy readiness check |
+| `GET /api/status` | 5 seconds | Authoritative runtime status (preferred) |
+
+<Note>`GET /api/status` is the authoritative health signal. The Railway wrapper uses `/api/status` as the primary health check. The legacy `/healthz` and `/readyz` endpoints may legitimately return `404` on some deployments and should not be treated as the sole indicator of agent health.</Note>
+
+The probe classifies agent status using the following priority:
+
+1. If `/api/status` returns `200`:
+   - `configured: false` → status is `setup`
+   - `running: true` or `state: "running"` → status is `running` (even if `/healthz` and `/readyz` return `404`)
+   - `running: false` or `state: "stopped"` → status is `stopped`
+   - Other states → falls back to legacy probe results
+2. If `/api/status` does not return `200`:
+   - `/healthz` and `/readyz` both `200` → status is `healthy`
+   - `/healthz` `200` but `/readyz` not `200` → status is `starting`
+   - All probes fail → status is `unreachable`
+
+The following endpoints use this shared classification:
+- [`GET /api/openclaw/maintenance`](/api-reference/maintenance#get-agent-health)
+- [`GET /api/instance/:userId`](/api-reference/maintenance#get-instance-runtime-state)
+- [`GET /api/instance/:userId/stats`](/api-reference/maintenance#get-instance-stats)
+
 ## Container health checks
 
 Agent services run the official OpenClaw image, which exposes built-in health endpoints on port `18789`. The backend uses these to determine service readiness during provisioning and ongoing monitoring.
 
 ### Built-in health endpoints
 
-The OpenClaw image (`ghcr.io/openclaw/openclaw:2026.4.7`) provides two health endpoints on each agent service:
+The OpenClaw image (`ghcr.io/openclaw/openclaw:2026.4.11`) provides three health endpoints on each agent service:
 
 | Endpoint | Purpose | Description |
 |----------|---------|-------------|
-| `GET /healthz` | Liveness | Returns `200` when the gateway process is running. Used by the health check to detect crashed or hung services. |
-| `GET /readyz` | Readiness | Returns `200` when the gateway is ready to accept requests. Use this to verify the service has completed startup before routing traffic. |
+| `GET /api/status` | Authoritative status | Returns `200` with runtime state, configuration status, and version info. This is the preferred endpoint for determining agent health. |
+| `GET /healthz` | Liveness (legacy) | Returns `200` when the gateway process is running. May return `404` on some deployments where the legacy endpoint is not registered. |
+| `GET /readyz` | Readiness (legacy) | Returns `200` when the gateway is ready to accept requests. May return `404` on some deployments. |
 
-Both endpoints are unauthenticated and bind to the service's internal port (`18789`).
+All endpoints are unauthenticated and bind to the service's internal port (`18789`).
+
+#### `/api/status` response
+
+```json
+{
+  "configured": true,
+  "running": true,
+  "state": "running",
+  "version": "2026.4.11",
+  "uptime": "2d 5h",
+  "runtime": {
+    "ffmpeg": {
+      "available": true,
+      "version": "ffmpeg version 6.1"
+    }
+  }
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `configured` | boolean | `true` when the agent has completed initial setup |
+| `running` | boolean | `true` when the agent process is actively running |
+| `state` | string | Process state string (for example, `running`, `stopped`) |
+| `version` | string | OpenClaw runtime version |
+| `uptime` | string | Human-readable uptime since the process started |
+| `runtime` | object | Runtime capability information |
+| `runtime.ffmpeg` | object | ffmpeg availability and version |
+| `runtime.ffmpeg.available` | boolean | `true` when ffmpeg is installed and executable |
+| `runtime.ffmpeg.version` | string \| null | ffmpeg version string, or `null` when unavailable |
 
 #### `/healthz` response
 
@@ -388,6 +448,8 @@ Both endpoints are unauthenticated and bind to the service's internal port (`187
 |-------|------|-------------|
 | `ok` | boolean | `true` when the gateway process is running |
 | `status` | string | Always `live` when the endpoint responds |
+
+<Warning>The `/healthz` endpoint may return `404` on deployments where the legacy health route is not registered. Use `/api/status` as the primary health check instead.</Warning>
 
 #### `/readyz` response
 
@@ -405,23 +467,26 @@ Both endpoints are unauthenticated and bind to the service's internal port (`187
 | `failing` | array | List of failing readiness checks. Empty when all checks pass. |
 | `uptimeMs` | number | Gateway uptime in milliseconds since startup |
 
-<Note>The backend probes `/healthz` on the agent's public Railway URL for health checks (with a 5-second timeout). The `/healthz` and `/readyz` endpoints are provided by the OpenClaw image itself and are available on all agent services.</Note>
+<Warning>The `/readyz` endpoint may return `404` on deployments where the legacy readiness route is not registered. Use `/api/status` as the primary health check instead.</Warning>
 
 ### Container health statuses
 
 | Status | Condition |
 |--------|-----------|
-| `healthy` | Service is running and the internal health endpoint responds successfully |
-| `starting` | Service is running but the health endpoint is not yet responding after all retries |
-| `running` | Service is active on Railway and responding |
-| `stopped` | Service has exited |
+| `running` | `/api/status` reports the agent process as active |
+| `healthy` | Legacy probes (`/healthz` and `/readyz`) both respond successfully |
+| `starting` | Agent is live but not yet ready to serve requests |
+| `setup` | Agent is reachable but has not completed initial configuration |
+| `stopped` | Agent process has exited or is reported as stopped by `/api/status` |
 | `suspended` | Service has been suspended (saves resources, retains data). Railway does not natively support suspension, so this status indicates the service has been marked idle. |
+| `unreachable` | None of `/api/status`, `/healthz`, or `/readyz` respond |
 | `not_found` | No matching Railway service exists for this agent |
 | `error` | Service is in an unexpected state, build failed, or cannot be inspected |
 
 ### Health check behavior
 
-- The backend probes each agent's `/healthz` endpoint to determine service health. The health check uses a 5-second timeout per request.
+- The shared runtime probe checks `/healthz`, `/readyz`, and `/api/status` in parallel. `/api/status` is the authoritative signal.
+- The health check uses a 5-second timeout for `/healthz` and `/api/status`, and a 4-second timeout for `/readyz`.
 - The `waitForHealthy` function polls service health every 2 seconds, with a default overall timeout of 60 seconds.
 
 ## Watchdog monitoring
@@ -430,7 +495,7 @@ The backend runs a per-agent watchdog that continuously monitors agent health, d
 
 ### Health check cycle
 
-The watchdog probes each agent's gateway at `GET /healthz` on the agent's internal port. Health checks run on a configurable interval (default: every 2 minutes). When the gateway reports unhealthy, the watchdog transitions the agent to a degraded state and increases the check frequency to every 5 seconds.
+The watchdog probes each agent's gateway using the shared runtime probe (which checks `/api/status`, `/healthz`, and `/readyz`). Health checks run on a configurable interval (default: every 2 minutes). When the probe reports the agent as unhealthy or unreachable, the watchdog transitions the agent to a degraded state and increases the check frequency to every 5 seconds.
 
 | Parameter | Default | Environment variable |
 |-----------|---------|---------------------|
