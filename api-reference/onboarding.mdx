@@ -1,0 +1,160 @@
+---
+title: Onboarding API
+description: "Guided onboarding system for new users with step-by-step progress tracking"
+---
+
+# Onboarding API
+
+The onboarding system provides a guided first-time experience with seven steps that help new users set up their account and agents.
+
+<Info>The onboarding endpoints are available on the web API. All endpoints require session authentication.</Info>
+
+## Get onboarding progress
+
+```http
+GET /api/onboarding
+```
+
+Returns the authenticated user's onboarding progress, including all steps and their completion status. Some steps are auto-completed based on user data (for example, the "Create Your First Agent" step completes automatically when you create an agent).
+
+### Response
+
+```json
+{
+  "userId": "user_abc123",
+  "completed": false,
+  "currentStep": 3,
+  "steps": [
+    {
+      "id": "welcome",
+      "title": "Welcome to Agentbot",
+      "description": "Complete your profile and get familiar with the platform",
+      "action": "Get Started",
+      "link": "/settings",
+      "completed": true,
+      "order": 1
+    },
+    {
+      "id": "create_agent",
+      "title": "Create Your First Agent",
+      "description": "Build an AI agent that represents you or your brand",
+      "action": "Create Agent",
+      "link": "/dashboard/agents/new",
+      "completed": true,
+      "order": 2
+    },
+    {
+      "id": "deploy_agent",
+      "title": "Deploy Your Agent",
+      "description": "Launch your agent to the cloud and make it accessible",
+      "action": "Deploy",
+      "link": "/dashboard/deploy",
+      "completed": false,
+      "order": 3
+    }
+  ],
+  "progress": 28
+}
+```
+
+### Response fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `userId` | string | The authenticated user's ID |
+| `completed` | boolean | Whether all onboarding steps are finished or the user skipped onboarding |
+| `currentStep` | number | The `order` value of the next incomplete step |
+| `steps` | array | All onboarding steps with completion status |
+| `steps[].id` | string | Unique step identifier |
+| `steps[].title` | string | Display title for the step |
+| `steps[].description` | string | Short description of what the step involves |
+| `steps[].action` | string | Call-to-action label for the step button |
+| `steps[].link` | string | URL path the user should visit to complete the step |
+| `steps[].completed` | boolean | Whether the step is complete (manual or auto-detected) |
+| `steps[].order` | number | Step position (1–7) |
+| `progress` | number | Completion percentage from 0 to 100 |
+
+### Onboarding steps
+
+| Order | Step ID | Title | Auto-completes when |
+|-------|---------|-------|---------------------|
+| 1 | `welcome` | Welcome to Agentbot | User has set a display name |
+| 2 | `create_agent` | Create Your First Agent | User has at least one agent |
+| 3 | `deploy_agent` | Deploy Your Agent | User has at least one agent |
+| 4 | `connect_platform` | Connect a Platform | Manually marked complete |
+| 5 | `customize_personality` | Customize Personality | Manually marked complete |
+| 6 | `invite_team` | Invite Your Team | Manually marked complete |
+| 7 | `earn_rewards` | Start Earning Rewards | Manually marked complete |
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | Unauthorized — no valid session |
+| 404 | User not found |
+| 500 | Failed to fetch onboarding progress |
+
+---
+
+## Complete a step
+
+```http
+POST /api/onboarding/complete
+```
+
+Marks an onboarding step as completed. When all seven steps are finished, the system automatically awards the "Getting Started" badge (see [gamification](/api-reference/gamification)).
+
+### Request body
+
+```json
+{
+  "stepId": "connect_platform"
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `stepId` | string | Yes | The `id` of the step to mark as complete |
+
+### Response
+
+```json
+{
+  "success": true
+}
+```
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | Invalid or missing `stepId` |
+| 401 | Unauthorized — no valid session |
+| 500 | Failed to complete step |
+
+---
+
+## Skip onboarding
+
+```http
+POST /api/onboarding/skip
+```
+
+Skips the onboarding flow entirely. The onboarding status is recorded as `skipped` rather than `completed`. Users can still complete individual steps later from their dashboard.
+
+### Response
+
+```json
+{
+  "success": true
+}
+```
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | Unauthorized — no valid session |
+| 500 | Failed to skip onboarding |
+
+<Note>Onboarding progress is stored in the `UserSettings` table using keys prefixed with `onboarding_step_` and `onboarding_completed`. Completion status persists across sessions.</Note>

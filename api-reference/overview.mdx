@@ -290,6 +290,18 @@ curl -X POST https://agentbot.sh/api/ai/chat \
 | `/api/dashboard/health` | GET | Get health status of backend services (no auth) |
 | `/api/dashboard/stats` | GET | Get dashboard stats (agent counts, skills, tasks) |
 | `/api/referrals` | GET | Get referral data, statistics, and referral link (session auth) |
+| `/api/onboarding` | GET | Get onboarding progress and step completion status (session auth) |
+| `/api/onboarding/complete` | POST | Mark an onboarding step as completed (session auth) |
+| `/api/onboarding/skip` | POST | Skip the onboarding flow (session auth) |
+| `/api/gamification/badges` | GET | Get badges earned by the authenticated user (session auth) |
+| `/api/gamification/points` | GET | Get points, level, and progress toward next level (session auth) |
+| `/api/gamification/streak` | POST | Record a login and update the streak counter (session auth) |
+| `/api/gamification/check` | POST | Evaluate and award badges based on current activity (session auth) |
+| `/api/gamification/leaderboard` | GET | Get top users ranked by points (no auth) |
+| `/api/notifications` | GET | Get user notifications with optional unread filter (session auth) |
+| `/api/notifications/unread-count` | GET | Get count of unread notifications (session auth) |
+| `/api/notifications/read` | POST | Mark a notification as read (session auth) |
+| `/api/notifications/read-all` | POST | Mark all notifications as read (session auth) |
 | `/api/stats` | GET | Get system stats (CPU, memory, uptime, health, deployment info) |
 | `/api/billing` | GET | Get billing info |
 | `/api/billing` | POST | Billing actions (`create-checkout`, `enable-byok`, `disable-byok`, `get-usage`, `buy-credits`) |
