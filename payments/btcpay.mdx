@@ -29,7 +29,7 @@ Agent Wallets (NBXplorer)
 
 | Component | Image | Port | Purpose |
 |-----------|-------|------|---------|
-| `agentbot_bitcoind` | `btcpayserver/bitcoin:29.1` | 43782 | Bitcoin node (testnet/mainnet) |
+| `agentbot_bitcoind` | `btcpayserver/bitcoin:29.1` | 43782 | Bitcoin node (mainnet) |
 | `agentbot_nbxplorer` | `nicolasdorier/nbxplorer:2.6.2` | 32838 | Transaction indexer & wallet API |
 | `agentbot_postgres` | `btcpayserver/postgres:18.1-1` | 5432 | Database for NBXplorer |
 
@@ -75,7 +75,7 @@ curl -s --user btcrpc:btcpayserver4ever \
 The headless stack uses these environment variables in `.env`:
 
 ```bash
-NBITCOIN_NETWORK=testnet      # testnet or mainnet
+NBITCOIN_NETWORK=mainnet      # mainnet (default) or testnet
 BTCPAYGEN_CRYPTO1=btc         # Bitcoin only
 BTCPAYGEN_REVERSEPROXY=none   # No UI proxy
 ```
@@ -120,9 +120,18 @@ The underlying NBXplorer REST API is also available directly at `http://localhos
 
 - **Non-custodial** — You control the keys
 - **Pruned nodes** — Minimal storage footprint
-- **Testnet-first** — Develop safely before mainnet
+- **Mainnet by default** — Production environment runs on Bitcoin mainnet; switch to testnet for development
 - **Hash verification** — UTXO snapshots verified against trusted hashes
 - **Isolated network** — Headless stack has no public-facing UI
+
+## Beyond Bitcoin mainnet: Liquid network
+
+The headless BTCPay stack covers Bitcoin mainnet. If you also want to operate on the [Liquid network](https://liquid.net) (Blockstream's Bitcoin sidechain), you have two options:
+
+- **Liquid Wallet Kit (LWK)** — a lightweight toolkit that connects to Blockstream's Electrum server without running a full Liquid node. Supports multi-sig wallets, Blockstream Jade hardware signing, and asset issuance. See the [LWK GitHub repository](https://github.com/Blockstream/lwk) for setup details.
+- **Full Liquid node** — run your own validating Elements Core node. Follow Blockstream's official [Liquid node setup guide](https://help.blockstream.com/hc/en-us/articles/900002026026-Set-up-a-Liquid-node) for chain sync, data directory configuration, and optional Bitcoin-node-backed peg-in validation.
+
+<Note>Liquid support is a planned integration track. The current agent wallet API endpoints serve Bitcoin mainnet only. Choose LWK for a fast, low-infrastructure start or a full Liquid node for independent validation.</Note>
 
 ## Resources
 
@@ -130,3 +139,5 @@ The underlying NBXplorer REST API is also available directly at `http://localhos
 - [NBXplorer API](https://github.com/dgarage/NBXplorer)
 - [FastSync Guide](https://github.com/EskyLab/btcpayagentbot-docker/tree/master/contrib/FastSync)
 - [Docker Repo](https://github.com/EskyLab/btcpayagentbot-docker)
+- [Liquid Wallet Kit (LWK)](https://github.com/Blockstream/lwk)
+- [Blockstream Liquid Node Setup](https://help.blockstream.com/hc/en-us/articles/900002026026-Set-up-a-Liquid-node)

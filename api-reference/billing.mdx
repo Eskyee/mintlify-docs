@@ -309,6 +309,43 @@ Verifies a Stripe checkout session after payment and activates the subscription.
 | 500 | Verification failed |
 | 503 | Stripe not configured |
 
+## Expert setup checkout
+
+```http
+GET /api/stripe/expert-setup-checkout
+```
+
+Creates a Stripe checkout session for a one-time expert setup booking. No session authentication is required — the customer email is passed as a query parameter.
+
+### Query parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `date` | string | Yes | Booking date |
+| `time` | string | Yes | Booking time |
+| `email` | string | Yes | Customer email address |
+
+### Response
+
+```json
+{
+  "url": "https://checkout.stripe.com/c/pay/..."
+}
+```
+
+Redirect the user to the returned `url` to complete the £49 one-time payment. After payment, Stripe redirects to `/expert-setup/success`.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `url` | string | Stripe checkout URL |
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | Missing required parameters (`date`, `time`, or `email`) |
+| 500 | Stripe not configured or checkout session creation failed |
+
 ## Subscription deploy
 
 ```http
@@ -357,6 +394,8 @@ Records a subscription-to-plan mapping so the next agent deployment uses the cor
 | `scale` | 8 GB | 4 | Legacy alias |
 | `enterprise` | 16 GB | 4 | Legacy alias |
 | `white_glove` | 32 GB | 8 | Legacy alias |
+
+<Note>The Railway provisioning function enforces resource limits for the following plans only: `underground`, `solo`, `collective`, `label`, `network`. Legacy aliases (`starter`, `pro`, `scale`, `enterprise`, `white_glove`) are not resolved during Railway provisioning and default to `solo` limits (2 GB / 1 vCPU). The subscription deploy endpoint still accepts all tier values listed above.</Note>
 
 ### Errors
 

@@ -9,6 +9,8 @@ Mission control provides a real-time view of your agent fleet. Use these endpoin
 
 <Note>All four mission control endpoints use session authentication. The web proxy resolves the user ID from the session automatically. Unauthenticated requests receive safe default responses (empty data with a `200` status) instead of an error.</Note>
 
+<Note>The fleet graph and cost endpoints have two response shapes: the web proxy enriches the data with soul instance details, plan information, and layout coordinates. The backend endpoints documented below return the raw database records. Integrations that call the backend directly should use the backend response shapes described in this section.</Note>
+
 ## Fleet graph
 
 ```http
@@ -211,7 +213,9 @@ The endpoint always returns HTTP `200`. Unauthenticated requests receive default
 GET /api/mission-control/fleet/traces
 ```
 
-Returns up to 20 of the most recent execution traces for your agent fleet, sorted by recency. Each trace is returned as an `AgentTask`-shaped object with fields like `description`, `completedAt`, `tokensUsed`, and `costUSD`. Traces include active plan steps, recent thoughts, free energy component readings, and cycle status from live soul instances. Returns an empty array when no soul instances are reachable or when the request is unauthenticated.
+Returns up to 50 of the most recent execution traces for your agent fleet, sorted by recency. Traces are sourced from treasury transaction records categorized as `agent_message` or `ai_metric`. Each trace is a raw transaction row that includes the transaction type, description, amount, transaction hash, and status fields. Returns an empty array when no traces exist or when the request is unauthenticated.
+
+<Note>The web proxy transforms these raw traces into `AgentTask`-shaped objects with fields like `description`, `completedAt`, `tokensUsed`, and `costUSD`. The backend endpoint documented here returns the raw treasury transaction rows.</Note>
 
 ### Authentication
 
@@ -222,64 +226,54 @@ Requires session authentication.
 ```json
 [
   {
-    "id": "trace-plan-0",
-    "status": "running",
-    "description": "plan: reflect (2/5)",
-    "startedAt": "2026-03-22T12:00:00.000Z",
-    "completedAt": null,
-    "tokensUsed": 0,
-    "costUSD": 0,
-    "model": "borg-0"
+    "id": 42,
+    "user_id": 1,
+    "agent_id": 5,
+    "type": "coordination",
+    "category": "agent_message",
+    "action": "BOOKING_OFFER",
+    "description": "Booking offer sent to DJ Nova",
+    "amount_usdc": 0,
+    "tx_hash": null,
+    "status": "confirmed",
+    "metadata": {},
+    "created_at": "2026-03-22T12:00:00.000Z"
   },
   {
-    "id": "trace-thought-0-0",
-    "status": "completed",
-    "description": "plan: next step is to consolidate memory entries",
-    "startedAt": "2026-03-22T11:59:56.000Z",
-    "completedAt": "2026-03-22T11:59:56.285Z",
-    "tokensUsed": 542,
-    "costUSD": 0,
-    "model": "borg-0"
-  },
-  {
-    "id": "trace-fe-0-0",
-    "status": "completed",
-    "description": "cortex: surprise=0.12, contribution=0.04",
-    "startedAt": "2026-03-22T11:59:50.000Z",
-    "completedAt": "2026-03-22T11:59:50.001Z",
-    "tokensUsed": 0,
-    "costUSD": 0,
-    "model": "borg-0"
-  },
-  {
-    "id": "trace-cycles-0",
-    "status": "idle",
-    "description": "cycle 1042 complete — mode: active, regime: explore",
-    "startedAt": "2026-03-22T11:59:45.000Z",
-    "completedAt": null,
-    "tokensUsed": 0,
-    "costUSD": 0,
-    "model": "borg-0"
+    "id": 41,
+    "user_id": 1,
+    "agent_id": 5,
+    "type": "transfer",
+    "category": "ai_metric",
+    "action": null,
+    "description": "AI inference cost logged",
+    "amount_usdc": 0.003,
+    "tx_hash": "0xabc123...",
+    "status": "confirmed",
+    "metadata": {},
+    "created_at": "2026-03-22T11:59:56.000Z"
   }
 ]
 ```
 
-### Trace object (AgentTask shape)
+### Trace object (treasury transaction row)
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `id` | string | Unique trace identifier |
-| `status` | string | Execution result. One of `completed`, `running`, or `idle`. Raw `success` status is mapped to `completed` |
-| `description` | string | Description of the task executed |
-| `startedAt` | string | ISO 8601 timestamp when the task started |
-| `completedAt` | string \| null | ISO 8601 timestamp when the task finished. Computed from the original duration for timed traces. `null` for ongoing or non-timed traces |
-| `tokensUsed` | number | Token count for inference-type traces. `0` for other trace types |
-| `costUSD` | number | Cost in USD attributed to this trace. Currently always `0` |
-| `model` | string | Soul designation that produced the trace (for example `"borg-0"`) |
+| `id` | number | Transaction identifier |
+| `user_id` | number | Owner user identifier |
+| `agent_id` | number \| null | Agent identifier associated with the transaction |
+| `type` | string \| null | Transaction type (for example `transfer`, `coordination`, `orphan_wallet`) |
+| `category` | string | Transaction category. Traces are filtered to `agent_message` and `ai_metric` categories |
+| `action` | string \| null | Action label for the transaction |
+| `description` | string \| null | Human-readable description of the transaction |
+| `amount_usdc` | number | Amount in USDC. `0` for non-financial traces |
+| `tx_hash` | string \| null | On-chain transaction hash, when applicable |
+| `status` | string | Transaction status. One of `confirmed`, `pending`, `failed`, or `needs_reconciliation` |
+| `metadata` | object | Additional context as a JSON object |
+| `created_at` | string | ISO 8601 timestamp when the transaction was recorded |
 
-<Note>The response is capped at 20 traces, sorted from most recent to oldest.</Note>
-
-<Note>The previous raw trace fields (`type`, `label`, `agent`, `duration`, `tokens`) have been replaced by the `AgentTask` shape (`description`, `completedAt`, `tokensUsed`, `costUSD`, `model`). The `status` value `success` is now returned as `completed`.</Note>
+<Note>The response is capped at 50 traces, sorted from most recent to oldest.</Note>
 
 ### Errors
 
@@ -295,7 +289,9 @@ The endpoint always returns HTTP `200`. Unauthenticated requests receive an empt
 GET /api/mission-control/fleet/costs
 ```
 
-Returns a cost breakdown for your agent fleet based on the user's subscription plan and active agents.
+Returns a cost breakdown for your agent fleet, grouped by agent and spending category. The data is sourced from treasury transaction records.
+
+<Note>The web proxy enriches this data with subscription plan information, agent names, and computed fields like `monthlyCost`. The backend endpoint documented here returns the raw per-agent cost aggregation from treasury transactions.</Note>
 
 ### Authentication
 
@@ -304,53 +300,36 @@ Requires session authentication.
 ### Response
 
 ```json
-{
-  "costs": [
-    {
-      "agentId": "agent_123",
-      "agentName": "Atlas",
-      "status": "active",
-      "tier": "pro",
-      "monthlyCost": 34.50,
-      "createdAt": "2026-03-01T00:00:00Z"
-    }
-  ],
-  "totalSpend": 138,
-  "managedAiCost": 69,
-  "coordinationRevenue": 0,
-  "plan": "collective",
-  "agentCount": 3,
-  "activeAgents": 2,
-  "monthsActive": 2
-}
+[
+  {
+    "agent_id": 5,
+    "total_spend": "12.50",
+    "category": "ai_metric"
+  },
+  {
+    "agent_id": 5,
+    "total_spend": "0.00",
+    "category": "agent_message"
+  }
+]
 ```
 
 ### Response fields
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `costs` | array | Per-agent cost breakdown. Each entry contains the agent's cost share based on the monthly plan cost split evenly across active agents. |
-| `costs[].agentId` | string | Agent identifier |
-| `costs[].agentName` | string | Agent display name |
-| `costs[].status` | string | Agent status |
-| `costs[].tier` | string | Agent tier |
-| `costs[].monthlyCost` | number | Monthly cost attributed to this agent, computed as the plan cost divided by the number of active agents |
-| `costs[].createdAt` | string | ISO 8601 agent creation timestamp |
-| `totalSpend` | number | Total spend across the fleet since subscription start |
-| `managedAiCost` | number | Monthly plan cost. One of `29` (solo), `69` (collective), `149` (label), or `499` (network). |
-| `coordinationRevenue` | number | Revenue from agent coordination. Currently always `0`. |
-| `plan` | string | User's current plan name |
-| `agentCount` | number | Total number of agents in the fleet |
-| `activeAgents` | number | Number of agents with `active` or `running` status |
-| `monthsActive` | number | Number of months since subscription start (minimum `1`) |
+| `agent_id` | number \| null | Agent identifier. `null` for transactions not attributed to a specific agent |
+| `total_spend` | string | Total USDC amount spent in this category, as a numeric string |
+| `category` | string | Transaction category (for example `ai_metric`, `agent_message`, `general`) |
 
 ### Errors
 
 | Code | Description |
 |------|-------------|
-| 200 | Cost data returned (empty costs array when unauthenticated or no agents exist) |
+| 200 | Cost data returned (empty array when unauthenticated or no transactions exist) |
+| 500 | Database query failed |
 
-The endpoint always returns HTTP `200`. Unauthenticated requests receive `{ "costs": [], "totalSpend": 0, "managedAiCost": 0, "coordinationRevenue": 0 }`.
+The endpoint always returns HTTP `200` on success. Unauthenticated requests receive an empty array `[]`.
 
 ## Talent bookings
 
@@ -358,7 +337,9 @@ The endpoint always returns HTTP `200`. Unauthenticated requests receive `{ "cos
 GET /api/mission-control/fleet/bookings
 ```
 
-Returns active booking requests for your agent fleet. Bookings represent agents that have been provisioned but whose containers are not yet ready (agents with `pending` status).
+Returns talent booking records for your agent fleet. These bookings are created through the agent-to-agent negotiation service when agents negotiate performance bookings for events. Each booking links a talent agent to an event and tracks the negotiation lifecycle.
+
+<Note>The web proxy returns a simplified view of bookings (pending agent provisioning). The backend endpoint documented here returns the full booking records from the negotiation service, including talent details and offer amounts.</Note>
 
 ### Authentication
 
@@ -367,34 +348,52 @@ Requires session authentication.
 ### Response
 
 ```json
-{
-  "bookings": [
-    {
-      "id": "agent_456",
-      "agentName": "Researcher",
-      "status": "pending",
-      "tier": "pro",
-      "createdAt": "2026-04-01T12:00:00Z"
-    }
-  ]
-}
+[
+  {
+    "id": 1,
+    "agent_id": 5,
+    "event_id": 3,
+    "talent_agent_id": "agent_789",
+    "talent_name": "DJ Nova",
+    "status": "offered",
+    "proposed_price_usdc": null,
+    "offer_amount_usdc": 500.00,
+    "final_price_usdc": null,
+    "metadata": {
+      "talentName": "DJ Nova",
+      "amount": 500,
+      "genre": "house"
+    },
+    "created_at": "2026-04-01T12:00:00Z",
+    "updated_at": "2026-04-01T12:00:00Z",
+    "event_name": "Underground Rave"
+  }
+]
 ```
 
 ### Response fields
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `bookings` | array | List of pending agent booking requests, ordered by creation date (newest first), limited to 10 entries |
-| `bookings[].id` | string | Agent identifier |
-| `bookings[].agentName` | string | Agent display name |
-| `bookings[].status` | string | Agent status (always `pending` for bookings) |
-| `bookings[].tier` | string | Agent tier |
-| `bookings[].createdAt` | string | ISO 8601 agent creation timestamp |
+| `id` | number | Booking identifier |
+| `agent_id` | number | Agent that owns the event |
+| `event_id` | number | Linked event identifier |
+| `talent_agent_id` | string \| null | Agent ID of the talent being booked (A2A identifier) |
+| `talent_name` | string \| null | Display name of the talent |
+| `status` | string | Booking status. One of `pending`, `offered`, `countered`, `accepted`, or `declined` |
+| `proposed_price_usdc` | number \| null | Originally proposed price in USDC |
+| `offer_amount_usdc` | number \| null | Current offer amount in USDC from the negotiation service |
+| `final_price_usdc` | number \| null | Agreed final price in USDC. Set when the booking is accepted |
+| `metadata` | object | Full offer payload from the negotiation. Contains the original booking message data |
+| `created_at` | string | ISO 8601 booking creation timestamp |
+| `updated_at` | string | ISO 8601 last update timestamp |
+| `event_name` | string | Name of the linked event |
 
 ### Errors
 
 | Code | Description |
 |------|-------------|
-| 200 | Booking data returned (empty bookings array when unauthenticated or no pending agents exist) |
+| 200 | Booking data returned (empty array when unauthenticated or no bookings exist) |
+| 500 | Database query failed |
 
-The endpoint always returns HTTP `200`. Unauthenticated requests receive `{ "bookings": [] }`.
+The endpoint always returns HTTP `200` on success. Unauthenticated requests receive an empty array `[]`.

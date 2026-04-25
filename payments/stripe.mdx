@@ -78,11 +78,12 @@ All plans are billed monthly in GBP. A paid subscription is required to provisio
 
 <Warning>Attempting to provision an agent without an active paid subscription returns an error. The web proxy returns `403 Forbidden` with the message `Active subscription required. Please purchase a plan to deploy.` Admin users bypass this check. All non-admin users must subscribe to a plan before creating agents.</Warning>
 
-| Plan | Price | Specs | Key features |
-|------|-------|-------|--------------|
-| Solo | £29/mo | 1 Agent · Mistral 7B | Telegram, BYOK, A2A Bus Access, Basic Analytics |
-| Collective | £69/mo | 3 Agents · Llama 3.3 | Everything in Solo + Royalty Split Engine, Fleet visibility, WhatsApp, Priority support |
-| Label | £149/mo | 10 Agents · DeepSeek R1 | Everything in Collective + Priority A2A Routing, 24/7 Signal Guard, White-glove staging, Custom integrations, Dedicated account manager |
+| Plan | Price | Specs | Runtime | Key features |
+|------|-------|-------|---------|--------------|
+| Solo | £29/mo | 1 Agent · Mistral 7B | 1 vCPU / 2 GB — trial / light workloads only | Telegram, BYOK, A2A Bus Access, Basic Analytics |
+| Collective | £69/mo | 3 Agents · Llama 3.3 | 2 vCPU / 4 GB — recommended production floor | Everything in Solo + Royalty Split Engine, Fleet visibility, WhatsApp, Priority support |
+| Label | £149/mo | 10 Agents · DeepSeek R1 | 4 vCPU / 8 GB — heavy production + browser/tool work | Everything in Collective + Priority A2A Routing, 24/7 Signal Guard, White-glove staging, Custom integrations, Dedicated account manager |
+| Network | £499/mo | Unlimited Agents | 8 vCPU / 16 GB — high-throughput production | Everything in Label + White-label (resell), 99.9% SLA guarantee |
 
 <Note>The billing page displays Solo, Collective, and Label as the public upgrade options. Custom and white-label deployments are handled separately through sales.</Note>
 
@@ -486,9 +487,11 @@ export async function POST(request) {
 
 When processing `checkout.session.completed` events, the webhook identifies the user by the `userId` field in the session metadata. If the `userId` matches an existing user, the subscription is activated for that user.
 
-When `userId` is missing from the session metadata, the webhook falls back to looking up the user by `customerEmail`. In this case, only existing users are updated — a new user account is never created. If no user is found by email, the event is logged and skipped. This prevents duplicate accounts when session metadata is incomplete.
+If the `userId` is present but does not match any existing user, the webhook falls back to looking up the user by `customerEmail`. Only existing users are updated — a new user account is never created. If neither the `userId` nor the email matches an existing user, the event is skipped and an alert is sent so the team can investigate the metadata mismatch.
 
-<Warning>Ensure your Stripe checkout session metadata includes a `userId` field. When `userId` is missing, the webhook can only update users that already exist in the database by email. If the email does not match any existing user, the subscription activation is skipped.</Warning>
+When `userId` is missing from the session metadata, the webhook also falls back to looking up the user by `customerEmail` with the same update-only behavior. If no user is found by email, the event is logged, skipped, and an alert is sent.
+
+<Warning>Ensure your Stripe checkout session metadata includes a valid `userId` field. When `userId` is missing or does not match an existing user, the webhook can only update users that already exist in the database by email. If the email does not match any existing user, the subscription activation is skipped.</Warning>
 
 ### Plan mapping
 

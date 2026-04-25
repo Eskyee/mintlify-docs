@@ -1,36 +1,25 @@
 ---
 title: Gamification API
-description: "Points, badges, levels, login streaks, and leaderboard for user engagement"
+description: "Retrieve your gamification profile including badges, points, level, leaderboard rank, and login streak"
 ---
 
 # Gamification API
 
-The gamification system rewards users with points, badges, and levels based on platform activity. Badges are awarded automatically when conditions are met, and login streaks are tracked daily.
+Retrieve your gamification profile, earned badges, points, level progression, and leaderboard position.
 
-<Info>The gamification endpoints are available on the web API. All endpoints require session authentication.</Info>
-
-## Get user badges
+## Get gamification profile
 
 ```http
-GET /api/gamification/badges
+GET /api/gamification/profile
 ```
 
-Returns all badges earned by the authenticated user.
+Requires session authentication. Returns the authenticated user's badges, points, level, leaderboard rank, login streak, and available badges to earn. Each request automatically updates the user's daily login streak.
 
 ### Response
 
 ```json
 {
   "badges": [
-    {
-      "id": "onboarding_complete",
-      "name": "Getting Started",
-      "description": "Complete the onboarding process",
-      "icon": "🚀",
-      "category": "onboarding",
-      "points": 100,
-      "condition": "Complete all onboarding steps"
-    },
     {
       "id": "first_agent",
       "name": "Agent Creator",
@@ -40,6 +29,34 @@ Returns all badges earned by the authenticated user.
       "points": 50,
       "condition": "Create 1 agent"
     }
+  ],
+  "points": 150,
+  "level": 2,
+  "title": "Beginner",
+  "nextLevel": 500,
+  "progress": 30,
+  "streak": 3,
+  "badgeAwarded": null,
+  "leaderboard": [
+    {
+      "userId": "user_abc",
+      "name": "Alice",
+      "points": 2500,
+      "level": 5,
+      "title": "Expert"
+    }
+  ],
+  "userRank": 4,
+  "availableBadges": [
+    {
+      "id": "message_100",
+      "name": "Century Club",
+      "description": "Send 100 messages through your agents",
+      "icon": "💬",
+      "category": "usage",
+      "points": 100,
+      "condition": "100 messages"
+    }
   ]
 }
 ```
@@ -48,14 +65,41 @@ Returns all badges earned by the authenticated user.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `badges` | array | List of badges earned by the user |
+| `badges` | array | Badges the user has earned |
 | `badges[].id` | string | Unique badge identifier |
-| `badges[].name` | string | Display name |
-| `badges[].description` | string | What the badge represents |
+| `badges[].name` | string | Display name of the badge |
+| `badges[].description` | string | Description of how to earn the badge |
 | `badges[].icon` | string | Emoji icon for the badge |
 | `badges[].category` | string | Badge category: `onboarding`, `usage`, `social`, or `achievement` |
 | `badges[].points` | number | Points awarded when the badge is earned |
-| `badges[].condition` | string | Human-readable condition for earning the badge |
+| `badges[].condition` | string | Human-readable condition to earn the badge |
+| `points` | number | User's total accumulated points |
+| `level` | number | Current level (1–7) |
+| `title` | string | Level title: `Newcomer`, `Beginner`, `Intermediate`, `Advanced`, `Expert`, `Master`, or `Legend` |
+| `nextLevel` | number | Points threshold required to reach the next level |
+| `progress` | number | Percentage progress toward the next level (0–100) |
+| `streak` | number | Current consecutive daily login streak |
+| `badgeAwarded` | string \| null | Badge ID if a streak badge was just awarded on this request, or `null` |
+| `leaderboard` | array | Top 5 users by points |
+| `leaderboard[].userId` | string | User ID |
+| `leaderboard[].name` | string | User display name, or `Anonymous` if not set |
+| `leaderboard[].points` | number | User's total points |
+| `leaderboard[].level` | number | User's current level |
+| `leaderboard[].title` | string | User's level title |
+| `userRank` | number \| null | Authenticated user's rank on the leaderboard (1-indexed), or `null` if not in the top 10 |
+| `availableBadges` | array | Badges the user has not yet earned. Same shape as `badges`. |
+
+### Level thresholds
+
+| Level | Title | Points required |
+|-------|-------|-----------------|
+| 1 | Newcomer | 0 |
+| 2 | Beginner | 100 |
+| 3 | Intermediate | 500 |
+| 4 | Advanced | 1,000 |
+| 5 | Expert | 2,500 |
+| 6 | Master | 5,000 |
+| 7 | Legend | 10,000 |
 
 ### Available badges
 
@@ -63,8 +107,8 @@ Returns all badges earned by the authenticated user.
 |----|------|----------|--------|-----------|
 | `onboarding_complete` | Getting Started | onboarding | 100 | Complete all onboarding steps |
 | `first_agent` | Agent Creator | onboarding | 50 | Create 1 agent |
-| `message_100` | Century Club | usage | 100 | Send 100 messages through your agents |
-| `message_1000` | Message Master | usage | 500 | Send 1,000 messages through your agents |
+| `message_100` | Century Club | usage | 100 | Send 100 messages |
+| `message_1000` | Message Master | usage | 500 | Send 1,000 messages |
 | `agent_3` | Agent Army | usage | 150 | Create 3 agents |
 | `agent_10` | Agent Overlord | usage | 500 | Create 10 agents |
 | `first_referral` | Referrer | social | 100 | Refer 1 user |
@@ -78,182 +122,4 @@ Returns all badges earned by the authenticated user.
 | Code | Description |
 |------|-------------|
 | 401 | Unauthorized — no valid session |
-| 500 | Failed to fetch badges |
-
----
-
-## Get user points and level
-
-```http
-GET /api/gamification/points
-```
-
-Returns the authenticated user's total points, current level, and progress toward the next level.
-
-### Response
-
-```json
-{
-  "points": 750,
-  "level": 3,
-  "title": "Intermediate",
-  "nextLevel": 1000
-}
-```
-
-### Response fields
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `points` | number | Total accumulated points |
-| `level` | number | Current level (1–7) |
-| `title` | string | Level title |
-| `nextLevel` | number | Points required to reach the next level |
-
-### Level thresholds
-
-| Level | Title | Minimum points |
-|-------|-------|---------------|
-| 1 | Newcomer | 0 |
-| 2 | Beginner | 100 |
-| 3 | Intermediate | 500 |
-| 4 | Advanced | 1,000 |
-| 5 | Expert | 2,500 |
-| 6 | Master | 5,000 |
-| 7 | Legend | 10,000 |
-
-### Errors
-
-| Code | Description |
-|------|-------------|
-| 401 | Unauthorized — no valid session |
-| 500 | Failed to fetch points |
-
----
-
-## Update login streak
-
-```http
-POST /api/gamification/streak
-```
-
-Records a login event and updates the user's streak counter. Call this endpoint on each authenticated session start. If the user logged in on the previous calendar day, the streak increments. If more than one day has passed, the streak resets to 1. Same-day logins maintain the current streak without incrementing.
-
-When a streak reaches 7 or 30 days, the corresponding badge is awarded automatically.
-
-### Response
-
-```json
-{
-  "streak": 8,
-  "badgeAwarded": "login_streak_7"
-}
-```
-
-### Response fields
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `streak` | number | Current login streak in consecutive days |
-| `badgeAwarded` | string \| null | Badge ID if a streak milestone badge was awarded, otherwise `null` |
-
-### Errors
-
-| Code | Description |
-|------|-------------|
-| 401 | Unauthorized — no valid session |
-| 500 | Failed to update streak |
-
----
-
-## Check and award badges
-
-```http
-POST /api/gamification/check
-```
-
-Evaluates the authenticated user's current activity and awards any badges whose conditions are now met. Returns a list of newly awarded badge IDs. This endpoint is idempotent — badges that were already awarded are not duplicated.
-
-Conditions checked:
-
-- Agent count (1, 3, or 10 agents)
-- Referral count (1 or 5 referrals)
-
-### Response
-
-```json
-{
-  "awarded": ["agent_3", "first_referral"]
-}
-```
-
-### Response fields
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `awarded` | string[] | List of badge IDs that were newly awarded. Empty array if no new badges were earned. |
-
-### Errors
-
-| Code | Description |
-|------|-------------|
-| 401 | Unauthorized — no valid session |
-| 500 | Failed to check badges |
-
----
-
-## Get leaderboard
-
-```http
-GET /api/gamification/leaderboard
-```
-
-Returns the top users ranked by total points. No authentication required.
-
-### Query parameters
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `limit` | integer | `10` | Number of users to return (maximum 50) |
-
-### Response
-
-```json
-{
-  "leaderboard": [
-    {
-      "userId": "user_abc123",
-      "name": "Alice",
-      "points": 2500,
-      "level": 5,
-      "title": "Expert"
-    },
-    {
-      "userId": "user_def456",
-      "name": "Bob",
-      "points": 1200,
-      "level": 4,
-      "title": "Advanced"
-    }
-  ]
-}
-```
-
-### Response fields
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `leaderboard` | array | Users sorted by points descending |
-| `leaderboard[].userId` | string | User identifier |
-| `leaderboard[].name` | string | Display name (defaults to "Anonymous" if not set) |
-| `leaderboard[].points` | number | Total accumulated points |
-| `leaderboard[].level` | number | Current level |
-| `leaderboard[].title` | string | Level title |
-
-### Errors
-
-| Code | Description |
-|------|-------------|
-| 500 | Failed to fetch leaderboard |
-
-<Note>Gamification data is stored in the `UserSettings` table using keys prefixed with `badge_`, `gamification_points`, `login_streak`, and `last_login`. Points accumulate from badge awards and cannot be spent or transferred.</Note>
+| 500 | Failed to fetch profile |
