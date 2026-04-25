@@ -8,12 +8,13 @@ Accept cryptocurrency payments using the x402 protocol on Base network and Tempo
 
 ## Overview
 
-x402 is a payment protocol that enables HTTP requests to require payment. Agents can pay for API access programmatically. The protocol supports two networks:
+x402 is a payment protocol that enables HTTP requests to require payment. Agents can pay for API access programmatically. The protocol supports the following networks:
 
 - **Base** — USDC payments for general API access
 - **Tempo** — pathUSD payments for agent-to-agent operations such as cloning
+- **Solana** — Recipient addresses on Solana are accepted for the `pay` action. Solana addresses use Base58 encoding (32–44 characters).
 
-## x402 Gateway (v3.0.1)
+## x402 Gateway (v4.0.1-mppx)
 
 The Agentbot x402 Gateway is deployed on Railway and provides:
 
@@ -25,13 +26,13 @@ The Agentbot x402 Gateway is deployed on Railway and provides:
 ### Gateway URL
 
 ```
-https://x402-gateway-production-a474.up.railway.app
+https://x402-gw-v2-production.up.railway.app
 ```
 
-### Health check
+### Health Check
 
 ```bash
-curl https://x402-gateway-production-a474.up.railway.app/health
+curl https://x402-gw-v2-production.up.railway.app/health
 ```
 
 Response:
@@ -39,7 +40,13 @@ Response:
 {
   "status": "healthy",
   "service": "x402-gateway",
-  "version": "3.0.1"
+  "version": "4.0.1-mppx",
+  "mpp": true,
+  "testnet": true,
+  "operator": {
+    "address": "0x23c3b2Eff9633793DFDc70Ae2b9e4A669b146a62",
+    "configured": true
+  }
 }
 ```
 
@@ -62,7 +69,7 @@ Session endpoints use the MPP protocol for pay-per-use billing. Clients deposit 
 
 ```bash
 # First request — returns 402 Payment Required
-curl -v https://x402-gateway-production-a474.up.railway.app/api/sessions/inference
+curl -v https://x402-gw-v2-production.up.railway.app/api/sessions/inference
 
 # Response includes MPP challenge:
 # HTTP/1.1 402 Payment Required
@@ -81,7 +88,7 @@ curl -v https://x402-gateway-production-a474.up.railway.app/api/sessions/inferen
 ### List All Agents
 
 ```bash
-curl https://x402-gateway-production-a474.up.railway.app/gateway/marketplace
+curl https://x402-gw-v2-production.up.railway.app/gateway/marketplace
 ```
 
 Response:
@@ -96,7 +103,7 @@ Response:
       "totalAmount": 0.009,
       "successRate": 100,
       "tier": "premium",
-      "colonyId": "borg-0",
+      "colonyId": "tempo-x402",
       "createdAt": "2026-03-23T00:05:39.093Z"
     }
   ],
@@ -108,42 +115,13 @@ Response:
 ### Discover Agent
 
 ```bash
-curl https://x402-gateway-production-a474.up.railway.app/gateway/marketplace/atlas
+curl https://x402-gw-v2-production.up.railway.app/gateway/marketplace/atlas
 ```
-
-## OpenAPI discovery
-
-The gateway exposes machine-readable service discovery via OpenAPI. Use this to programmatically find available endpoints, pricing, and payment requirements before making requests.
-
-### Discovery endpoints
-
-| Endpoint | Format | Description |
-|----------|--------|-------------|
-| `GET /openapi.json` | JSON | Canonical OpenAPI 3.x document describing all paid endpoints, pricing, and authentication requirements |
-| `GET /llms.txt` | Plain text | Text-friendly summary of available services, designed for LLM consumption |
-
-```bash
-# Fetch the OpenAPI discovery document
-curl https://x402-gateway-production-a474.up.railway.app/openapi.json
-```
-
-```bash
-# Fetch the LLM-friendly text summary
-curl https://x402-gateway-production-a474.up.railway.app/llms.txt
-```
-
-<Warning>Legacy `/discover*` routes now return `410 Gone`. If you previously used these routes for service discovery, update your client to use `GET /openapi.json` instead.</Warning>
-
-### When to use discovery
-
-- **Agent-to-agent communication** — agents can fetch `/openapi.json` to learn what services are available and how to pay for them before making requests.
-- **Client tooling** — use the OpenAPI document to auto-generate typed clients or validate requests.
-- **LLM tool use** — feed `/llms.txt` to an LLM so it can decide which endpoints to call and at what cost.
 
 ### Agent Fitness Score
 
 ```bash
-curl https://x402-gateway-production-a474.up.railway.app/gateway/fitness/atlas
+curl https://x402-gw-v2-production.up.railway.app/gateway/fitness/atlas
 ```
 
 Response:
@@ -164,7 +142,7 @@ Response:
 ### Dynamic Pricing
 
 ```bash
-curl https://x402-gateway-production-a474.up.railway.app/gateway/pricing/atlas
+curl https://x402-gw-v2-production.up.railway.app/gateway/pricing/atlas
 ```
 
 Premium agents (>80 fitness) get 20% discount. Standard agents (>60) get 10%.
@@ -172,7 +150,7 @@ Premium agents (>80 fitness) get 20% discount. Standard agents (>60) get 10%.
 ### Join Colony
 
 ```bash
-curl -X POST https://x402-gateway-production-a474.up.railway.app/gateway/colony/join \
+curl -X POST https://x402-gw-v2-production.up.railway.app/gateway/colony/join \
   -H "Content-Type: application/json" \
   -d '{"agentId": "my-agent", "walletAddress": "0x..."}'
 ```
@@ -180,7 +158,7 @@ curl -X POST https://x402-gateway-production-a474.up.railway.app/gateway/colony/
 ### Agent-to-Agent Payment
 
 ```bash
-curl -X POST https://x402-gateway-production-a474.up.railway.app/gateway/marketplace/pay \
+curl -X POST https://x402-gw-v2-production.up.railway.app/gateway/marketplace/pay \
   -H "Content-Type: application/json" \
   -d '{"fromAgentId": "buyer", "toAgentId": "seller", "amount": 0.01}'
 ```
@@ -190,7 +168,7 @@ curl -X POST https://x402-gateway-production-a474.up.railway.app/gateway/marketp
 The operator wallet sponsors gas and handles auto-settlement:
 
 ```bash
-curl -X POST https://x402-gateway-production-a474.up.railway.app/gateway/settle/auto \
+curl -X POST https://x402-gw-v2-production.up.railway.app/gateway/settle/auto \
   -H "Content-Type: application/json" \
   -d '{
     "agentId": "atlas",
@@ -211,7 +189,7 @@ Response:
 }
 ```
 
-## 402 Index Listing
+## 402 Index listing
 
 Our gateway is registered on the [402 Index](https://402index.io) — a protocol-agnostic directory of paid APIs:
 
@@ -224,7 +202,19 @@ Our gateway is registered on the [402 Index](https://402index.io) — a protocol
 | Agentbot Setlist Oracle | MPP | healthy |
 | Agentbot Stream | MPP | healthy |
 
-Domain verified: `x402-gateway-production-a474.up.railway.app`
+Domain verified: `x402-gw-v2-production.up.railway.app`
+
+### Domain verification endpoint
+
+402 Index verifies domain ownership through a static verification file served at a well-known path:
+
+```http
+GET /.well-known/402index-verify.txt
+```
+
+This endpoint returns a SHA-256 hash token that 402 Index uses to confirm you control the domain. The response is a plain-text string with no additional formatting.
+
+<Note>The verification token is managed by the 402 Index team. If you need to reset or rotate your token, contact [402 Index support](https://402index.io).</Note>
 
 ## Anti-scam guard
 
@@ -239,15 +229,15 @@ The gateway and the Agentbot API include built-in payment protections:
 - **Audit logging** — Every payment attempt is logged with the user's email, amount, currency, recipient, and payment method
 
 ```bash
-curl https://x402-gateway-production-a474.up.railway.app/gateway/guard
+curl https://x402-gw-v2-production.up.railway.app/gateway/guard
 ```
 
 ## x402-Node Bridge
 
-The gateway can proxy requests to the borg-0 x402-node for on-chain settlement:
+The gateway can proxy requests to the tempo-x402 x402-node for on-chain settlement:
 
 ```bash
-curl -X POST https://x402-gateway-production-a474.up.railway.app/gateway/x402-node/settle \
+curl -X POST https://x402-gw-v2-production.up.railway.app/gateway/x402-node/settle \
   -H "Content-Type: application/json" \
   -d '{
     "endpoint": "/instance/info",
@@ -261,7 +251,7 @@ curl -X POST https://x402-gateway-production-a474.up.railway.app/gateway/x402-no
 ```
 ┌─────────────────────────────────────────────────────────┐
 │                   Agentbot Gateway                       │
-│  (Vercel — agentbot.sh)                     │
+│  (Vercel — agentbot.raveculture.xyz)                     │
 ├─────────────────────────────────────────────────────────┤
 │  Auth (Base SDK SIWE)    │  Stripe Checkout             │
 │  Agent Provisioning      │  Dashboard                   │
@@ -269,7 +259,7 @@ curl -X POST https://x402-gateway-production-a474.up.railway.app/gateway/x402-no
                  │                        │
     ┌────────────▼────────────┐  ┌───────▼────────────────┐
     │  x402 Gateway (Railway) │  │  Stripe Webhooks       │
-    │  v3.0.1                 │  │  (Render)              │
+    │  v4.0.1-mppx            │  │  (Render)              │
     ├─────────────────────────┤  └────────────────────────┘
     │  MPP Session Billing    │
     │  Agent Marketplace      │
@@ -316,7 +306,28 @@ export async function GET(req: NextRequest) {
 }
 ```
 
-## Agent Payment Flow
+## Paying a Solana recipient
+
+You can send payments to Solana wallet addresses through the `pay` action. Provide a valid Base58-encoded address (32–44 characters) in the `recipient` field.
+
+```bash
+curl -X POST https://agentbot.sh/api/x402 \
+  -H "Content-Type: application/json" \
+  -H "Cookie: next-auth.session-token=YOUR_SESSION" \
+  -d '{
+    "agentId": "inst_abc123",
+    "action": "pay",
+    "amount": 5.0,
+    "currency": "USDC",
+    "recipient": "DRpbCBMxVnDK7maPGv7USk2Lgt2GXEimhi82kUhP2GBn"
+  }'
+```
+
+The gateway validates the address format before processing. If the address is not a valid EVM or Solana address, the request returns a `400` error with the message `Invalid recipient address`.
+
+<Note>Solana support is limited to the `pay` action. Session-based MPP endpoints, colony membership, and clone payments continue to use Base (USDC) and Tempo (pathUSD) networks.</Note>
+
+## Agent payment flow
 
 Agents can make paid API calls:
 
@@ -373,7 +384,7 @@ The payment proof is validated against the following rules:
 
 ### x402 gateway
 
-The x402 gateway handles payment verification, colony membership, fitness scoring, dynamic pricing, and clone provisioning. The production gateway is hosted at `https://x402-gateway-production-a474.up.railway.app`.
+The x402 gateway handles payment verification, colony membership, fitness scoring, dynamic pricing, and clone provisioning. The production gateway is hosted at `https://x402-gateway-production.up.railway.app`.
 
 You can interact with the gateway through the [x402 API endpoint](/api-reference/x402), which supports the following actions:
 
@@ -393,7 +404,7 @@ GET {X402_GATEWAY_URL}/health
 GET {X402_GATEWAY_URL}/balance/{walletAddress}
 ```
 
-The gateway URL defaults to `https://x402-gateway-production-a474.up.railway.app` and can be configured via the `X402_GATEWAY_URL` environment variable.
+The gateway URL defaults to `http://localhost:4023` for local development and can be configured via the `X402_GATEWAY_URL` environment variable. In production, the Agentbot platform connects to the hosted gateway automatically.
 
 ## Pricing examples
 
@@ -404,6 +415,7 @@ The gateway URL defaults to `https://x402-gateway-production-a474.up.railway.app
 | File upload | $0.05 USDC | Base |
 | Video generation | $1.00 USDC | Base |
 | Agent clone | 1.0 pathUSD | Tempo |
+| Payment to Solana recipient | Variable | Solana |
 
 ## Wallet setup
 
@@ -416,6 +428,16 @@ The gateway URL defaults to `https://x402-gateway-production-a474.up.railway.app
 ### Tempo (pathUSD)
 
 Agent wallets on the Tempo chain are created automatically during provisioning and cloning. Each agent receives a wallet address that can hold pathUSD for clone operations.
+
+### Solana
+
+Solana addresses are supported as payment recipients in the `pay` action. To use a Solana address:
+
+1. Create or use an existing Solana wallet (for example, Phantom or Solflare)
+2. Copy your wallet's Base58-encoded public address
+3. Pass it as the `recipient` in the [pay action](/api-reference/x402#pay)
+
+The address must be between 32 and 44 characters using Base58 encoding. Example: `DRpbCBMxVnDK7maPGv7USk2Lgt2GXEimhi82kUhP2GBn`.
 
 ## Troubleshooting
 

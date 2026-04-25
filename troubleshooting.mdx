@@ -108,14 +108,14 @@ Agentbot reads env vars at startup. After changing them:
 
 Each agent has a memory limit based on plan:
 
-| Plan | Memory |
-|------|--------|
-| Solo | 2GB |
-| Collective | 4GB |
-| Label | 8GB |
-| Custom deployment | 16GB+ (by arrangement) |
+| Plan | Memory | CPU | Description |
+|------|--------|-----|-------------|
+| Solo | 2 GB | 1 vCPU | Trial / light workloads only |
+| Collective | 4 GB | 2 vCPU | Recommended production floor |
+| Label | 8 GB | 4 vCPU | Heavy production + browser/tool work |
+| Network | 16 GB | 8 vCPU | High-throughput production |
 
-If you're hitting limits, check for memory leaks in custom skills or upgrade your plan.
+If you're hitting memory limits, check for memory leaks in custom skills or upgrade your plan. The Solo tier (1 vCPU / 2 GB) is the trial/light-use floor — for production workloads, we recommend at least Collective (2 vCPU / 4 GB).
 
 </Accordion>
 
@@ -131,6 +131,21 @@ POST /api/skills
 ```
 
 Skills are loaded at agent startup. If a skill fails to load, the agent will start without it and log the error.
+
+</Accordion>
+
+<Accordion icon="bug" title="Agent offline when installing skills">
+
+If you see **"Agent offline. Install your agent first, then retry installing skills."** in the dashboard, the skill was saved to your account but the agent's gateway is not reachable.
+
+This happens when the API returns `"deployed": false` with a `deployWarning` field. To resolve:
+
+1. Verify your agent is running: `GET /api/agents/{id}`
+2. Start or restart the agent from the dashboard
+3. The skill will sync automatically once the agent comes back online
+4. You can also trigger a manual sync using `POST /api/agents/{id}/sync`
+
+See the [Skills API reference](/api-reference/skills#install-skill) for full response details.
 
 </Accordion>
 

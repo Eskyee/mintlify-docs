@@ -17,7 +17,7 @@ Endpoints for interacting with AI models through a unified provider layer. These
 GET /api/ai/health
 ```
 
-Requires bearer token authentication. Returns the availability status of configured AI providers.
+Returns the availability status of configured AI providers. This endpoint is public and does not require authentication.
 
 ### Response
 
@@ -54,7 +54,7 @@ When the provider check fails, the response uses `status: "error"` and includes 
 GET /api/ai/models
 ```
 
-Requires bearer token authentication. Returns all available AI models across providers.
+Returns all available AI models across providers. This endpoint is public and does not require authentication.
 
 ### Response
 
@@ -91,7 +91,7 @@ Requires bearer token authentication. Returns all available AI models across pro
 GET /api/ai/models/:provider
 ```
 
-Requires bearer token authentication.
+This endpoint is public and does not require authentication.
 
 ### Path parameters
 
@@ -237,6 +237,7 @@ Returns a structured response with the following shape:
 | 402 | Valid subscription required. Returned when the plan header is missing or unrecognized (`PLAN_REQUIRED`), when there is no active Stripe subscription (`SUBSCRIPTION_REQUIRED`), or when the subscription ID in the request header does not match the subscription on file for the authenticated user (`SUBSCRIPTION_MISMATCH`). |
 | 403 | Model not available on your plan (`MODEL_RESTRICTED`). The response includes an `allowedModels` array listing the models your plan supports. |
 | 404 | No models available |
+| 429 | Monthly token quota exceeded for this plan (`QUOTA_EXCEEDED`). Resets at the start of the next calendar month. |
 | 500 | AI provider error |
 
 #### 402 error examples
@@ -269,16 +270,29 @@ When the subscription ID sent in the `x-stripe-subscription-id` header does not 
 }
 ```
 
-## Token quotas (planned)
+## Token quotas
 
-<Warning>Token quotas are not yet enforced. The backend does not currently track token usage or reject requests based on usage limits. The quota system described below is planned for a future release. When implemented, requests exceeding the plan limit will be rejected with a `429` status and a `QUOTA_EXCEEDED` error code.</Warning>
+Token quotas are enforced per user on a calendar-month basis. Each chat completion request checks the user's cumulative token usage for the current month against their plan limit before calling the AI provider. Requests that would exceed the quota are rejected with a `429` status and a `QUOTA_EXCEEDED` error code. The quota resets automatically at the start of each calendar month.
 
-| Plan | Monthly token limit (planned) |
+Usage is tracked in the `model_metrics` table. Each successful and failed chat request logs the model, token counts, latency, and outcome for auditing and quota enforcement.
+
+| Plan | Monthly token limit |
 |------|-------------------|
 | `solo` | 2,000,000 |
 | `collective` | 6,000,000 |
 | `label` | 20,000,000 |
 | `network` | Unlimited |
+
+### 429 error example
+
+```json
+{
+  "error": "Monthly token quota exceeded for plan \"solo\". Used 2,000,000 of 2,000,000 tokens. Quota resets at the start of next month.",
+  "code": "QUOTA_EXCEEDED"
+}
+```
+
+<Note>If the database is temporarily unreachable, quota enforcement fails open — the request proceeds without a usage check. A warning is logged server-side.</Note>
 
 ## Plan-based model access
 
@@ -287,8 +301,8 @@ Each subscription plan grants access to a specific set of AI models. The chat en
 | Plan | Price | Models | Agent limit | Skill limit | A2A messages/day |
 |------|-------|--------|-------------|-------------|------------------|
 | `solo` | £29/mo | `openai/gpt-4o-mini`, `google/gemini-2.0-flash`, `xiaomi/mimo-v2-pro` | 1 | 3 | 100 |
-| `collective` | £69/mo | `openai/gpt-4o-mini`, `openai/gpt-4o`, `google/gemini-2.0-flash`, `anthropic/claude-3.5-sonnet`, `xiaomi/mimo-v2-pro` | 10 | 10 | 500 |
-| `label` | £149/mo | `openai/gpt-4o-mini`, `openai/gpt-4o`, `openai/gpt-4-turbo`, `google/gemini-2.0-flash`, `anthropic/claude-3.5-sonnet`, `anthropic/claude-3-opus`, `xiaomi/mimo-v2-pro` | 3 | 25 | 2,000 |
+| `collective` | £69/mo | `openai/gpt-4o-mini`, `openai/gpt-4o`, `google/gemini-2.0-flash`, `anthropic/claude-3.5-sonnet`, `xiaomi/mimo-v2-pro` | 3 | 10 | 500 |
+| `label` | £149/mo | `openai/gpt-4o-mini`, `openai/gpt-4o`, `openai/gpt-4-turbo`, `google/gemini-2.0-flash`, `anthropic/claude-3.5-sonnet`, `anthropic/claude-3-opus`, `xiaomi/mimo-v2-pro` | 10 | 25 | 2,000 |
 | `network` | £499/mo | All models | 100 | 100 | 10,000 |
 
 <Note>Admin users are automatically granted `network`-level access regardless of their subscription plan.</Note>

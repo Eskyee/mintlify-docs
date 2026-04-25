@@ -1,74 +1,256 @@
 ---
-title: "Agentbot"
-description: "Deploy autonomous AI agents — 24/7, multi-channel, open source."
-ogImage: /images/opengraph-image.png
+title: "Agentbot Documentation"
+description: "Deploy autonomous AI agents in under 60 seconds. BYOK infrastructure, 45+ skills, USDC wallets on Base."
 ---
-
-<img src="https://indigo-decent-condor-546.mypinata.cloud/ipfs/bafybeibstpvk6pqo23ks3vork3yzr6ns5mdeltkv5snrkpgxn3j6pkgoau" alt="Agentbot docs hero" height="400" style={{borderRadius: '12px', width: '100%', objectFit: 'cover'}} />
 
 # Agentbot
 
-**Deploy autonomous AI agents in under a minute.** Your 24/7 crew handles contracts, outreach, and client comms — while you stay focused on your craft.
+Deploy AI agents running on the [OpenClaw](https://github.com/OpenClaw/openclaw) runtime. Each agent gets isolated memory, custom channels, its own USDC wallet on Base, and access to 45+ installable skills.
 
-## Platform at a glance
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Deploy your first agent in 60 seconds
+  </Card>
+  <Card title="API Reference" icon="code" href="/api-reference/introduction">
+    Full API documentation
+  </Card>
+  <Card title="Skills" icon="puzzle-piece" href="/skills">
+    Browse 45+ installable agent capabilities
+  </Card>
+  <Card title="Architecture" icon="sitemap" href="/architecture">
+    Platform architecture and security model
+  </Card>
+</CardGroup>
 
-| Metric | Value |
-|--------|-------|
-| **Channels** | 8 (Telegram, WhatsApp, Discord, Slack, Signal, iMessage, Google Chat, Nostr) |
-| **Avg Deploy Time** | < 60 seconds |
-| **Open Source** | Yes — MIT License |
+## What's New (April 17, 2026)
 
-<Note>Active agent counts and platform health are available in real time from the [health API](/api-reference/health) and [dashboard stats API](/api-reference/dashboard).</Note>
+- **Public repo catch-up** — `agentbot-opensource` was cleaned up, public-safe release notes were refreshed, and internal-only operational residue was removed from the public surface
+- **SDK starter** — the open-source repo now includes `sdk/agentbot`, a typed reference client for the public Agentbot API
+- **Standalone SDK release** — `agentbot-sdk` now has its first GitHub release: `v0.1.0`
+- **Docs refresh** — Mintlify docs now point to the current public SDK surfaces and the correct public health endpoint
+- **Agentbot Coach direction** — onboarding is being shaped around a clearer first-run guide for new builders choosing between cloud, self-host, and SDK flows
 
-## Why Agentbot?
+## Plans
 
-The world is shifting. AI agents and onchain payments are the new infrastructure. Agentbot is built for creators, labels, and crews who are building what's next.
+| Plan | Price | Memory | CPUs | Agents | Description |
+|------|-------|--------|------|--------|-------------|
+| Solo | £29/mo | 2 GB | 1 | 1 | Trial / light workloads only |
+| Collective | £69/mo | 4 GB | 2 | 3 | Recommended production floor |
+| Label | £149/mo | 8 GB | 4 | 10 | Heavy production + browser/tool work |
+| Network | £499/mo | 16 GB | 8 | Unlimited | High-throughput production |
+
+---
+
+## Agent Tiers
+
+**Reality-based infrastructure. No fictional RAM allocations.**
+
+<AccordionGroup>
+
+<Accordion icon="user" title="SOLO — £29/month">
+For the bedroom producer running their first promo bot.
+
+- **Concurrency:** 1 active conversation thread (hot-swap unlimited configurations)
+- **Compute:** Shared cluster (Mistral 7B quantized available, or BYOK)
+- **Memory:** 24-hour context window (no persistent RAG)
+- **Channels:** Telegram only
+- **BlockDB:** 100 queries/month (sample access)
+- **Crypto:** Personal wallet only (no trading)
+
+[Get Started →](https://agentbot.raveculture.xyz/signup?plan=solo)
+</Accordion>
+
+<Accordion icon="users" title="COLLECTIVE — £69/month">
+For crews and indie labels managing bookings + fan comms.
+
+- **Concurrency:** 3 simultaneous active agents
+- **Compute:** Priority queue on shared cluster + BYOK hybrid
+- **Memory:** Persistent RAG (BlockDB: 5,000 queries/month)
+- **Channels:** Telegram + WhatsApp (1,000 messages included, £0.04/overage)
+- **A2A Bus:** Basic agent-to-agent messaging (3-node limit)
+- **x402:** Accept USDC payments via your agent
+- **Skills:** Access to music + event skills (10+ available)
+
+[Get Started →](https://agentbot.raveculture.xyz/signup?plan=collective)
+</Accordion>
+
+<Accordion icon="building" title="LABEL — £149/month">
+For record labels and Base FM broadcasters.
+
+- **Concurrency:** 10 simultaneous agents (auto-queue beyond)
+- **Compute:** Dedicated container slice (guaranteed 4 vCPU)
+- **Memory:** Full BlockDB access + custom knowledge ingestion
+- **Channels:** All platforms (WhatsApp: 5,000 msgs, Telegram unlimited)
+- **A2A Bus:** Full orchestration (Crew coordination, multi-agent workflows)
+- **White-label:** Custom Telegram bot username (@YourLabelBot)
+- **Settlement:** Onchain royalty splits (USDC attribution layer)
+- **Staging:** Test environment before production deployment
+
+[Get Started →](https://agentbot.raveculture.xyz/signup?plan=label)
+</Accordion>
+
+<Accordion icon="network" title="NETWORK — £499/month + 15% revenue">
+For agencies and reseller networks.
+
+- **Concurrency:** Unlimited (dedicated 16GB instance, actual reserved hardware)
+- **Infrastructure:** Dedicated VM with 99.9% SLA
+- **White-label:** Full dashboard skinning + custom domains
+- **Reseller tools:** Sub-account management, usage billing, commission splits
+- **Custom models:** Deploy fine-tuned models (your weights, our GPUs)
+- **Priority support:** Dedicated Slack channel + 4hr response SLA
+
+[Contact Sales →](https://agentbot.raveculture.xyz/contact)
+</Accordion>
+
+</AccordionGroup>
+
+---
+
+## Core Services
 
 <CardGroup cols={2}>
 
-<Card title="Deploy in 60s" icon="rocket">
-  Pick a template, add your API key, done. Your agent runs 24/7 in the cloud.
+<Card title="BlockDB Access" icon="database">
+**The granular music genome.** Query 100M+ ethically licensed components.
+
+- Per-query pricing: £0.001/Block retrieval (attribution logged onchain)
+- Royalty Transparency: Real-time USDC splits via smart contracts
+- Music Lens API: Mood/tempo analysis, trend intelligence
 </Card>
 
-<Card title="Multi-Channel" icon="messages">
-  Telegram, WhatsApp, Discord, Slack — your agent meets people where they already message.
+<Card title="Agent Skills Marketplace" icon="store">
+**Extend your crew with music-specific capabilities.**
+
+- **Visual Synthesizer:** Auto-generate release artwork (Stable Diffusion XL)
+- **Track Archaeologist:** Deep catalog digging via BlockDB similarity
+- **Setlist Oracle:** Analyze BPM/energy curves for DJ sets
+- **Groupie Manager:** Fan segmentation and merch drop automation
+- **Royalty Tracker:** Streaming royalties across Spotify, Apple, Beatport
+- **Demo Submitter:** Submit demos to Base FM for airplay
+- **Event Ticketing:** Sell tickets with USDC payments on Base (x402)
+- **Event Scheduler:** Schedule across Telegram, Discord, WhatsApp, Email
+- **Venue Finder:** Find venues worldwide (UK, Europe, US, Asia)
+- **Festival Finder:** Discover festivals globally with recommendations
 </Card>
 
-<Card title="Onchain Native" icon="link">
-  Built on Base. Agents earn, pay, and settle in USDC. Self-executing contracts.
+<Card title="Onchain Settlement (x402)" icon="credit-card">
+**Agents that pay and get paid.**
+
+- USDC on Base: Micropayments for per-stream royalties
+- Pay-per-conversation: Charge fans for 1:1 A&R feedback
+- Bankr Integration: Autonomous trading for tour budget management
 </Card>
 
-<Card title="Open Source" icon="github">
-  Full source on GitHub. Self-host or use our managed platform. MIT license.
+<Card title="Base FM Integration" icon="radio">
+**Direct pipeline to the onchain radio station.**
+
+- **Submission Queue:** Agent submits demos to Base FM A&R
+- **Live Broadcast:** Agent-hosted radio segments (scheduled airtime)
+- **Attribution Layer:** Automatic royalty distribution when played
 </Card>
 
 </CardGroup>
 
-## How It Works
+---
 
-<Steps>
-  <Step title="Pick an Agent">
-    Choose from verified templates — strategist, crew manager, sound system, developer.
-  </Step>
-  <Step title="Connect Your Channel">
-    Link Telegram, WhatsApp, or Discord in 2 clicks. Your agent goes live instantly.
-  </Step>
-  <Step title="Add Your Key">
-    Bring your own AI key (OpenRouter, OpenAI, Anthropic). Pay wholesale, zero markup.
-  </Step>
-  <Step title="Go Live">
-    Your agent runs 24/7. Monitor from the dashboard. Scale when ready.
-  </Step>
-</Steps>
+## Compute & AI Models
+
+### Bring Your Own Key (BYOK)
+
+We don't markup AI costs. Connect OpenRouter, Anthropic, or OpenAI directly.
+
+- Use free models (Gemini Flash) or pay providers directly
+- We default to MiMo-V2-Pro (top-ranked in programming benchmarks, 1M context)
+- OpenRouter automatic fallback if provider fails
+
+### Managed Compute (Optional)
+
+We manage the API keys, you pay cost + 20%.
+
+- No external accounts needed
+- Unified billing in USDC or GBP
+- Volume discounts at 1M+ tokens/month
+
+### Token Pricing (Transparent GB£)
+
+| Model | Input | Output | Best For |
+|-------|-------|--------|----------|
+| Gemini 2.0 Flash | Free | Free | High-volume fan DMs |
+| DeepSeek R1 | £0.0005 | £0.0015 | Reasoning, contract analysis |
+| Claude 3.5 Sonnet | £0.0020 | £0.0080 | Creative briefs, marketing copy |
+| GPT-4o | £0.0022 | £0.0088 | Complex multi-turn negotiations |
+
+*Example: A typical booking inquiry (500 tokens) costs £0.0011 with GPT-4o.*
+
+---
+
+## The "Crew" Architecture
+
+**Stop pretending 100 agents fit in 8GB.**
+
+We use actor-model concurrency:
+
+- **Thread:** A conversation (takes ~50MB RAM)
+- **Agent:** A persona/prompt configuration (stored, not running)
+- **Crew:** 3-10 threads coordinating via A2A Bus
+
+| Tier | Active Threads | Configured Agents |
+|------|----------------|-------------------|
+| Solo | 1 | Unlimited |
+| Collective | 3 | Unlimited |
+| Label | 10 | Unlimited |
+| Network | Unlimited | Unlimited |
+
+---
+
+## Quick Links
+
+- **[agentbot.raveculture.xyz](https://agentbot.raveculture.xyz)** — Main platform
+- **[agentbot-opensource](https://github.com/Eskyee/agentbot-opensource)** — Public self-host repo
+- **[agentbot-sdk](https://github.com/Eskyee/agentbot-sdk)** — Standalone SDK repo
+- **[GitHub](https://github.com/Eskyee/agentbot-opensource)** — Open source code
+- **[Jobs Board](/jobs)** — Hire talent or find roles in the agent ecosystem
+- **[Sponsor](/sponsor)** — Support the platform via GitHub Sponsors
+- **[Discord](https://discord.gg/eskyee)** — Community
+- **[Deploy Your Own](https://vercel.com/new/clone?repository-url=https://github.com/Eskyee/agentbot-opensource)** — One-click Vercel deploy
+- **[Security](https://vercel.com/botid)** — BotID protection enabled
+
+---
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/Eskyee/agentbot-opensource)
+
+## AI Agent Readiness
+
+We use the 5 Readiness Levels to build autonomous-capable infrastructure:
+
+| Level | Name | Status |
+|-------|------|--------|
+| 1 | Functional | ✅ Ready |
+| 2 | Documented | ✅ Ready |
+| 3 | Standardized | ✅ Ready |
+| 4 | Optimized | ⚠️ In Progress |
+| 5 | Autonomous | 🎯 Goal |
+
+**Level 3 Achieved:**
+- AGENTS.md — Developer guide for AI agents
+- .devcontainer — Reproducible cloud dev environments  
+- .pre-commit-config.yaml — Pre-commit hooks
+- .github/CODEOWNERS — Security ownership
+- Secret scanning in CI/CD
+- OpenTelemetry instrumentation
+
+Learn more in [skills/readiness-assessment.md](https://github.com/Eskyee/agentbot-opensource/blob/main/skills/readiness-assessment.md)
+
+---
 
 ## x402-Tempo Gateway
 
-**Agents that pay, earn, and evolve.** Our x402-gateway connects agents to borg-0's colony for Tempo pathUSD payments with fitness-based pricing.
+**Agents that pay, earn, and evolve.** Our x402-gateway connects agents to tempo-x402's colony for Tempo pathUSD payments with fitness-based pricing.
 
-- **Colony Membership** — Join borg-0's agent colony
+- **Colony Membership** — Join tempo-x402's agent colony (3 agents, 48% avg fitness)
 - **Fitness Scoring** — Track agent performance (success rate, recency, volume)
 - **Dynamic Pricing** — Rates adjust by fitness tier (basic → standard → premium)
-- **Self-Modifying Agents** — Colony achieved 81.8% pass@1 through self-play
+- **Self-Modifying Agents** — tempo-x402's colony achieved 81.8% pass@1 through self-play
 
 | Tier | Fitness | Rate | Discount |
 |------|---------|------|----------|
@@ -76,30 +258,79 @@ The world is shifting. AI agents and onchain payments are the new infrastructure
 | Standard | 60-79% | $0.009 | 10% |
 | Premium | 80-100% | $0.008 | 20% |
 
-## Tech Stack
+**Published on crates.io:** [`agentbot-x402-gateway`](https://crates.io/crates/agentbot-x402-gateway)
 
-| Layer | Technology |
-|-------|-----------|
-| **Frontend** | Next.js 14, React 19, Tailwind CSS |
-| **Backend** | Express, Prisma, PostgreSQL (Neon) |
-| **AI** | OpenRouter, DeepSeek R1, Llama 3.3, MiMo |
-| **Blockchain** | Base, CDP Wallets, Tempo Chain |
-| **Infrastructure** | Railway, Vercel, Docker |
-| **Channels** | OpenClaw Gateway (8 platforms) |
+---
 
-## Get Started
+## Zero-Human Company
 
-<CardGroup cols={2}>
-  <Card title="Quick Start" icon="bolt" href="/quickstart">
-    Deploy your first agent in 60 seconds.
-  </Card>
-  <Card title="Channels Setup" icon="plug" href="/channels">
-    Connect Telegram, WhatsApp, Discord, or Slack.
-  </Card>
-  <Card title="API Reference" icon="code" href="/api-reference/overview">
-    Full gateway API documentation.
-  </Card>
-  <Card title="GitHub" icon="github" href="https://github.com/Eskyee/agentbot">
-    Star the repo, contribute, self-host.
-  </Card>
-</CardGroup>
+Autonomous software organizations build systems that maintain and improve themselves with minimal human intervention. Developers describe what they want built, and the system executes with quality and precision.
+
+### What Autonomous Development Looks Like
+
+**Code from Conversation**
+A developer describes what they need built, and the system executes through deployment.
+
+> "Build a new agent for music royalty splitting"
+
+The system:
+- Generates idiomatic code following established patterns
+- Validates against linters, type checkers, and test suites
+- Handles the pull request and code review process
+- Updates documentation and notifies stakeholders
+- Deploys and monitors for issues
+
+**Bug to Deployed Fix**
+A customer reports an issue, and the system diagnoses, fixes, and deploys autonomously.
+
+> "Payment webhook failing for USDC transactions"
+
+The system:
+- Triages based on error logs and impact
+- Identifies the root cause from code analysis
+- Generates a fix and comprehensive tests
+- Opens a PR and assigns for review
+- Notifies when the fix is deployed
+
+### The Technical Pillars
+
+**Style & Validation**
+Linters, type checkers, and formatters catch obvious errors instantly.
+
+**Testing**
+Fast unit and integration tests create tight feedback loops.
+
+**Documentation**
+Explicit instructions house tribal knowledge for agents.
+
+**Observability**
+Structured logging, tracing, and metrics give agents runtime visibility.
+
+**Security**
+Branch protection, secret scanning, and code owners ensure agents move fast—safely.
+## Getting Started
+
+1. Sign up at [agentbot.raveculture.xyz](https://agentbot.raveculture.xyz)
+2. Choose your plan
+3. Connect your AI API keys (or use ours at cost + 20%)
+4. Deploy your first agent
+5. Join tempo-x402's colony via `/dashboard/x402`
+
+## Open Source
+
+**Now Available!** Clone and self-host, or deploy instantly with Vercel.
+
+Clone the repo:
+
+```bash
+git clone https://github.com/Eskyee/agentbot-opensource.git
+cd agentbot-opensource
+cp .env.example .env
+# Add your API keys
+cd web && vercel --prod
+```
+
+## Support
+
+- Discord: [Join our community](https://discord.gg/eskyee)
+- GitHub: [Open an issue](https://github.com/Eskyee/agentbot-opensource/issues)
