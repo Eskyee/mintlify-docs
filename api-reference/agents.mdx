@@ -1356,22 +1356,56 @@ POST /api/agents/:id/sync
 
 Syncs agent skills, memories, and files to the OpenClaw gateway. Requires session authentication and ownership of the agent. The endpoint verifies that the authenticated user owns the agent by checking the database before proceeding with the sync.
 
+Use this endpoint to retry a failed deployment, or to bring the live OpenClaw runtime back in line with the saved install records when an earlier skill install or uninstall returned `"deployed": false`. A skill is only treated as active in the runtime once a sync succeeds — saved install records alone do not imply the runtime accepted the skill.
+
 ### Response
+
+When the gateway accepts the sync:
 
 ```json
 {
   "success": true,
-  "synced": true
+  "agentId": "agent_456",
+  "gatewayId": "agent_456",
+  "deployedAt": "2026-04-29T12:34:56.000Z",
+  "details": {
+    "skillsDeployed": 3,
+    "memoriesDeployed": 0,
+    "filesDeployed": 0
+  }
 }
 ```
 
+| Field | Type | Description |
+|-------|------|-------------|
+| `success` | boolean | Always `true` on a successful sync. |
+| `agentId` | string | ID of the agent that was synced. |
+| `gatewayId` | string \| undefined | Identifier returned by the gateway for the synced agent. Falls back to `agentId` when the gateway does not return one. |
+| `deployedAt` | string \| undefined | ISO 8601 timestamp recorded when the gateway accepted the sync. |
+| `details` | object \| undefined | Counts of resources sent to the gateway during this sync. |
+| `details.skillsDeployed` | number | Number of installed skills sent to the runtime. |
+| `details.memoriesDeployed` | number | Number of memories sent to the runtime. |
+| `details.filesDeployed` | number | Number of files sent to the runtime. |
+
+<Note>The gateway client validates the sync response body. A `2xx` status with `"success": false` (or a body the client otherwise rejects) is treated as a failed sync and surfaces as a `500` from this endpoint, rather than being reported as a successful deploy.</Note>
+
 ### Errors
+
+When the sync fails, the response includes the underlying gateway error in `details`:
+
+```json
+{
+  "error": "Sync failed",
+  "details": "Gateway error: 503",
+  "agentId": "agent_456"
+}
+```
 
 | Code | Description |
 |------|-------------|
 | 401 | Unauthorized — no valid session |
 | 404 | Agent not found — the agent does not exist or does not belong to the authenticated user |
-| 500 | Sync failed |
+| 500 | Sync failed. The response body includes a `details` string with the gateway error and the `agentId` that failed to sync. |
 
 <Note>This endpoint enforces strict ownership. The agent must belong to the authenticated user's account. Requests for agents owned by other users return `404` to prevent information leakage about agent IDs.</Note>
 
