@@ -7,7 +7,9 @@ description: "Content-addressed file editing using line-level hashes to prevent 
 
 Read and edit files using content-addressed hashes instead of plain line numbers. Each line is identified by a combined `lineNumber#hash` reference, so edits fail predictably when the file has changed since you last read it.
 
-<Note>All endpoints require session-based authentication through NextAuth. File paths must resolve to a location within the project directory.</Note>
+<Note>All endpoints require an authenticated **admin** session. The caller's email must appear in the server's `ADMIN_EMAILS` allowlist; ordinary authenticated users receive `403 Forbidden`. File paths must resolve to a location within the project directory.</Note>
+
+<Warning>Hashline is a read-any/write-any-file primitive scoped to the project directory. Admin-only access is enforced because GET, POST, and DELETE all touch arbitrary files under the project root.</Warning>
 
 ## Read file with hashes
 
@@ -75,7 +77,8 @@ When `format=cli`, the response is plain text with `Content-Type: text/plain`. E
 | Code | Description |
 |------|-------------|
 | 400 | `path parameter required` -- missing `path` query parameter |
-| 401 | Unauthorized -- no valid session |
+| 401 | `Unauthorized` -- no valid session |
+| 403 | `Forbidden` -- session is valid but the caller is not in the admin allowlist |
 | 403 | `Invalid path: must be within project directory` -- path resolves outside the project root |
 | 500 | File read failure (for example, file does not exist) |
 
@@ -176,7 +179,8 @@ Up to 5 similar lines are returned. Re-read the file with `GET /api/hashline` an
 |------|-------------|
 | 400 | `path required` -- missing `path` in request body |
 | 400 | `hashRef and newContent required` -- single edit mode with missing fields |
-| 401 | Unauthorized -- no valid session |
+| 401 | `Unauthorized` -- no valid session |
+| 403 | `Forbidden` -- session is valid but the caller is not in the admin allowlist |
 | 403 | `Invalid path: must be within project directory` -- path traversal attempt |
 | 409 | Stale line -- the hash reference does not match the current file. Response includes `similarLines` when available. |
 | 500 | Edit failed for a reason other than a stale reference |
@@ -209,7 +213,8 @@ Remove a backup file created by a previous edit. Only files containing `.backup.
 | Code | Description |
 |------|-------------|
 | 400 | `path parameter required` -- missing `path` query parameter |
-| 401 | Unauthorized -- no valid session |
+| 401 | `Unauthorized` -- no valid session |
+| 403 | `Forbidden` -- session is valid but the caller is not in the admin allowlist |
 | 403 | `Can only delete .backup. files` -- path does not contain `.backup.` |
 | 403 | `Invalid path` -- path resolves outside the project directory |
 | 500 | Delete failed (for example, file does not exist) |
