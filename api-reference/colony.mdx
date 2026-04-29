@@ -31,6 +31,8 @@ Requires session authentication. Returns colony tree data, agent fitness ranking
 
 Returns the full colony tree with fitness rankings, agent metadata, and root node soul state.
 
+<Note>Template agents (those with `status` equal to `template`, such as `THE-STRATEGIST` or `CREW-MANAGER`) are excluded from the colony tree. Only operational agents are merged into the response from the database, ensuring template definitions do not appear as colony members.</Note>
+
 ```bash
 curl -X GET "https://agentbot.sh/api/colony/status?action=tree" \
   -H "Cookie: session=YOUR_SESSION_TOKEN"
