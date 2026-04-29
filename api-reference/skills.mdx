@@ -242,7 +242,7 @@ When a skill is blocked by safety checks, the response looks like this:
 }
 ```
 
-<Note>When a skill is installed, the agent's complete state (including the newly installed skill) is automatically synced to the OpenClaw gateway. If the gateway is unreachable, the response returns `"deployed": false` with a `deployWarning` message — the skill is still recorded in the database and will sync automatically when the agent comes back online. You can also retry the sync manually using the [agent sync endpoint](/api-reference/agents#sync-agent-to-gateway).</Note>
+<Note>A skill install is only considered active in the runtime when `"deployed": true` is returned. A `"deployed": false` response — whether from a gateway error, an unreachable runtime, or a `2xx` body the gateway client rejects (for example, a runtime that returns `"success": false`) — means the install is saved to the database but has not been accepted by the live OpenClaw runtime. Use the [agent sync endpoint](/api-reference/agents#sync-agent-to-gateway) to push installed skills to the runtime and confirm they are active.</Note>
 
 ## Create skill
 
