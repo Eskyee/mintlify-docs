@@ -236,12 +236,14 @@ When the authenticated caller already owns a non-expired current session, the en
 | 402 | Payment required. The caller does not hold the BASEFM token threshold and has no community guest pass, and no `txHash` was provided. The response includes `fee` (USDC) and a human-readable `message`. |
 | 403 | Community guest pass only works with the claimed Agentbot wallet. Returned when the caller has a community pass but the `wallet` in the request does not match their claimed wallet address. The response includes the expected `wallet`. |
 | 409 | `active_session_exists` — a non-expired current session already exists for this wallet and the authenticated caller does not own it. Owners receive the recovery response above instead. |
-| 429 | `cooldown_active` — the wallet ended a previous session less than 24 hours ago and is in the cooldown window. |
+| 429 | `cooldown_active` — the wallet ended a previous session less than 24 hours ago and is in the cooldown window. Admin callers (authenticated with an email on the platform admin allowlist) bypass this check. |
 | 500 | Mux is not configured or stream creation failed |
 
 <Note>When access is granted via a community guest pass (not BASEFM tokens), the stream is created using the caller's claimed Agentbot wallet address regardless of the `wallet` value in the request. The `stream.wallet` and `session.wallet` fields in the response reflect the claimed wallet.</Note>
 
 <Note>Before checking for a blocking session, the endpoint automatically ends any expired current sessions for the wallet. This means that if a previous session exceeded the 2-hour maximum but was never explicitly stopped, it is cleaned up and the caller can start a new stream without manual intervention.</Note>
+
+<Note>**Admin cooldown bypass:** When the request is made by an authenticated user whose email is on the platform admin allowlist, the 24-hour post-session cooldown is skipped. This lets admins run same-day stream tests. The bypass is tied to the authenticated session — it cannot be triggered from the request body or query parameters. All other access checks (BASEFM token balance, community guest pass, or USDC payment) still apply, and normal DJs remain rate-limited by the cooldown.</Note>
 
 ## Check session status
 
