@@ -48,6 +48,7 @@ Returns all available skills in the marketplace. No authentication required for 
       "userRating": 5,
       "featured": true,
       "code": "",
+      "hasDownload": true,
       "scan": {
         "trustTier": "trusted",
         "riskLevel": "low",
@@ -86,6 +87,7 @@ Returns all available skills in the marketplace. No authentication required for 
 | `skills[].installs` | number | Number of currently enabled installations across all users and agents. Computed from live `InstalledSkill` rows rather than the seeded `downloads` counter. |
 | `skills[].userRating` | number \| null | The authenticated caller's own rating for the skill (1–5), or `null` if they have not rated it. Always `null` when the request is unauthenticated. |
 | `skills[].code` | string | Skill handler code or configuration. Empty string for platform-authored skills without custom code. |
+| `skills[].hasDownload` | boolean | Whether the skill has a downloadable package. `true` when the skill has handler code, an MCP server, or a widget configuration that can be exported via [`GET /api/skills/{skillId}/download`](#download-skill). `false` for catalog-only skills that must be installed via the runtime. |
 | `skills[].scan` | object | Marketplace safety scan result for the skill. See [scan object](#scan-object) for field details. |
 | `categories` | string[] | All distinct skill categories in the marketplace |
 | `featured` | array | Subset of `skills` where `featured` is `true`. Each entry includes the same `rating`, `ratingCount`, `installs`, `userRating`, and `scan` fields. |
@@ -372,6 +374,85 @@ Requires session authentication. Removes a skill from an agent.
 <Note>The uninstall endpoint returns `{ "success": true }` even when no matching installation exists. It does not return a `404` error for missing skill installations, though it does return `404` if the agent itself cannot be found.</Note>
 
 <Note>When a skill is uninstalled, the updated agent state is automatically synced to the OpenClaw gateway. If the sync fails, the skill is still removed from the database — you can retry the sync manually using the [agent sync endpoint](/api-reference/agents#sync-agent-to-gateway).</Note>
+
+## Download skill
+
+```http
+GET /api/skills/{skillId}/download
+```
+
+Requires session authentication. Downloads a skill as a portable JSON manifest. Use this endpoint when a user wants to export a packaged skill (handler code, MCP server config, or widget configuration) instead of installing it directly to a runtime.
+
+The response is delivered as a file download with `Content-Disposition: attachment` and a slugified filename derived from the skill name.
+
+### Path parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `skillId` | string | ID of the skill to download |
+
+### Response
+
+Returns a JSON manifest with `Content-Type: application/json; charset=utf-8` and `Cache-Control: no-store`:
+
+```json
+{
+  "schema": "agentbot.skill.v1",
+  "exportedAt": "2026-04-29T16:52:02.000Z",
+  "skill": {
+    "id": "clx9abc123",
+    "name": "My Custom Skill",
+    "description": "Analyzes track mix quality",
+    "category": "custom",
+    "author": "user@example.com",
+    "code": "// skill handler code",
+    "mcpEnabled": false,
+    "mcpConfig": null,
+    "widgetUrl": null,
+    "widgetConfig": null
+  }
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `schema` | string | Manifest schema identifier. Currently always `agentbot.skill.v1`. |
+| `exportedAt` | string | ISO 8601 timestamp when the manifest was generated |
+| `skill` | object | The exported skill payload |
+| `skill.id` | string | Skill identifier |
+| `skill.name` | string | Display name |
+| `skill.description` | string | Skill description |
+| `skill.category` | string | Skill category |
+| `skill.author` | string | Author name |
+| `skill.code` | string | Skill handler code or configuration |
+| `skill.mcpEnabled` | boolean | Whether the skill bundles an MCP server |
+| `skill.mcpConfig` | object \| null | MCP server configuration, or `null` when not present |
+| `skill.widgetUrl` | string \| null | Widget URL, or `null` when not present |
+| `skill.widgetConfig` | object \| null | Widget configuration, or `null` when not present |
+
+### Response headers
+
+| Header | Value |
+|--------|-------|
+| `Content-Type` | `application/json; charset=utf-8` |
+| `Content-Disposition` | `attachment; filename="<slugified-skill-name>.agentbot-skill.json"` |
+| `Cache-Control` | `no-store` |
+
+The filename slug is derived from the skill name: lowercased, non-alphanumeric characters replaced with `-`, leading and trailing `-` trimmed, and capped at 80 characters. Skills with names that slugify to an empty string fall back to `agentbot-skill`.
+
+### Side effects
+
+Each successful download increments the skill's `downloads` counter by `1`. The increment is best-effort and does not fail the download if the database update errors.
+
+<Note>This endpoint returns the package only when the skill has at least one downloadable component: non-empty handler code, an MCP server (`mcpEnabled: true`), a `widgetUrl`, or a `widgetConfig`. Catalog-only skills without any of these fields return `404` with a message directing the caller to use install instead. Check the `hasDownload` field on the [list skills](#list-skills) response to determine whether a skill supports download.</Note>
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | `Sign in to download skills` — no authenticated session |
+| 404 | Skill not found |
+| 404 | `This skill does not have a downloadable package yet. Use Install to sync it to your runtime.` — the skill exists but has no exportable code, MCP config, or widget |
 
 ## Rate skill
 
