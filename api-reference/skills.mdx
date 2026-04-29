@@ -112,6 +112,14 @@ The auto-created agent uses the following defaults:
 
 <Note>The agent row is created via an upsert, so subsequent skill installations on the same managed runtime reuse the existing row. The same resolution logic applies to the [uninstall endpoint](#uninstall-skill).</Note>
 
+### Idempotency
+
+Installs are idempotent. Repeated installs of the same skill on the same agent do not surface generic failure errors:
+
+- If the skill is already installed and enabled for the agent, the endpoint returns `200 OK` with `alreadyInstalled: true` and does not redeploy.
+- If a previous install record exists but was disabled (for example, after an earlier uninstall), it is re-enabled in place and the response message reflects that the skill was re-enabled.
+- If a concurrent install causes a duplicate-key conflict at the database layer, the endpoint returns `409 Conflict` with `code: "already_installed"` and a clear, human-readable message instead of a generic install failure.
+
 ### Response
 
 When the skill is installed and deployed to the gateway successfully:
@@ -128,6 +136,41 @@ When the skill is installed and deployed to the gateway successfully:
   "runtimeHydrated": false,
   "deployed": true,
   "message": "Skill installed successfully."
+}
+```
+
+When a previously disabled install is re-enabled:
+
+```json
+{
+  "success": true,
+  "installed": {
+    "id": "inst_123",
+    "skillId": "dj-streaming",
+    "agentId": "agent_456",
+    "installedAt": "2026-03-20T00:00:00Z"
+  },
+  "runtimeHydrated": false,
+  "deployed": true,
+  "message": "Skill re-enabled successfully."
+}
+```
+
+When the skill is already installed and enabled for the agent:
+
+```json
+{
+  "success": true,
+  "installed": {
+    "id": "inst_123",
+    "skillId": "dj-streaming",
+    "agentId": "agent_456",
+    "installedAt": "2026-03-20T00:00:00Z"
+  },
+  "alreadyInstalled": true,
+  "runtimeHydrated": false,
+  "deployed": false,
+  "message": "This skill is already installed for this agent."
 }
 ```
 
@@ -157,20 +200,31 @@ When the skill is saved but the agent is offline or the gateway is unreachable:
 | `installed.skillId` | string | ID of the installed skill |
 | `installed.agentId` | string | ID of the agent the skill was installed on |
 | `installed.installedAt` | string | ISO 8601 timestamp of the installation |
+| `alreadyInstalled` | boolean \| undefined | Present and `true` when the skill was already installed and enabled for this agent. The endpoint returns the existing install record without redeploying. Omitted on fresh installs and re-enables. |
 | `runtimeHydrated` | boolean | `true` when the `agentId` resolved to a managed OpenClaw runtime and a backing agent row was auto-created. `false` when the agent already existed in the database. See [managed runtime resolution](#managed-runtime-resolution). |
-| `deployed` | boolean | Whether the skill was successfully deployed to the gateway. `false` when the agent is offline or the gateway is unreachable. |
-| `deployWarning` | string \| undefined | Present only when `deployed` is `false`. Describes why the deployment did not complete. The skill is still saved and will sync automatically when the agent comes back online. |
-| `message` | string | Human-readable summary of the install outcome. Varies based on whether the runtime was hydrated and whether the gateway deploy succeeded. |
+| `deployed` | boolean | Whether the skill was successfully deployed to the gateway. `false` when the agent is offline, the gateway is unreachable, or the skill was already installed (`alreadyInstalled: true`). |
+| `deployWarning` | string \| undefined | Present only when `deployed` is `false` because of a gateway issue. Describes why the deployment did not complete. The skill is still saved and will sync automatically when the agent comes back online. |
+| `message` | string | Human-readable summary of the install outcome. Varies based on whether the install was new, re-enabled, already present, whether the runtime was hydrated, and whether the gateway deploy succeeded. |
 
 ### Errors
 
-| Code | Description |
-|------|-------------|
-| 400 | Missing `skillId` or `agentId` |
-| 400 | Skill blocked by marketplace safety checks. The response includes a `scan` object with the reasons for the block. See [scan object](#scan-object). |
-| 401 | Unauthorized |
-| 404 | Agent not found or skill not found |
-| 500 | Internal error |
+| Code | Error code | Description |
+|------|------------|-------------|
+| 400 | — | Missing `skillId` or `agentId` |
+| 400 | — | Skill blocked by marketplace safety checks. The response includes a `scan` object with the reasons for the block. See [scan object](#scan-object). |
+| 401 | — | Unauthorized |
+| 404 | — | Agent not found or skill not found |
+| 409 | `already_installed` | A duplicate-key conflict was raised when creating the install record. Treat this as a successful install — the skill is already installed for this agent. |
+| 500 | `install_failed` | Internal error. The response includes a generic install failure message suggesting the user refresh and try again, or open the OpenClaw skills manager for the agent. |
+
+Error responses for the 409 and 500 cases include a `code` field alongside `error`:
+
+```json
+{
+  "error": "This skill is already installed for this agent.",
+  "code": "already_installed"
+}
+```
 
 When a skill is blocked by safety checks, the response looks like this:
 
