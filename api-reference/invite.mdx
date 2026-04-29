@@ -103,7 +103,7 @@ Verifies an invite token and returns invite details. No authentication required.
 GET /api/admin/invites
 ```
 
-Returns all invites with summary counts. Requires an authenticated session with an admin email address.
+Returns the most recent invites with summary counts. Requires an authenticated session with an admin email address. Records are persisted in the database, so invites survive process restarts and remain auditable.
 
 ### Response
 
@@ -113,7 +113,9 @@ Returns all invites with summary counts. Requires an authenticated session with 
     {
       "code": "a1b2c3d4...64 hex characters",
       "email": "invitee@example.com",
+      "audience": "headliner",
       "createdAt": "2026-03-25T21:00:00.000Z",
+      "expiresAt": "2026-06-25T21:00:00.000Z",
       "status": "active"
     }
   ],
@@ -124,15 +126,16 @@ Returns all invites with summary counts. Requires an authenticated session with 
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `invites` | array | List of all invites |
+| `invites` | array | List of invites, ordered by creation time descending. Up to 200 entries. |
 | `invites[].code` | string | 64-character hex invite token |
-| `invites[].email` | string | Email the invite was created for |
+| `invites[].email` | string \| null | Email the invite was created for |
+| `invites[].audience` | string | Invite audience tier: `headliner`, `guest`, or `partner` |
 | `invites[].createdAt` | string | ISO 8601 creation timestamp |
-| `invites[].usedAt` | string \| undefined | ISO 8601 timestamp when the invite was used |
-| `invites[].status` | string | One of `active`, `used`, or `expired` |
-| `invites[].userId` | string \| undefined | User ID of the person who redeemed the invite |
-| `total` | number | Total number of invites |
-| `active` | number | Number of currently active invites |
+| `invites[].usedAt` | string \| undefined | ISO 8601 timestamp when the invite was redeemed |
+| `invites[].expiresAt` | string \| undefined | ISO 8601 expiration timestamp. Omitted if the invite has no expiry. |
+| `invites[].status` | string | One of `active`, `used`, or `expired`. An invite is `expired` when `expiresAt` has passed and the invite has not been used. |
+| `total` | number | Total number of invites returned |
+| `active` | number | Number of invites with status `active` |
 
 ### Errors
 
@@ -147,37 +150,52 @@ Returns all invites with summary counts. Requires an authenticated session with 
 POST /api/admin/invites
 ```
 
-Creates an invite for a specific email address. Requires an authenticated session with an admin email address.
+Creates an invite for a specific email address and persists it to the database. Requires an authenticated session with an admin email address.
 
 ### Request body
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `email` | string | Yes | Email address to associate with the invite |
+| `email` | string | Yes | Email address to associate with the invite. Must be a valid email format; lower-cased on save. |
+| `audience` | string | No | Invite audience tier. One of `headliner`, `guest`, or `partner`. Defaults to `headliner`. |
+| `expiresAt` | string | No | ISO 8601 timestamp at which the invite expires. Omit for an invite with no expiry. |
 
 ### Response
 
 ```json
 {
   "success": true,
+  "invite": {
+    "code": "a1b2c3d4...64 hex characters",
+    "email": "invitee@example.com",
+    "audience": "headliner",
+    "createdAt": "2026-03-25T21:00:00.000Z",
+    "expiresAt": "2026-06-25T21:00:00.000Z",
+    "status": "active"
+  },
   "code": "a1b2c3d4...64 hex characters",
   "email": "invitee@example.com",
+  "audience": "headliner",
   "inviteUrl": "https://agentbot.sh/invite?token=a1b2c3d4..."
 }
 ```
 
+Returns HTTP `201 Created` on success.
+
 | Field | Type | Description |
 |-------|------|-------------|
 | `success` | boolean | Whether the invite was created |
-| `code` | string | 64-character hex invite token |
-| `email` | string | Email the invite was created for |
+| `invite` | object | The created invite record. Same shape as items in the [list invites](#list-invites-admin) response. |
+| `code` | string | 64-character hex invite token (mirrors `invite.code`) |
+| `email` | string | Email the invite was created for (mirrors `invite.email`) |
+| `audience` | string | Invite audience tier (mirrors `invite.audience`) |
 | `inviteUrl` | string | Full URL the recipient can use to accept the invite |
 
 ### Errors
 
 | Code | Description |
 |------|-------------|
-| 400 | Email is missing |
+| 400 | Email is missing, not a valid email address, `audience` is not one of the allowed values, or `expiresAt` is not a valid ISO 8601 date |
 | 403 | Not authorized (requires admin) |
 | 500 | Failed to create invite |
 
