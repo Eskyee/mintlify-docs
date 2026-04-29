@@ -483,6 +483,44 @@ export async function POST(request) {
 
 <Warning>The legacy endpoint at `/api/stripe/webhook` has been permanently removed. Both `POST` and `GET` requests return `410 Gone` with `{ "error": "This endpoint is deprecated. Use /api/webhooks/stripe instead." }`. Update your Stripe dashboard webhook URL to the canonical endpoint at `/api/webhooks/stripe`. The previous forwarding behavior has been removed.</Warning>
 
+### Idempotency and duplicate events
+
+Stripe delivers webhook events at-least-once and retries on any non-`2xx` response (and occasionally retries `2xx` responses during scaling events). To prevent duplicate side effects — duplicate receipt emails, duplicate auto-provisioning of paid agents, repeated `+50 GB` storage grants — every delivery is deduplicated by Stripe `event.id` before any handler runs.
+
+The webhook records each `event.id` in a processed-events store **before** executing side effects. If the same event ID is delivered again, the webhook short-circuits and returns `200` without re-running the handler. This makes paid actions at-most-once across retries — the safer default for non-idempotent operations such as storage increments.
+
+**Successful first delivery**
+
+```json
+{
+  "received": true
+}
+```
+
+**Duplicate delivery (event already processed)**
+
+```json
+{
+  "received": true,
+  "deduped": true
+}
+```
+
+The `deduped` flag is `true` only on retried deliveries that Stripe has already sent successfully at least once. Your application code should treat both responses as success.
+
+**Idempotency store outage**
+
+If the processed-events store cannot be reached (database outage), the webhook fails closed with `503` so Stripe retries the delivery. The handler will not run with side effects until the store is reachable.
+
+| Status | Body | Meaning |
+|--------|------|---------|
+| 200 | `{ "received": true }` | First delivery — side effects executed |
+| 200 | `{ "received": true, "deduped": true }` | Duplicate event — already processed, no side effects |
+| 400 | `{ "error": "Invalid signature" }` | Signature verification failed |
+| 503 | `{ "error": "Idempotency store unavailable" }` | Could not record event — Stripe will retry |
+
+<Note>The webhook signing secret is still verified on every request before idempotency is checked. Invalid signatures are rejected with `400` and never written to the processed-events store.</Note>
+
 ### User matching
 
 When processing `checkout.session.completed` events, the webhook identifies the user by the `userId` field in the session metadata. If the `userId` matches an existing user, the subscription is activated for that user.

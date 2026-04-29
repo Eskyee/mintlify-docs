@@ -9,6 +9,8 @@ Schedule recurring prompts for your agents using cron expressions. You can creat
 
 <Note>Scheduled tasks are processed by an inline scheduler that runs inside the API process. The scheduler polls for pending tasks every 30 seconds and executes up to 10 tasks per cycle. Each task is dispatched as an HTTP request to the target agent with a 30-second timeout.</Note>
 
+<Note>Each tick claims due tasks atomically using `SELECT ... FOR UPDATE SKIP LOCKED`. Tasks are only marked `completed` when the agent returns a `2xx` response. Failed dispatches are re-queued with backoff or marked `failed` once `attempts` reaches `maxAttempts`. See [Execution lifecycle](#execution-lifecycle) below.</Note>
+
 <Note>All scheduled task endpoints require session authentication. Tasks are scoped to the authenticated user — you can only manage tasks for agents you own.</Note>
 
 ## List scheduled tasks
@@ -39,6 +41,10 @@ Returns all scheduled tasks for the authenticated user, sorted by creation date 
       "enabled": true,
       "lastRun": "2026-03-22T09:00:00Z",
       "nextRun": "2026-03-23T09:00:00Z",
+      "status": "pending",
+      "attempts": 0,
+      "maxAttempts": 5,
+      "lastError": null,
       "agentId": "agent_456",
       "createdAt": "2026-03-15T12:00:00Z",
       "updatedAt": "2026-03-22T09:00:00Z"
@@ -60,6 +66,10 @@ Returns all scheduled tasks for the authenticated user, sorted by creation date 
 | `enabled` | boolean | Whether the task is active |
 | `lastRun` | string \| null | ISO 8601 timestamp of the last execution |
 | `nextRun` | string \| null | ISO 8601 timestamp of the next scheduled execution |
+| `status` | string | Current execution state. One of `pending`, `running`, `completed`, `failed`. See [Execution lifecycle](#execution-lifecycle). |
+| `attempts` | number | Number of dispatch attempts made for the current run. Reset to `0` on the next scheduled trigger. |
+| `maxAttempts` | number | Maximum dispatch attempts before the task is marked `failed`. Defaults to `5`. |
+| `lastError` | string \| null | Error message from the most recent failed dispatch, or `null` if the last run succeeded. |
 | `agentId` | string | ID of the agent this task targets |
 | `createdAt` | string | ISO 8601 creation timestamp |
 | `updatedAt` | string | ISO 8601 last-updated timestamp |
@@ -188,3 +198,46 @@ Permanently deletes a scheduled task.
 | 401 | Unauthorized — no valid session |
 | 404 | Task not found or does not belong to you |
 | 500 | Task deletion failed |
+
+## Execution lifecycle
+
+Each scheduled task moves through a small state machine driven by the inline scheduler. The `status` field on the task object reflects the current state.
+
+### Status values
+
+| Status | Meaning |
+|--------|---------|
+| `pending` | The task is waiting for its `nextRun` time. The scheduler will pick it up on the next tick after `nextRun <= NOW()`. |
+| `running` | The scheduler has claimed this task and is currently dispatching it to the target agent. |
+| `completed` | The most recent dispatch succeeded — the agent returned a `2xx` response. The task will return to `pending` and `nextRun` will advance to the next cron tick. |
+| `failed` | All `maxAttempts` dispatches failed. The task is no longer retried automatically. Inspect `lastError` and re-enable manually by issuing a `PUT` with `enabled: true` after fixing the underlying issue. |
+
+### Atomic claim
+
+Each scheduler tick claims due tasks using `SELECT ... FOR UPDATE SKIP LOCKED` inside a single atomic statement. This guarantees that overlapping ticks, concurrent replicas, or restarted workers can never claim the same task twice. Up to 10 tasks are claimed per tick.
+
+### Retry behavior
+
+When a dispatch fails — the agent returns a non-`2xx` status, the request times out, or the network call raises — the task is settled as follows:
+
+- If `attempts < maxAttempts`, the task is re-queued. `nextRun` is set to `NOW() + backoff`, `status` is reset to `pending`, and `lastError` is updated. The task is picked up again on a future tick.
+- If `attempts >= maxAttempts`, the task is marked `failed` and stops retrying.
+
+**Backoff schedule** (linear with a hard cap):
+
+| Attempt | Backoff before next retry |
+|---------|---------------------------|
+| 1 | 30 s |
+| 2 | 60 s |
+| 3 | 90 s |
+| 4 | 120 s |
+| 5 | 150 s |
+| 6+ | 300 s (capped) |
+
+The backoff is `min(30 × attempts, 300)` seconds. The default `maxAttempts` is `5`.
+
+### Stale-claim recovery
+
+If a worker dies mid-dispatch (process crash, container restart, network partition), the task can be left in `running` state with no worker driving it forward. On every tick, the scheduler scans for tasks that have been `running` for more than 10 minutes and returns them to `pending` with `nextRun = NOW()`, `lastError = "Recovered after stale worker lock"`. They are then picked up on the next tick.
+
+You should never see a task stuck in `running` for more than 10 minutes during normal operation.
