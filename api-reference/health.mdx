@@ -556,16 +556,16 @@ Receives platform status notifications from Railway's status page and deployment
 
 ### Authentication
 
-When the `RAILWAY_WEBHOOK_SECRET` environment variable is configured, requests must include a valid secret via one of the following methods:
+The `RAILWAY_WEBHOOK_SECRET` environment variable **must** be configured. Every request must include the secret via one of the following methods:
 
 | Method | Location | Description |
 |--------|----------|-------------|
 | Header | `x-railway-secret` | Shared secret in a custom request header |
 | Query parameter | `?secret=` | Shared secret as a URL query parameter |
 
-The secret is verified using a constant-time comparison to prevent timing attacks. When `RAILWAY_WEBHOOK_SECRET` is not configured, requests are accepted without verification (development mode only).
+The secret is verified using a constant-time comparison to prevent timing attacks.
 
-<Warning>You should always configure `RAILWAY_WEBHOOK_SECRET` in production to prevent unauthorized parties from injecting fake status notifications.</Warning>
+<Warning>The webhook fails closed when `RAILWAY_WEBHOOK_SECRET` is not set. Unsigned POSTs are rejected with `503 Service Unavailable` to prevent unauthenticated parties from injecting fake status notifications and poisoning the cached `railway:status:latest` record in Redis.</Warning>
 
 ### Request body
 
@@ -643,7 +643,8 @@ Returned when the request body is not valid JSON:
 |------|-------------|
 | 200 | Webhook payload received and processed |
 | 400 | Invalid JSON payload |
-| 401 | Unauthorized — missing or invalid secret when `RAILWAY_WEBHOOK_SECRET` is configured |
+| 401 | `Unauthorized` — missing or invalid secret |
+| 503 | `Webhook not configured` — the `RAILWAY_WEBHOOK_SECRET` environment variable is not set on the server |
 
 ### Example payloads
 

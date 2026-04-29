@@ -15,7 +15,9 @@ POST /api/init-deep
 
 Traverse the project directory tree and generate `AGENTS.md` files for directories that need them.
 
-<Note>This endpoint requires session-based authentication through NextAuth.</Note>
+<Note>This endpoint requires an authenticated **admin** session. The caller's email must appear in the server's `ADMIN_EMAILS` allowlist; ordinary authenticated users receive `403 Forbidden`.</Note>
+
+<Warning>Init-deep walks the project tree and writes `AGENTS.md` files into arbitrary subdirectories. Admin-only access is enforced to prevent ordinary users from triggering filesystem writes.</Warning>
 
 ### Request body
 
@@ -82,7 +84,8 @@ curl -X POST https://agentbot.sh/api/init-deep \
 
 | Code | Description |
 |------|-------------|
-| 401 | Unauthorized -- no valid session |
+| 401 | `Unauthorized` -- no valid session |
+| 403 | `Forbidden` -- session is valid but the caller is not in the admin allowlist |
 | 500 | `Failed to generate AGENTS.md files` -- an unexpected error prevented the operation. The `detail` field contains the error message. |
 
 ## Check generation status
@@ -91,7 +94,9 @@ curl -X POST https://agentbot.sh/api/init-deep \
 GET /api/init-deep
 ```
 
-Check which priority directories already have an `AGENTS.md` file. This endpoint does not require authentication.
+Check which priority directories already have an `AGENTS.md` file.
+
+<Note>This endpoint requires an authenticated **admin** session. The caller's email must appear in the server's `ADMIN_EMAILS` allowlist; ordinary authenticated users receive `403 Forbidden`.</Note>
 
 ### Query parameters
 
@@ -143,4 +148,6 @@ The endpoint checks these directories by default:
 
 | Code | Description |
 |------|-------------|
+| 401 | `Unauthorized` -- no valid session |
+| 403 | `Forbidden` -- session is valid but the caller is not in the admin allowlist |
 | 500 | `Failed to check status` -- an unexpected error occurred |
