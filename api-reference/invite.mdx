@@ -76,25 +76,29 @@ Verifies an invite token and returns invite details. No authentication required.
 ```json
 {
   "valid": true,
-  "plan": "solo"
+  "plan": "headliner",
+  "audience": "headliner",
+  "email": "invitee@example.com"
 }
 ```
 
 | Field | Type | Description |
 |-------|------|-------------|
 | `valid` | boolean | Whether the token is valid |
-| `plan` | string | Plan tier assigned to the invite. Currently always `"solo"`. |
+| `plan` | string | Plan tier assigned to the invite. Returns `"headliner"` when the invite audience is `headliner`, otherwise `"solo"`. |
+| `audience` | string \| undefined | Invite audience tier: `headliner`, `guest`, or `partner`. Omitted when the invite was verified by token format alone. |
+| `email` | string \| null \| undefined | Email associated with the invite, when stored. Omitted when the invite was verified by token format alone. |
 | `note` | string \| undefined | Present only when the invite was verified by token format alone (database model pending). Omitted when the invite was verified against the database. |
 
-<Note>The `email` field was removed from the verify response. The invite codes table does not store an email column. If you previously relied on this field, use a separate user lookup after verification.</Note>
+<Note>The branded headliner landing page at `/basefm/headliner` calls this endpoint to confirm the invite before pointing DJs to redemption and the DJ stream panel. It reads `audience` and `email` from the response to display issued-to details.</Note>
 
 ### Errors
 
 | Code | Description |
 |------|-------------|
 | 400 | Token is missing, not a string, or not in valid 64-character hex format |
-| 404 | Invite not found or expired |
-| 410 | Invite has already been used |
+| 404 | Invite not found |
+| 410 | Invite has already been used or has expired |
 | 500 | Verification failed |
 
 ## List invites (admin)
