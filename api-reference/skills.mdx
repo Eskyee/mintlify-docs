@@ -42,7 +42,10 @@ Returns all available skills in the marketplace. No authentication required for 
       "category": "streaming",
       "author": "Agentbot",
       "downloads": 150,
-      "rating": 5.0,
+      "rating": 4.8,
+      "ratingCount": 12,
+      "installs": 47,
+      "userRating": 5,
       "featured": true,
       "code": "",
       "scan": {
@@ -77,11 +80,18 @@ Returns all available skills in the marketplace. No authentication required for 
 | Field | Type | Description |
 |-------|------|-------------|
 | `skills` | array | List of skill objects matching the query filters |
+| `skills[].downloads` | number | Cumulative install counter on the skill record. Maintained for backwards compatibility — prefer `installs` for live engagement counts. |
+| `skills[].rating` | number | Average user-submitted rating, rounded to one decimal place. Derived from real ratings posted via [`POST /api/skills/{skillId}/rating`](#rate-skill). Returns `0` when no users have rated the skill yet. |
+| `skills[].ratingCount` | number | Number of unique users who have submitted a rating for the skill. |
+| `skills[].installs` | number | Number of currently enabled installations across all users and agents. Computed from live `InstalledSkill` rows rather than the seeded `downloads` counter. |
+| `skills[].userRating` | number \| null | The authenticated caller's own rating for the skill (1–5), or `null` if they have not rated it. Always `null` when the request is unauthenticated. |
 | `skills[].code` | string | Skill handler code or configuration. Empty string for platform-authored skills without custom code. |
 | `skills[].scan` | object | Marketplace safety scan result for the skill. See [scan object](#scan-object) for field details. |
 | `categories` | string[] | All distinct skill categories in the marketplace |
-| `featured` | array | Subset of `skills` where `featured` is `true`. Each entry includes the same `scan` object. |
+| `featured` | array | Subset of `skills` where `featured` is `true`. Each entry includes the same `rating`, `ratingCount`, `installs`, `userRating`, and `scan` fields. |
 | `installedSkillIds` | string[] | IDs of skills installed and enabled for the authenticated user and the specified `agentId`. Returns an empty array when no session is present or `agentId` is omitted. |
+
+<Note>The `rating`, `ratingCount`, `installs`, and `userRating` fields are derived from live engagement records, not the seeded `Skill` columns. New skills with no user ratings return `rating: 0` and `ratingCount: 0`. If the database is unreachable and the endpoint falls back to the default catalog, all four fields are returned as `0` (or `null` for `userRating`).</Note>
 
 ## Install skill
 
@@ -362,6 +372,57 @@ Requires session authentication. Removes a skill from an agent.
 <Note>The uninstall endpoint returns `{ "success": true }` even when no matching installation exists. It does not return a `404` error for missing skill installations, though it does return `404` if the agent itself cannot be found.</Note>
 
 <Note>When a skill is uninstalled, the updated agent state is automatically synced to the OpenClaw gateway. If the sync fails, the skill is still removed from the database — you can retry the sync manually using the [agent sync endpoint](/api-reference/agents#sync-agent-to-gateway).</Note>
+
+## Rate skill
+
+```http
+POST /api/skills/{skillId}/rating
+```
+
+Requires session authentication. Submits or updates the authenticated user's rating for a skill. Each user has at most one rating per skill — re-posting overwrites the previous rating in place.
+
+After the rating is recorded, the skill's average rating is recomputed from all `SkillRating` rows and persisted on the skill record so it is reflected immediately in subsequent `GET /api/skills` responses.
+
+### Path parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `skillId` | string | ID of the skill to rate |
+
+### Request body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `rating` | number | Yes | Whole number from `1` to `5`. Decimal values, values outside this range, and non-numeric values are rejected. |
+
+### Response
+
+```json
+{
+  "success": true,
+  "skillId": "clx9abc123",
+  "userRating": 5,
+  "rating": 4.8,
+  "ratingCount": 12
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `success` | boolean | Always `true` on a successful rating |
+| `skillId` | string | The skill that was rated |
+| `userRating` | number | The rating the authenticated user just submitted (1–5) |
+| `rating` | number | New average rating across all users, rounded to one decimal place. Returns `0` when no ratings exist (this can only happen if the rating was rejected before reaching this point). |
+| `ratingCount` | number | Total number of unique users who have rated the skill, including the current submission |
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | `rating` is missing, not an integer, or outside the range `1`–`5` |
+| 401 | Unauthorized — sign in to rate skills |
+| 404 | Skill not found |
+| 500 | Failed to save rating |
 
 ## Verify skill
 
