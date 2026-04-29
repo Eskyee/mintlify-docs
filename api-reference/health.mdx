@@ -122,7 +122,7 @@ No authentication required. Checks connectivity to backend services and returns 
 {
   "services": [
     { "name": "Agentbot API", "status": "ok", "detail": "ok" },
-    { "name": "Tempo Soul", "status": "ok", "detail": "ok" },
+    { "name": "Borg-7139", "status": "ok", "detail": "active" },
     { "name": "x402 Gateway", "status": "ok", "detail": "ok" }
   ],
   "timestamp": "2026-04-02T12:00:00.000Z"
@@ -134,10 +134,10 @@ No authentication required. Checks connectivity to backend services and returns 
 | `services` | array | List of monitored services |
 | `services[].name` | string | Service display name |
 | `services[].status` | string | Service status: `ok`, `degraded`, or `down` |
-| `services[].detail` | string | Additional detail. Contains the HTTP status code when degraded, or an error message when down. |
+| `services[].detail` | string | Additional detail. Contains a normalized status string from the probed service body when `ok` (for example, `active`, `dormant`, `ready`, `inactive`, or a build identifier), an HTTP status code when degraded, or an error label when down. |
 | `timestamp` | string | ISO 8601 timestamp of the health check |
 
-The `status` field for each service reflects the result of an HTTP health probe with a 4-second timeout:
+The `status` field for each service reflects the result of an HTTP health probe with a 6-second timeout per candidate URL. When all candidates fail, the primary URL is retried once with an 8-second timeout for diagnostic detail:
 
 | Value | Condition |
 |-------|-----------|
@@ -145,7 +145,9 @@ The `status` field for each service reflects the result of an HTTP health probe 
 | `degraded` | Health endpoint returned a non-2xx HTTP status |
 | `down` | Health endpoint was unreachable or timed out |
 
-<Note>The dashboard health endpoint probes the Tempo Soul service at `/soul/status` (not `/health`). A host is considered healthy when `/soul/status` returns a JSON object containing an `active` field within 4 seconds. The Tempo Soul's generic `/health` endpoint may return HTTP `503` until external dependencies are satisfied (connected peers, funded wallets, required environment variables), but the dashboard bypasses this by using the more reliable `/soul/status` path. Railway uses a TCP port check on port `4023` instead of an HTTP health check for this service.</Note>
+When a service is `down`, the `detail` field contains a normalized error label rather than the platform's raw error string. Possible values include `timeout (8s)`, `dns error`, `connection refused`, `connection reset`, `socket error`, or `unreachable`.
+
+<Note>The Borg-7139 (formerly Tempo Soul) probe attempts the configured `SOUL_SERVICE_URL` first at `/soul/status`, then falls back through `/health`, `/healthz`, and `/readyz` on the same host before trying `/soul/status` and `/health` on the canonical `borg-0-production-7139.up.railway.app` host. This fallback chain ensures that a stale `SOUL_SERVICE_URL` value does not surface a misleading `HTTP 404` while the canonical Borg host is healthy. A host is considered healthy when any candidate returns HTTP 2xx; the response body is parsed for an `active`, `ready`, `status`, or `build` field to populate the `detail`. Railway uses a TCP port check on port `4023` instead of an HTTP health check for this service.</Note>
 
 | Code | Description |
 |------|-------------|
