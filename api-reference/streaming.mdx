@@ -120,10 +120,13 @@ When the response has `"availability": "degraded"`, it may also include an `erro
 POST /api/basefm/streams
 ```
 
-Creates a new Mux live stream. Access is granted if the caller meets either of the following conditions:
+Creates a new Mux live stream. Access is granted if the caller meets any of the following conditions:
 
-- The wallet holds at least **1,250,000 BASEFM** tokens on the Base network, or
-- The caller has an active **community guest pass** (available to Builder and Whale tier claimed holders via the community program)
+- The wallet holds at least **2,500,000 BASEFM** tokens on the Base network, or
+- The caller has an active **community guest pass** (available to Builder and Whale tier claimed holders via the community program), or
+- The caller pays a **$5 USDC** session fee on Base by including a verifying `txHash` in the request
+
+<Note>Mux live stream creation only arms the stream — it is not actually live until OBS or ffmpeg connects to the RTMP ingest. Use the [Stream status](#stream-status) endpoint to confirm ingest is up.</Note>
 
 <Note>The `wallet` address used for BASEFM token verification must be a Coinbase Smart Wallet on Base. The platform enforces `smartWalletOnly` as its connector policy — injected wallets (such as MetaMask) are not supported for DJ streaming.</Note>
 
@@ -132,9 +135,11 @@ Creates a new Mux live stream. Access is granted if the caller meets either of t
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `wallet` | string | Yes | Wallet address of the DJ. Used for BASEFM token balance verification. |
-| `name` | string | No | DJ display name (default: `Anonymous DJ`) |
+| `name` | string | No | DJ display name (default: `DJ`) |
+| `city` | string | No | City or location label for the DJ. Stored in session metadata and displayed on the dashboard. Trimmed and capped at 80 characters. |
+| `txHash` | string | Conditional | Transaction hash for the $5 USDC paid session. Required when the caller does not hold the BASEFM token threshold and does not have a community guest pass. The transfer must be to the platform wallet for the full fee from the request `wallet`. |
 
-### Response (200)
+### Response (200) — new stream
 
 ```json
 {
@@ -147,83 +152,91 @@ Creates a new Mux live stream. Access is granted if the caller meets either of t
     "rtmpUrl": "rtmp://global-live.mux.com:5222/app",
     "fullRtmpUrl": "rtmp://global-live.mux.com:5222/app/sk-ab12-cd34-ef56",
     "playbackId": "xYz789",
-    "status": "created",
-    "accessGrantedBy": "basefm"
+    "status": "created"
   },
   "session": {
-    "id": "sess_abc123",
+    "id": 42,
     "wallet": "0x1234...abcd",
     "maxDuration": 7200,
     "remaining": 7200,
     "expiresAt": "2026-04-11T02:00:00.000Z",
     "accessToken": "eyJhbGciOiJIUzI1NiIs..."
   },
-  "obsSettings": {
-    "server": "rtmp://global-live.mux.com:5222/app",
-    "streamKey": "sk-ab12-cd34-ef56",
-    "recommended": {
-      "video": {
-        "resolution": "1280x720 (720p) or 1920x1080 (1080p)",
-        "bitrate": "2500-4500 kbps",
-        "framerate": "30 fps",
-        "encoder": "H.264",
-        "keyframeInterval": "2 seconds"
-      },
-      "audio": {
-        "bitrate": "256-320 kbps",
-        "encoder": "AAC",
-        "sampleRate": "44.1 kHz",
-        "channels": "Stereo"
-      }
-    }
-  },
-  "streamType": "video+audio",
-  "playback": {
-    "hls": "https://stream.mux.com/xYz789.m3u8",
-    "web": "https://stream.mux.com/xYz789.html"
-  },
   "ffmpeg": {
-    "command": "ffmpeg -re -loop 1 -i \"https://...basefm-artwork.jpg\" -f lavfi -i anullsrc=channel_layout=stereo:sample_rate=44100 -c:v libx264 -preset veryfast -tune stillimage -pix_fmt yuv420p -vf \"scale=1280:720:...\" ... -f flv rtmp://global-live.mux.com:5222/app/sk-ab12-cd34-ef56",
-    "inputHint": "Uses the default baseFM artwork image and generated silent audio. Swap the image URL if you want a different visual."
+    "command": "ffmpeg -re -i \"/path/to/set.mp3\" -c:a aac -b:a 128k -ar 44100 -ac 2 -f flv \"rtmp://global-live.mux.com:5222/app/sk-ab12-cd34-ef56\"",
+    "audioOnlyCommand": "ffmpeg -re -i \"/path/to/set.mp3\" -c:a aac -b:a 128k -ar 44100 -ac 2 -f flv \"rtmp://global-live.mux.com:5222/app/sk-ab12-cd34-ef56\"",
+    "playlistCommand": "ffmpeg -re -f concat -safe 0 -i \"/tmp/basefm-playlist.txt\" -c:a aac -b:a 128k -ar 44100 -ac 2 -f flv \"rtmp://global-live.mux.com:5222/app/sk-ab12-cd34-ef56\"",
+    "artworkCommand": "ffmpeg -re -loop 1 -i \"https://.../basefm-artwork.jpg\" -f lavfi -i anullsrc=... -c:v libx264 -preset veryfast -tune stillimage -pix_fmt yuv420p -vf \"scale=1280:720:...\" -g 60 -r 30 -b:v 3500k -maxrate 4500k -bufsize 7000k -c:a aac -b:a 256k -ar 44100 -ac 2 -f flv \"rtmp://global-live.mux.com:5222/app/sk-ab12-cd34-ef56\"",
+    "inputHint": "Default command is audio-only. Use playlistCommand for an ffmpeg concat playlist, or artworkCommand when the DJ explicitly wants a video track with the baseFM standby image."
+  }
+}
+```
+
+### Response (200) — recovery (existing session)
+
+When the authenticated caller already owns a non-expired current session, the endpoint returns the existing stream control payload instead of creating a duplicate stream. This lets DJs recover after a refresh without losing their controls or accidentally creating a new stream.
+
+```json
+{
+  "success": true,
+  "reconnected": true,
+  "stream": {
+    "id": "aB1cD2eF3g",
+    "name": "DJ Rave",
+    "wallet": "0x1234...abcd",
+    "streamKey": "sk-ab12-cd34-ef56",
+    "rtmpUrl": "rtmp://global-live.mux.com:5222/app",
+    "fullRtmpUrl": "rtmp://global-live.mux.com:5222/app/sk-ab12-cd34-ef56",
+    "playbackId": "xYz789",
+    "status": "active"
+  },
+  "ffmpeg": { "command": "...", "audioOnlyCommand": "...", "playlistCommand": "...", "artworkCommand": "...", "inputHint": "..." },
+  "session": {
+    "id": 42,
+    "wallet": "0x1234...abcd",
+    "maxDuration": 7200,
+    "remaining": 5400,
+    "expiresAt": "2026-04-11T02:00:00.000Z",
+    "accessToken": "eyJhbGciOiJIUzI1NiIs..."
   }
 }
 ```
 
 | Field | Type | Description |
 |-------|------|-------------|
+| `success` | boolean | Always `true` |
+| `reconnected` | boolean | Present and `true` only on a recovery response, when the authenticated caller already owns a non-expired current session and is being handed the existing stream controls. |
 | `stream.id` | string | Mux live stream ID |
+| `stream.name` | string | DJ display name |
+| `stream.wallet` | string | Wallet for the session |
 | `stream.streamKey` | string | RTMP stream key |
 | `stream.rtmpUrl` | string | RTMP ingest server URL |
-| `stream.fullRtmpUrl` | string | Full RTMP URL including stream key (for OBS) |
+| `stream.fullRtmpUrl` | string | Full RTMP URL including stream key (for OBS or ffmpeg) |
 | `stream.playbackId` | string \| null | Mux playback ID for viewers |
-| `stream.accessGrantedBy` | string | How access was granted. Either `basefm` (token balance) or `community-pass` (Builder/Whale community program perk). |
-| `session.id` | string | DJ session record ID |
+| `stream.status` | string | Mux or session status (e.g. `created`, `active`) |
+| `session.id` | number | DJ session record ID |
 | `session.wallet` | string | The wallet address used for the session. When access is granted via a community guest pass, this is the claimed Agentbot wallet (not the wallet sent in the request). |
 | `session.maxDuration` | number | Maximum session duration in seconds (7200 = 2 hours) |
 | `session.remaining` | number | Remaining seconds in the session |
 | `session.expiresAt` | string | ISO 8601 timestamp when the session expires |
 | `session.accessToken` | string | A signed session token that can be used to authenticate subsequent `GET` and `DELETE` requests on this session without requiring a full user session. Valid for the session duration plus a 1-hour grace period. |
-| `obsSettings.recommended.video` | object | Recommended OBS video encoding settings |
-| `obsSettings.recommended.video.resolution` | string | Recommended resolution (`1280x720` or `1920x1080`) |
-| `obsSettings.recommended.video.bitrate` | string | Recommended video bitrate range |
-| `obsSettings.recommended.video.framerate` | string | Recommended frame rate |
-| `obsSettings.recommended.video.encoder` | string | Recommended video encoder (`H.264`) |
-| `obsSettings.recommended.video.keyframeInterval` | string | Recommended keyframe interval |
-| `obsSettings.recommended.audio` | object | Recommended OBS audio encoding settings |
-| `streamType` | string | Type of stream. Currently always `video+audio`. |
-| `playback.hls` | string \| null | HLS playlist URL for playback |
-| `playback.web` | string \| null | Embeddable web player URL |
-| `ffmpeg.command` | string | A pre-built ffmpeg command for autonomous agent broadcasting. Uses the default baseFM artwork image and generates silent audio, so no external media source is required. Replace the image URL to use a different visual. |
-| `ffmpeg.inputHint` | string | Human-readable hint explaining how to use the ffmpeg command |
+| `ffmpeg.command` | string | Default ffmpeg command (audio-only). Suitable for unattended agent streaming with no video track. |
+| `ffmpeg.audioOnlyCommand` | string | Audio-only ffmpeg command. Encodes a single audio file to the Mux RTMP endpoint. |
+| `ffmpeg.playlistCommand` | string | ffmpeg concat playlist command. Use for DJs who provide an ffmpeg `concat` playlist file. |
+| `ffmpeg.artworkCommand` | string | Artwork-and-video ffmpeg command. Use when the DJ explicitly wants a video track with the default baseFM standby image. |
+| `ffmpeg.inputHint` | string | Human-readable hint explaining when to use each command. |
+
+<Note>The deprecated `stream.accessGrantedBy`, `obsSettings`, `streamType`, and `playback` response fields have been removed. Use the [Stream status](#stream-status) endpoint to read playback URLs and Mux state during a session.</Note>
 
 ### Errors
 
 | Code | Description |
 |------|-------------|
-| 400 | Wallet address required |
-| 403 | Insufficient BASEFM tokens or community guest pass. The wallet must hold at least 1,250,000 BASEFM, or the authenticated user must have a Builder or Whale tier community claim. |
+| 400 | Wallet address required, or USDC payment verification failed (the response `error` includes the verification reason) |
+| 402 | Payment required. The caller does not hold the BASEFM token threshold and has no community guest pass, and no `txHash` was provided. The response includes `fee` (USDC) and a human-readable `message`. |
 | 403 | Community guest pass only works with the claimed Agentbot wallet. Returned when the caller has a community pass but the `wallet` in the request does not match their claimed wallet address. The response includes the expected `wallet`. |
-| 409 | A non-expired current session already exists for this wallet. The response includes a `remaining` field (seconds left) and the `sessionId`. |
+| 409 | `active_session_exists` — a non-expired current session already exists for this wallet and the authenticated caller does not own it. Owners receive the recovery response above instead. |
+| 429 | `cooldown_active` — the wallet ended a previous session less than 24 hours ago and is in the cooldown window. |
 | 500 | Mux is not configured or stream creation failed |
 
 <Note>When access is granted via a community guest pass (not BASEFM tokens), the stream is created using the caller's claimed Agentbot wallet address regardless of the `wallet` value in the request. The `stream.wallet` and `session.wallet` fields in the response reflect the claimed wallet.</Note>
@@ -262,10 +275,24 @@ The endpoint accepts two forms of authentication, checked in this order:
 ```json
 {
   "active": true,
+  "stream": {
+    "id": "aB1cD2eF3g",
+    "name": "DJ Rave",
+    "wallet": "0x1234...abcd",
+    "streamKey": "sk-ab12-cd34-ef56",
+    "rtmpUrl": "rtmp://global-live.mux.com:5222/app",
+    "fullRtmpUrl": "rtmp://global-live.mux.com:5222/app/sk-ab12-cd34-ef56",
+    "playbackId": "xYz789",
+    "status": "active",
+    "accessGrantedBy": "basefm",
+    "ffmpeg": { "command": "...", "audioOnlyCommand": "...", "playlistCommand": "...", "artworkCommand": "...", "inputHint": "..." }
+  },
+  "ffmpeg": { "command": "...", "audioOnlyCommand": "...", "playlistCommand": "...", "artworkCommand": "...", "inputHint": "..." },
   "session": {
-    "id": "sess_abc123",
+    "id": 42,
     "wallet": "0x1234...abcd",
     "djName": "DJ Rave",
+    "muxStreamId": "aB1cD2eF3g",
     "playbackId": "xYz789",
     "startedAt": "2026-04-11T00:00:00.000Z",
     "elapsed": 1800,
@@ -281,18 +308,31 @@ The endpoint accepts two forms of authentication, checked in this order:
 ```json
 {
   "active": false,
-  "message": "No active session. Start a new stream!"
+  "message": "No active session."
 }
 ```
 
-If the session has expired (exceeded the 2-hour maximum), it is automatically ended and the response returns `active: false`.
+If the session has expired (exceeded the 2-hour maximum), it is automatically ended and the response returns `active: false` with a `"Session expired."` message.
 
 | Field | Type | Description |
 |-------|------|-------------|
 | `active` | boolean | Whether the caller has an active session |
-| `session.id` | string | Session record ID |
+| `stream` | object | The full stream control payload for the active session, mirroring the [Create live stream](#create-live-stream) response. Use this to recover stream controls after a refresh without creating a new stream. |
+| `stream.id` | string | Mux live stream ID |
+| `stream.name` | string | DJ display name |
+| `stream.wallet` | string | Wallet for the session |
+| `stream.streamKey` | string \| null | RTMP stream key (resolved from Mux when reachable) |
+| `stream.rtmpUrl` | string | RTMP ingest server URL |
+| `stream.fullRtmpUrl` | string \| null | Full RTMP URL including stream key, when the stream key is available |
+| `stream.playbackId` | string \| null | Mux playback ID |
+| `stream.status` | string | Mux or session status (e.g. `active`, `idle`) |
+| `stream.accessGrantedBy` | string \| null | How access was granted: `basefm` (token balance), `community-pass` (Builder/Whale community program perk), or `paid` (USDC session fee) |
+| `stream.ffmpeg` | object | The ffmpeg command templates for the session. See [Create live stream](#create-live-stream) for field shape. |
+| `ffmpeg` | object | Convenience copy of `stream.ffmpeg` at the top level. |
+| `session.id` | number | Session record ID |
 | `session.wallet` | string | Wallet address for the session |
 | `session.djName` | string \| null | DJ display name |
+| `session.muxStreamId` | string | Mux live stream ID stored on the session |
 | `session.playbackId` | string \| null | Mux playback ID |
 | `session.startedAt` | string | ISO 8601 timestamp when the session started |
 | `session.elapsed` | number | Seconds elapsed since the session started |
@@ -315,7 +355,7 @@ If the session has expired (exceeded the 2-hour maximum), it is automatically en
 DELETE /api/basefm/streams
 ```
 
-Ends all current DJ sessions for the authenticated caller's wallet. Both `active` and `live` sessions are ended and the corresponding Mux live streams are retired. By default, replay assets are deleted to avoid ongoing storage costs. Pass `archive: true` in the request body to preserve replay assets for paid archive storage.
+Ends the authenticated caller's current DJ session and retires the corresponding Mux live stream. Replay assets are deleted by default to avoid ongoing storage costs.
 
 Uses the same [authentication](#authentication) as the check session endpoint (session token or user session).
 
@@ -331,73 +371,32 @@ Uses the same [authentication](#authentication) as the check session endpoint (s
 |--------|----------|-------------|
 | `x-basefm-session` | No | Session access token. Alternative to the `sessionToken` query parameter. |
 
-### Request body
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `archive` | boolean | No | When `true`, preserves Mux replay assets for paid archive storage. Requires the owning logged-in Agentbot account, configured archive pricing, and sufficient credits. Defaults to `false`. |
-
-<Note>The request body is optional. When omitted or when `archive` is `false`, the session ends normally and all replay assets are deleted.</Note>
-
-### Response (default — no archive)
+### Response
 
 ```json
 {
   "success": true,
-  "ended": 2,
-  "muxStopped": true,
-  "archived": false,
-  "archiveCreditCost": null,
-  "deletedAssetIds": ["asset_abc123"],
-  "retainedAssetIds": [],
-  "message": "Session ended. Live stream and recent Mux assets deleted to avoid archive cost."
+  "message": "Session ended"
 }
 ```
 
-### Response (archive)
-
-```json
-{
-  "success": true,
-  "ended": 1,
-  "muxStopped": true,
-  "archived": true,
-  "archiveCreditCost": 10,
-  "deletedAssetIds": [],
-  "retainedAssetIds": ["asset_abc123"],
-  "message": "Session archived. Live stream retired and Mux assets kept for paid archive storage."
-}
-```
-
-If no active session exists, `ended` is `0` and `message` is `"No active session found"`.
+If no active session exists, the endpoint still returns `success: true` with `"message": "No session"`.
 
 | Field | Type | Description |
 |-------|------|-------------|
 | `success` | boolean | Always `true` |
-| `ended` | number | Number of sessions ended. Can be greater than `1` when the wallet has multiple current sessions (for example, a stale `active` session and a `live` session). `0` when no current sessions exist. |
-| `muxStopped` | boolean | Whether all underlying Mux live streams were successfully retired. |
-| `archived` | boolean | Whether replay assets were preserved for archive storage. |
-| `archiveCreditCost` | number \| null | The number of credits charged for archive retention. `null` when `archived` is `false`. |
-| `deletedAssetIds` | array | IDs of Mux assets that were deleted during stream retirement. Empty when archiving. |
-| `retainedAssetIds` | array | IDs of Mux assets that were preserved. Empty when not archiving. |
 | `message` | string | Human-readable status message describing the outcome. |
 
-<Note>When archive is requested but Mux cleanup fails, any credits that were debited are automatically refunded.</Note>
+<Warning>**Deprecated:** The `archive` request body field and the `ended`, `muxStopped`, `archived`, `archiveCreditCost`, `deletedAssetIds`, and `retainedAssetIds` response fields are no longer returned. The DJ archive flow is currently unavailable through this endpoint — replay assets are always cleaned up when a session ends.</Warning>
 
 ### Errors
 
 | Code | Description |
 |------|-------------|
 | 401 | Unauthorized — no valid session token or user session |
-| 402 | Insufficient credits to save a DJ archive. The response includes the required `archiveCreditCost`. |
-| 403 | Forbidden — the session token does not match the session owner, or archive was requested by a user who does not own the session |
-| 503 | Archive is temporarily unavailable because archive pricing has not been configured on the platform |
+| 403 | Forbidden — the session token does not match the session owner |
 
 <Warning>The `wallet` query parameter is no longer used. Session lookup is now based on the authenticated caller (session token or user session). Requests using the old `?wallet=` parameter are ignored — you must provide authentication instead.</Warning>
-
-<Note>When a wallet has accumulated multiple current sessions (for example, due to a previous lifecycle inconsistency), this endpoint cleans up all of them in a single call and retires each corresponding Mux live stream.</Note>
-
-<Warning>Replay retention is opt-in and requires payment. By default, ending a session deletes all Mux replay assets to prevent unintended storage costs. To preserve replays, you must explicitly pass `archive: true` and have sufficient credits.</Warning>
 
 ## Stream status
 
