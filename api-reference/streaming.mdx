@@ -25,7 +25,13 @@ A DJ session transitions through several statuses during its lifecycle. The `act
 GET /api/basefm/live
 ```
 
-Returns all currently active Mux live streams. No authentication required. When Mux credentials are unavailable or the Mux API returns an error, the endpoint falls back to cached session data from the database and returns a degraded response.
+Returns all currently active Mux live streams. No authentication required.
+
+The `availability` field reflects the station state:
+
+- `live` — Mux is healthy and at least one DJ is currently broadcasting.
+- `idle` — Mux is healthy but no DJs are live (for example, after the most recent set ended).
+- `degraded` — Mux credentials are missing or the Mux API returned an error. The response falls back to cached session data from the database.
 
 When Mux is available, active streams are enriched with metadata from the corresponding DJ session record (matched by stream ID). This means fields like `name`, `wallet`, `playbackId`, and `startedAt` can resolve from session data even when Mux stream metadata is sparse or missing.
 
@@ -93,9 +99,9 @@ When Mux is available, active streams are enriched with metadata from the corres
 | `djs[].embedUrl` | string \| null | Embeddable player URL |
 | `count` | number | Number of live DJs |
 | `primaryDj` | object \| null | The first DJ in the list, or `null` when no DJs are live |
-| `availability` | string | Data source status: `live` (real-time from Mux) or `degraded` (served from session cache) |
+| `availability` | string | Stream availability and data source status. One of `live` (at least one DJ is broadcasting, served from Mux), `idle` (Mux is healthy but no DJ is currently live — for example, after a set ended), or `degraded` (Mux API or credentials are unavailable and the response is served from the session cache). |
 | `distribution` | object | Distribution state for the baseFM station. See [distribution](#get-distribution-state) for the full shape. |
-| `distribution.origin.status` | string | Origin stream status: `active`, `degraded`, or `idle` |
+| `distribution.origin.status` | string | Origin stream status. `active` (a DJ is broadcasting), `idle` (Mux is healthy but no DJ is live — the normal off-air state), or `degraded` (Mux API or credentials are unavailable). |
 | `distribution.origin.playbackId` | string \| null | Mux playback ID for the origin stream |
 | `distribution.origin.hlsUrl` | string \| null | HLS URL for the origin stream |
 | `distribution.firstParty` | object | Health status of the first-party baseFM page |
@@ -104,7 +110,7 @@ When Mux is available, active streams are enriched with metadata from the corres
 | `distribution.requiredRelayStatus` | string | Aggregated status of all required relays |
 | `distribution.overallStatus` | string | Overall distribution health across origin, first-party page, and relays |
 
-When the response has `"availability": "degraded"`, it may also include an `error` field with a human-readable description of why the Mux API could not be reached.
+When the response has `"availability": "degraded"`, it may also include an `error` field with a human-readable description of why the Mux API could not be reached. An `"availability": "idle"` response is the normal off-air state and does not include an `error` field.
 
 ### Errors
 
@@ -565,7 +571,11 @@ GET /api/basefm/distribution
 
 Returns the current distribution state for the baseFM station, including the origin stream health, first-party page status, and relay destination statuses. No authentication required.
 
-When Mux credentials are unavailable or the Mux API returns an error, the endpoint falls back to cached session data and returns a degraded distribution state.
+The `distribution.origin.status` field reflects the live origin state:
+
+- `active` — Mux is healthy and a DJ is currently broadcasting.
+- `idle` — Mux is healthy but no DJ is live (for example, after a set ended). This is the normal off-air state and does not indicate a problem.
+- `degraded` — Mux credentials are missing or the Mux API returned an error. The response falls back to cached session data.
 
 ### Response
 
@@ -606,7 +616,7 @@ When Mux credentials are unavailable or the Mux API returns an error, the endpoi
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `distribution.origin.status` | string | Origin stream status: `active`, `degraded`, or `idle` |
+| `distribution.origin.status` | string | Origin stream status. `active` (a DJ is broadcasting), `idle` (Mux is healthy but no DJ is live — the normal off-air state), or `degraded` (Mux API or credentials are unavailable). |
 | `distribution.origin.playbackId` | string \| null | Mux playback ID for the origin stream |
 | `distribution.origin.hlsUrl` | string \| null | HLS URL for the origin stream |
 | `distribution.firstParty.status` | string | First-party page health: `pending`, `healthy`, `degraded`, `failed`, or `stopped` |
