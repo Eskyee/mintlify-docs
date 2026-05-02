@@ -24,7 +24,7 @@ The endpoint probes each service concurrently using an 8-second per-service time
 | Agentbot API | `https://agentbot-prod-production.up.railway.app/health` |
 | Agentbot Web | `https://agentbot.sh` |
 | x402 Gateway | `https://x402-gateway-production-a474.up.railway.app/health` |
-| Borg-0 | `https://borg-0-production.up.railway.app/health` |
+| Borg-0 | `https://agentbot-agent-8711c7cdf8242b25-production.up.railway.app/health` |
 
 <Note>The daily brief probes Borg-0 at `/health`, which is the generic health endpoint on the x402-node binary. This endpoint may return HTTP `503` until external dependencies are satisfied (connected peers, funded wallets, required environment variables). Railway uses a TCP port check on port `4023` instead of an HTTP health check for this service, so the process is considered healthy as long as it is accepting TCP connections. When the daily brief probes `/health` over HTTP, it may report the service as `degraded` even though the underlying process is running and reachable. This is expected behavior during startup or when external dependencies are not yet available. The [dashboard health endpoint](#dashboard-health) uses the more reliable `/soul/status` path instead.</Note>
 
