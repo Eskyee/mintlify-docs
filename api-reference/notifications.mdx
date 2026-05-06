@@ -1,0 +1,204 @@
+---
+title: Notifications API
+description: "In-app notification system for badges, referrals, achievements, and system events"
+---
+
+# Notifications API
+
+The notification system delivers in-app alerts for user engagement events including badge awards, referral conversions, level-ups, agent deployments, and login streak milestones.
+
+<Info>The notification endpoints are available on the web API. All endpoints require session authentication.</Info>
+
+## Get notifications
+
+```http
+GET /api/notifications
+```
+
+Returns the authenticated user's notifications, ordered by creation date descending.
+
+### Query parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `unreadOnly` | boolean | `false` | When `true`, returns only unread notifications |
+| `limit` | integer | `20` | Maximum number of notifications to return |
+
+### Response
+
+```json
+{
+  "notifications": [
+    {
+      "id": "notif_abc123",
+      "userId": "user_xyz",
+      "type": "badge",
+      "title": "New Badge Earned!",
+      "message": "You earned the 🚀 Getting Started badge!",
+      "read": false,
+      "data": {
+        "badgeName": "Getting Started",
+        "badgeIcon": "🚀"
+      },
+      "createdAt": "2026-04-04T06:00:00.000Z"
+    },
+    {
+      "id": "notif_def456",
+      "userId": "user_xyz",
+      "type": "achievement",
+      "title": "Level Up!",
+      "message": "Congratulations! You reached Level 3 - Intermediate",
+      "read": true,
+      "data": {
+        "level": 3,
+        "title": "Intermediate"
+      },
+      "createdAt": "2026-04-03T12:00:00.000Z"
+    }
+  ]
+}
+```
+
+### Response fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `notifications` | array | List of notifications |
+| `notifications[].id` | string | Unique notification identifier |
+| `notifications[].userId` | string | User the notification belongs to |
+| `notifications[].type` | string | Notification type (see types below) |
+| `notifications[].title` | string | Notification headline |
+| `notifications[].message` | string | Full notification message |
+| `notifications[].read` | boolean | Whether the notification has been read |
+| `notifications[].data` | object \| null | Type-specific metadata |
+| `notifications[].createdAt` | string | ISO 8601 timestamp |
+
+### Notification types
+
+| Type | Description | Example trigger |
+|------|-------------|----------------|
+| `achievement` | Level-ups and streak milestones | Reaching a new level or login streak |
+| `badge` | Badge awards | Earning a gamification badge |
+| `referral` | Referral conversions | A referred user signing up |
+| `system` | Platform announcements | Welcome-back messages after inactivity |
+| `agent` | Agent lifecycle events | Agent deployed successfully |
+| `message` | Message-related alerts | Message volume milestones |
+| `billing` | Billing and subscription events | Subscription changes |
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | Unauthorized — no valid session |
+| 500 | Failed to fetch notifications |
+
+---
+
+## Get unread count
+
+```http
+GET /api/notifications/unread-count
+```
+
+Returns the count of unread notifications for the authenticated user. Use this endpoint to display a notification badge in the UI without fetching all notification data.
+
+### Response
+
+```json
+{
+  "count": 3
+}
+```
+
+### Response fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `count` | number | Number of unread notifications |
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | Unauthorized — no valid session |
+| 500 | Failed to fetch unread count |
+
+---
+
+## Mark notification as read
+
+```http
+POST /api/notifications/read
+```
+
+Marks a single notification as read.
+
+### Request body
+
+```json
+{
+  "notificationId": "notif_abc123"
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `notificationId` | string | Yes | The notification ID to mark as read |
+
+### Response
+
+```json
+{
+  "success": true
+}
+```
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 400 | Missing `notificationId` |
+| 401 | Unauthorized — no valid session |
+| 500 | Failed to mark notification as read |
+
+---
+
+## Mark all as read
+
+```http
+POST /api/notifications/read-all
+```
+
+Marks all unread notifications as read for the authenticated user.
+
+### Response
+
+```json
+{
+  "success": true
+}
+```
+
+### Errors
+
+| Code | Description |
+|------|-------------|
+| 401 | Unauthorized — no valid session |
+| 500 | Failed to mark notifications as read |
+
+---
+
+## Automatic notifications
+
+The following notifications are created automatically by the system when corresponding events occur. You do not need to call an endpoint to trigger them.
+
+| Event | Type | Title | Example message |
+|-------|------|-------|-----------------|
+| Badge awarded | `badge` | New Badge Earned! | "You earned the 🚀 Getting Started badge!" |
+| Referral converted | `referral` | Referral Converted! | "Alice signed up using your referral link. You earned £10 credit!" |
+| Level up | `achievement` | Level Up! | "Congratulations! You reached Level 3 - Intermediate" |
+| Agent deployed | `agent` | Agent Deployed | "Your agent 'Atlas' is now live and ready to use!" |
+| Login streak milestone | `achievement` | Login Streak! | "🔥 7 day login streak! Keep it up!" |
+| Return after inactivity | `system` | Welcome Back! | "It's been 14 days! Here's what you missed..." |
+
+<Note>Return notifications are only sent when the user has been inactive for more than 7 days. Notifications older than 30 days that have been read are automatically cleaned up.</Note>
